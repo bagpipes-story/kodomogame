@@ -10,7 +10,7 @@ import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
 import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 
-const APP_VERSION = 'v0.5';
+const APP_VERSION = 'v0.5.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

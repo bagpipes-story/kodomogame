@@ -54,16 +54,10 @@
   transform: scale(1);
 }
 
+/* くろ石は真っ黒（実機フィードバック対応）。しろ石は輪郭リングがあるため
+   「ぬりつぶし か リングか」の形でも見分けられる（色覚対応は維持） */
 .kgb-stone-black {
   background: #3a3a45;
-}
-
-.kgb-stone-black::after {
-  content: '';
-  position: absolute;
-  inset: 34%;
-  border-radius: 50%;
-  background: #fff8e7;
 }
 
 .kgb-stone-white {
@@ -111,14 +105,6 @@
 
 .kgb-chip-black {
   background: #3a3a45;
-}
-
-.kgb-chip-black::after {
-  content: '';
-  position: absolute;
-  inset: 34%;
-  border-radius: 50%;
-  background: #fff8e7;
 }
 
 .kgb-chip-white {

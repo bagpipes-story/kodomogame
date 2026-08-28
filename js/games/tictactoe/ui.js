@@ -96,9 +96,12 @@ export function mount(root, config, { onExit }) {
     banner.className = `kgb-turn-banner is-blinking kgb-player-${state.current}`;
   }
 
-  // どちらかが「あとひとつ」のマスを点滅させる
+  // どちらかが「あとひとつ」のマスを点滅させる。
+  // 誰のリーチか分かるよう、◯側=あか・×側=あおで色分けする（両方のリーチなら二重ワク）
   function updateReach() {
-    for (const index of reachCells) cellEls[index].classList.remove('is-reach');
+    for (const index of reachCells) {
+      cellEls[index].classList.remove('is-reach-0', 'is-reach-1');
+    }
     reachCells = [];
     if (state.finished) {
       reachLabel.hidden = true;
@@ -106,10 +109,8 @@ export function mount(root, config, { onExit }) {
     }
     for (const player of [0, 1]) {
       for (const index of getReachCells(state, player)) {
-        if (!reachCells.includes(index)) {
-          cellEls[index].classList.add('is-reach');
-          reachCells.push(index);
-        }
+        cellEls[index].classList.add(`is-reach-${player}`);
+        if (!reachCells.includes(index)) reachCells.push(index);
       }
     }
     reachLabel.hidden = reachCells.length === 0;
@@ -263,7 +264,7 @@ export function mount(root, config, { onExit }) {
     firstPlayer = 1 - firstPlayer; // 次のラウンドは先手交代（仕様§4.6）
     for (let i = 0; i < 9; i++) {
       renderMark(i);
-      cellEls[i].classList.remove('is-win', 'is-reach');
+      cellEls[i].classList.remove('is-win', 'is-reach-0', 'is-reach-1');
     }
     reachCells = [];
     reachLabel.hidden = true;
