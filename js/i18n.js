@@ -75,6 +75,7 @@ export const text = {
 
   // もぐらたたき
   difficultyLabel: 'むずかしさ',
+  sizeAdult: 'おとな',
   readyTitle: 'じゅんびは いいかな？',
   moleCountSuffix: ' ひき',
   moleResultPrefix: 'きょうは ',

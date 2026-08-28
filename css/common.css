@@ -255,6 +255,12 @@ html, body {
   gap: 8px;
 }
 
+/* 4択以上のグループは2×2で並べる */
+.kgb-option-row.is-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
 .kgb-option-button {
   flex: 1 1 0;
   min-height: var(--kgb-tap-min);

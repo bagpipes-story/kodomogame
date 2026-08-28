@@ -100,6 +100,20 @@
   margin: 8px auto 0;
 }
 
+/* おとなモード: 穴2倍(18こ)を6列×3段で並べる。穴もキャラも小さくなる */
+.kgb-mole-field.is-wide {
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+.kgb-mole-field.is-wide .kgb-mole-char {
+  font-size: 30px;
+}
+
+.kgb-mole-field.is-wide .kgb-mole-hole {
+  border-radius: 12px;
+}
+
 .kgb-mole-hole {
   position: relative;
   aspect-ratio: 1;

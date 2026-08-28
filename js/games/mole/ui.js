@@ -7,7 +7,7 @@
 
 import {
   ROUND_SECONDS,
-  HOLE_COUNT,
+  DIFFICULTY,
   createGame,
   spawn,
   hide,
@@ -28,12 +28,13 @@ export function mount(root, config, { onExit }) {
 
   const isTwoMode = config.mode === 'two';
   const playerNames = [text.redName, text.blueName];
+  const holeCount = DIFFICULTY[config.difficulty].holeCount;
 
   let state = null;
   let roundPlayer = 0;          // こうたい対戦で今ラウンドを遊んでいる人
   let scores = [0, 0];
   let secondsLeft = ROUND_SECONDS;
-  let holeTokens = new Array(HOLE_COUNT).fill(0); // 自動引っ込みタイマーの取り違え防止
+  let holeTokens = new Array(holeCount).fill(0); // 自動引っ込みタイマーの取り違え防止
   let playing = false;
 
   function later(fn, ms) {
@@ -93,11 +94,12 @@ export function mount(root, config, { onExit }) {
 
   // 3×3の穴。キャラクターのspanも先に作っておく
   const field = document.createElement('div');
-  field.className = 'kgb-mole-field';
+  // おとなモードは穴2倍(18こ)を6列で並べる
+  field.className = holeCount > 9 ? 'kgb-mole-field is-wide' : 'kgb-mole-field';
   const charEls = [];
   {
     const fragment = document.createDocumentFragment();
-    for (let i = 0; i < HOLE_COUNT; i++) {
+    for (let i = 0; i < holeCount; i++) {
       const hole = document.createElement('div');
       hole.className = 'kgb-mole-hole';
       hole.dataset.index = i;
@@ -214,7 +216,7 @@ export function mount(root, config, { onExit }) {
     playing = false;
     clearAllTimers();
     finishRound(state);
-    for (let i = 0; i < HOLE_COUNT; i++) {
+    for (let i = 0; i < holeCount; i++) {
       holeTokens[i]++;
       charDown(i);
     }
@@ -236,14 +238,19 @@ export function mount(root, config, { onExit }) {
 
   function finishGame() {
     let isNewRecord = false;
+    let bestForDifficulty = state.score;
     if (!isTwoMode) {
+      // さいこうきろくは むずかしさ別（おとなの記録と子どもの記録を混ぜない）
       const stats = loadStats();
       stats.mole ??= { best: 0, plays: 0 };
-      if (state.score > (stats.mole.best ?? 0)) {
-        stats.mole.best = state.score;
+      stats.mole.bestBy ??= {};
+      const best = stats.mole.bestBy[config.difficulty] ?? 0;
+      if (state.score > best) {
+        stats.mole.bestBy[config.difficulty] = state.score;
         isNewRecord = true;
         emitPraise('new_record');
       }
+      bestForDifficulty = Math.max(best, state.score);
       saveStats(stats);
     }
     recordPlay('mole', { won: false });
@@ -256,8 +263,7 @@ export function mount(root, config, { onExit }) {
       detail = `${text.redName} ${a}${text.moleCountSuffix} ／ ${text.blueName} ${b}${text.moleCountSuffix}`;
     } else {
       title = text.moleResultPrefix + state.score + text.moleResultSuffix;
-      const best = loadStats().mole?.best ?? state.score;
-      detail = `${text.bestLabel}: ${best}${text.moleCountSuffix}`;
+      detail = `${text.bestLabel}: ${bestForDifficulty}${text.moleCountSuffix}`;
       if (isNewRecord) detail += `\n${text.newRecord}`;
     }
 

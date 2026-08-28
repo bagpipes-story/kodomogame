@@ -11,7 +11,7 @@ import { mount as mountSevens } from './games/sevens/ui.js';
 import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 import { mount as mountMole } from './games/mole/ui.js';
 
-const APP_VERSION = 'v0.6';
+const APP_VERSION = 'v0.6.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -47,7 +47,7 @@ const setupConfigs = {
     defaults: { mode: 'solo', difficulty: 'easy' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['two', text.modeTwo]] },
-      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard], ['adult', text.sizeAdult]] },
     ],
   },
   tictactoe: {
@@ -182,7 +182,8 @@ function buildSetupScreen(gameId) {
     label.textContent = group.label;
 
     const row = document.createElement('div');
-    row.className = 'kgb-option-row';
+    // 4択以上は1行に収まらないため2×2のグリッドにする
+    row.className = group.options.length > 3 ? 'kgb-option-row is-grid' : 'kgb-option-row';
     for (const [value, optionLabel] of group.options) {
       const button = document.createElement('button');
       button.type = 'button';
