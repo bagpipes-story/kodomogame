@@ -1,0 +1,208 @@
+/* ==========================================================
+   common.css — デザイントークンと共通UI（v0.1）
+   仕様書§3.2: パステル基調・最小フォント20px・ボタン最小60px
+   ========================================================== */
+
+:root {
+  /* 配色トークン: 背景はクリーム色、ゲームごとにテーマ色1色 */
+  --kgb-bg: #fff8e7;
+  --kgb-text: #4a3f35;
+  --kgb-white: #ffffff;
+  --kgb-shadow: rgba(74, 63, 53, 0.15);
+
+  --kgb-color-othello: #7fc8a9;   /* みどり */
+  --kgb-color-sevens: #f6a6b2;    /* ピンク */
+  --kgb-color-memory: #f9c784;    /* オレンジ */
+  --kgb-color-oldmaid: #a5b8f3;   /* あお */
+  --kgb-color-balance: #c9a7eb;   /* むらさき */
+
+  /* サイズトークン */
+  --kgb-radius: 20px;
+  --kgb-tap-min: 60px;            /* 主要操作の最小タップ領域（要件定義§3） */
+  --kgb-font-min: 20px;
+}
+
+* {
+  box-sizing: border-box;
+  /* 子ども向け: 長押しでの選択・コピーメニューを出さない */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--kgb-bg);
+  color: var(--kgb-text);
+  font-family: -apple-system, "Hiragino Sans", sans-serif;
+  font-size: var(--kgb-font-min);
+  /* iOSのバウンススクロールで画面がずれるのを防ぐ */
+  overscroll-behavior: none;
+}
+
+/* ---------- 画面（SPA切り替え） ---------- */
+
+/* display:flexがhidden属性の標準スタイルを上書きしてしまうため、明示的にnoneにする */
+.kgb-screen[hidden] {
+  display: none;
+}
+
+.kgb-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+}
+
+/* ---------- ホーム画面 ---------- */
+
+.kgb-home-title {
+  font-size: 28px;
+  /* 上マージンは右上のミュートボタン（60px）と重ならない高さにしている */
+  margin: 68px 0 8px;
+  text-align: center;
+}
+
+.kgb-game-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 16px;
+}
+
+.kgb-game-button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 24px;
+  font-family: inherit;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+  /* 押下時に軽く縮む（transformのみ使用。§9アニメ規定） */
+  transition: transform 0.1s ease;
+}
+
+.kgb-game-button:active {
+  transform: scale(0.96);
+}
+
+.kgb-game-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  font-size: 32px;
+  flex-shrink: 0;
+  color: var(--kgb-white);
+}
+
+/* ゲームごとのテーマ色（アイコン背景に使用） */
+.kgb-theme-othello { background: var(--kgb-color-othello); }
+.kgb-theme-sevens  { background: var(--kgb-color-sevens); }
+.kgb-theme-memory  { background: var(--kgb-color-memory); }
+.kgb-theme-oldmaid { background: var(--kgb-color-oldmaid); }
+.kgb-theme-balance { background: var(--kgb-color-balance); }
+
+.kgb-home-footer {
+  margin-top: auto;
+  padding-top: 24px;
+}
+
+.kgb-version {
+  font-size: 14px;
+  opacity: 0.5;
+}
+
+/* ---------- ゲーム画面ヘッダー（もどるボタン） ---------- */
+
+.kgb-screen-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.kgb-back-button {
+  width: var(--kgb-tap-min);
+  height: var(--kgb-tap-min);
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 28px;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kgb-back-button:active {
+  transform: scale(0.96);
+}
+
+.kgb-screen-title {
+  font-size: 26px;
+  margin: 0;
+}
+
+/* ---------- ダミー画面の中身（v0.2以降で削除） ---------- */
+
+.kgb-dummy-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.kgb-dummy-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  border-radius: 30px;
+  font-size: 64px;
+  color: var(--kgb-white);
+}
+
+.kgb-dummy-message {
+  font-size: 24px;
+  margin: 0;
+}
+
+/* ---------- ミュートボタン（右上常設） ---------- */
+
+.kgb-mute-button {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top));
+  right: 12px;
+  z-index: 10;
+  width: var(--kgb-tap-min);
+  height: var(--kgb-tap-min);
+  border: none;
+  border-radius: 50%;
+  background: var(--kgb-white);
+  font-size: 26px;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kgb-mute-button:active {
+  transform: scale(0.96);
+}

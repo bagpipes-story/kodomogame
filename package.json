@@ -1,0 +1,6 @@
+{
+  "name": "kodomogame",
+  "private": true,
+  "type": "module",
+  "description": "こどもゲームボックス（4〜8さい むけ ゲームしゅう）。ビルドツールは不使用、このファイルはNodeテスト用のESM設定のみ。"
+}

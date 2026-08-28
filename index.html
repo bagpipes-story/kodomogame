@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover: iPhoneのノッチ領域まで背景色を広げるため -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>こどもゲームボックス</title>
+  <!-- 仮のfavicon（404防止）。正式なアイコンはv0.7で追加する -->
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/common.css">
+</head>
+<body>
+
+  <!-- ミュートボタン: 全画面で常設のため画面divの外に置く -->
+  <button id="muteButton" class="kgb-mute-button" type="button" aria-label="おとをけす"></button>
+
+  <!-- ホーム画面 -->
+  <section id="screen-home" class="kgb-screen">
+    <h1 class="kgb-home-title" data-i18n="appTitle"></h1>
+    <nav class="kgb-game-list" id="gameList">
+      <!-- ゲームボタンはapp.jsがi18n.jsの定義から生成する（文言の二重管理を避けるため） -->
+    </nav>
+    <footer class="kgb-home-footer">
+      <span id="versionLabel" class="kgb-version"></span>
+    </footer>
+  </section>
+
+  <!-- ダミー画面（v0.1では全ゲーム共通。v0.2以降でゲーム画面に置き換える） -->
+  <section id="screen-game" class="kgb-screen" hidden>
+    <header class="kgb-screen-header">
+      <button id="backButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 id="gameTitle" class="kgb-screen-title"></h2>
+    </header>
+    <div class="kgb-dummy-body">
+      <div id="gameIcon" class="kgb-dummy-icon" aria-hidden="true"></div>
+      <p class="kgb-dummy-message" data-i18n="preparing"></p>
+    </div>
+  </section>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
