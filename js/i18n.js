@@ -43,6 +43,14 @@ export const text = {
   turnWhite: 'しろの ばん',
   passSuffix: 'は パス！', // 「くろは パス！」のように名前の後ろに付ける
 
+  // 7ならべ
+  passButton: 'パス',
+  remainPrefix: 'のこり ',
+  sheetsSuffix: ' まい',
+  handoverTap: 'タップして スタート',
+  reasonEmpty: 'てふだを ぜんぶ だした！',
+  reasonPassOver: 'パスが なくなった',
+
   // 結果画面（ネガティブ表現禁止。「またあそぼう！」トーン）
   movesLabel: 'めくった かいすう',
   bestLabel: 'さいこうきろく',

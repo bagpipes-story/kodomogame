@@ -82,15 +82,9 @@
   100% { transform: scaleX(1); }
 }
 
-/* 置けない場所をタップしたときの盤ゆれ */
+/* 置けない場所をタップしたときの盤ゆれ（keyframesはcommon.cssのkgbShake） */
 .kgb-board.is-shake {
   animation: kgbShake 0.3s ease;
-}
-
-@keyframes kgbShake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  75% { transform: translateX(5px); }
 }
 
 /* 手番バナーの石色バリエーション */

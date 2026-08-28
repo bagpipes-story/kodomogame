@@ -1,0 +1,172 @@
+/* sevens.css — 7ならべ（v0.4）
+   マークは色＋形の両方で見分けられる（♠こん・♥あか・♦オレンジ・♣みどり）。
+   数字はA/J/Q/Kを使わず1〜13で統一（数の順番を学べる知育方針。仕様§12） */
+
+.kgb-sevens {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* マークの文字色（手札・行ラベル用） */
+.kgb-suit-0 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-0 { color: #4a4a55; }
+.kgb-suit-1 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-1 { color: #e2566b; }
+.kgb-suit-2 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-2 { color: #f0913b; }
+.kgb-suit-3 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-3 { color: #3f9e6e; }
+
+/* ---------- 相手情報 ---------- */
+
+.kgb-sevens-opp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background: var(--kgb-white);
+  font-size: 20px;
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-sevens-hearts {
+  color: #e2566b;
+  letter-spacing: 2px;
+}
+
+/* ---------- 場（4段×13マス＋左端のマーク列） ---------- */
+
+.kgb-sevens-board {
+  display: grid;
+  grid-template-columns: 18px repeat(13, 1fr);
+  gap: 2px;
+  align-items: center;
+  padding: 6px;
+  border-radius: 12px;
+  background: #f9dfe4;
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+  margin-bottom: 10px;
+}
+
+.kgb-sevens-row-label {
+  font-size: 13px;
+  text-align: center;
+}
+
+.kgb-sevens-cell {
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 盤のマスは表示専用の小さな数字（本文の最小20pxルールの対象外とする） */
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* 置かれたカード（ポンと出るアニメはtransformのみ） */
+.kgb-sevens-cell.is-placed {
+  color: #fff;
+  animation: kgbPop 0.25s ease;
+}
+
+.kgb-suit-bg-0 { background: #4a4a55; }
+.kgb-suit-bg-1 { background: #e2566b; }
+.kgb-suit-bg-2 { background: #f0913b; }
+.kgb-suit-bg-3 { background: #3f9e6e; }
+
+@keyframes kgbPop {
+  0% { transform: scale(0.3); }
+  70% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* 次に出せる数字のガイド（知育: 「7のつぎは8」を目で覚える） */
+.kgb-sevens-cell.is-need {
+  background: rgba(255, 255, 255, 0.95);
+  color: #c96a7d;
+}
+
+/* ---------- パスボタン ---------- */
+
+.kgb-sevens-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.kgb-sevens-pass-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--kgb-tap-min);
+  padding: 8px 20px;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 20px;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.kgb-sevens-pass-button:active {
+  transform: scale(0.96);
+}
+
+/* ---------- 手札 ---------- */
+
+.kgb-sevens-hand {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+
+.kgb-sevens-hand[hidden] {
+  display: none;
+}
+
+.kgb-hand-card {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  border: none;
+  border-radius: 7px;
+  background: var(--kgb-white);
+  box-shadow: 0 2px 0 var(--kgb-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--kgb-text);
+}
+
+.kgb-hand-num {
+  font-size: 17px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.kgb-hand-suit {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* 出せるカードを光らせる（ルール補助。opacityアニメのみ） */
+.kgb-hand-card.is-playable::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid var(--kgb-accent);
+  border-radius: 10px;
+  animation: kgbBlink 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.kgb-hand-card.is-shake {
+  animation: kgbShake 0.3s ease;
+}

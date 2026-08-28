@@ -4,15 +4,18 @@
 
 import { text, games } from './i18n.js';
 import { playTap, isMuted, toggleMute } from './sound.js';
+import { loadStats } from './storage.js';
 import { mount as mountMemory } from './games/memory/ui.js';
 import { mount as mountOthello } from './games/othello/ui.js';
+import { mount as mountSevens } from './games/sevens/ui.js';
 
-const APP_VERSION = 'v0.3';
+const APP_VERSION = 'v0.4';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
   memory: mountMemory,
   othello: mountOthello,
+  sevens: mountSevens,
 };
 
 const screens = {
@@ -51,6 +54,13 @@ const setupConfigs = {
       { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
     ],
   },
+  sevens: {
+    defaults: { mode: 'cpu', level: 'weak' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+    ],
+  },
 };
 
 const setupSelections = {}; // gameId -> 選択状態
@@ -65,6 +75,19 @@ function currentSelection() {
 function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {
     el.hidden = key !== name;
+  }
+  // ホームに戻るたびに勝ち星を最新にする（がんばりの見える化。仕様§12）
+  if (name === 'home') updateHomeStars();
+}
+
+function updateHomeStars() {
+  const stats = loadStats();
+  for (const game of games) {
+    const el = document.querySelector(`[data-game-id="${game.id}"] .kgb-game-stars`);
+    if (!el) continue;
+    const wins = stats[game.id]?.wins ?? 0;
+    // 5こまでは★を並べ、それ以上は「★×8」のように数字で見せる（大きい数への興味づけ）
+    el.textContent = wins === 0 ? '' : wins <= 5 ? '★'.repeat(wins) : `★×${wins}`;
   }
 }
 
@@ -103,10 +126,15 @@ function buildGameList() {
     icon.textContent = game.icon;
     icon.setAttribute('aria-hidden', 'true');
 
+    const textWrap = document.createElement('span');
+    textWrap.className = 'kgb-game-text';
     const label = document.createElement('span');
     label.textContent = game.name;
+    const stars = document.createElement('span');
+    stars.className = 'kgb-game-stars';
+    textWrap.append(label, stars);
 
-    button.append(icon, label);
+    button.append(icon, textWrap);
     fragment.append(button);
   }
   list.append(fragment);
@@ -209,6 +237,7 @@ function renderMuteButton() {
 
 applyStaticText();
 buildGameList();
+updateHomeStars();
 renderMuteButton();
 
 // 設定画面の選択肢は都度作り直すため、リスナーは親に1回だけ登録しておく
