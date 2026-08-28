@@ -6,14 +6,25 @@ const SETTINGS_KEY = 'kgb.settings';
 const STATS_KEY = 'kgb.stats';
 
 // 初期値は仕様書§5のデータ構造に合わせる
-const DEFAULT_SETTINGS = { muted: false, version: 1 };
+const DEFAULT_SETTINGS = {
+  muted: false,
+  breakMinutes: 30, // きゅうけいリマインダー（v0.9でUI実装）
+  assist: { othelloCount: true, oldmaidPairHint: true, oldmaidAutoSort: true },
+  version: 1,
+};
 
 const DEFAULT_STATS = {
-  othello: { wins: 0 },
-  sevens: { wins: 0 },
-  memory: { wins: 0, bestMoves: {} },
-  oldmaid: { wins: 0 },
-  balance: { best: 0 },
+  othello: { wins: 0, plays: 0 },
+  sevens: { wins: 0, plays: 0 },
+  memory: { wins: 0, plays: 0, bestMoves: {} },
+  oldmaid: { wins: 0, plays: 0 },
+  balance: { best: 0, plays: 0 },
+  tictactoe: { wins: 0, plays: 0 },
+  mole: { best: 0, plays: 0 },
+  // 5つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
+  skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0 },
+  stamps: 0,
+  lossStreak: {}, // 難易度アシスト用の連敗カウント（ゲームごと）
   version: 1,
 };
 

@@ -15,6 +15,8 @@
   --kgb-color-memory: #f9c784;    /* オレンジ */
   --kgb-color-oldmaid: #a5b8f3;   /* あお */
   --kgb-color-balance: #c9a7eb;   /* むらさき */
+  --kgb-color-tictactoe: #f0c94a; /* きいろ */
+  --kgb-color-mole: #c8a284;      /* ちゃいろ */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -77,30 +79,33 @@ html, body {
 .kgb-home-title {
   font-size: 28px;
   /* 上マージンは右上のミュートボタン（60px）と重ならない高さにしている */
-  margin: 68px 0 8px;
+  margin: 60px 0 4px;
   text-align: center;
 }
 
+/* 7ゲームを2列グリッドで並べる（仕様§3.1） */
 .kgb-game-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   width: 100%;
   max-width: 400px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .kgb-game-button {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  min-height: 72px;
-  padding: 8px 20px;
+  justify-content: center;
+  gap: 5px;
+  min-height: 96px;
+  padding: 8px 6px;
   border: none;
   border-radius: var(--kgb-radius);
   background: var(--kgb-white);
   color: var(--kgb-text);
-  font-size: 24px;
+  font-size: 20px;
   font-family: inherit;
   box-shadow: 0 4px 0 var(--kgb-shadow);
   cursor: pointer;
@@ -116,28 +121,34 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  font-size: 32px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  font-size: 26px;
   flex-shrink: 0;
   color: var(--kgb-white);
 }
 
-/* ゲーム名＋勝ち星の縦並び（がんばりの見える化。仕様§12） */
+/* ゲーム名＋勝ち星の縦並び（がんばりの見える化） */
 .kgb-game-text {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: 2px;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .kgb-game-stars {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1;
-  min-height: 15px;
   color: #f2a93b;
   letter-spacing: 2px;
+}
+
+/* 星ゼロのときは行ごと消して高さを詰める */
+.kgb-game-stars:empty {
+  display: none;
 }
 
 /* ゲームごとのテーマ色（アイコン背景に使用） */
@@ -146,6 +157,8 @@ html, body {
 .kgb-theme-memory  { background: var(--kgb-color-memory); }
 .kgb-theme-oldmaid { background: var(--kgb-color-oldmaid); }
 .kgb-theme-balance { background: var(--kgb-color-balance); }
+.kgb-theme-tictactoe { background: var(--kgb-color-tictactoe); }
+.kgb-theme-mole { background: var(--kgb-color-mole); }
 
 .kgb-home-footer {
   margin-top: auto;
@@ -426,6 +439,25 @@ html, body {
 .kgb-result-title {
   font-size: 30px;
   margin: 0 0 12px;
+}
+
+/* きょうのすごいところ（具体ほめシステム。仕様§3.4） */
+.kgb-praise-box {
+  background: #fdf3dd;
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin: 0 0 20px;
+}
+
+.kgb-praise-label {
+  font-size: 18px;
+  color: #c08a2e;
+  margin: 0 0 4px;
+}
+
+.kgb-praise-text {
+  font-size: 20px;
+  margin: 0;
 }
 
 .kgb-result-detail {

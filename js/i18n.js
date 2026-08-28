@@ -66,6 +66,30 @@ export const text = {
   winBlue: 'あおの かち！',
   winBlack: 'くろの かち！',
   winWhite: 'しろの かち！',
+
+  // ◯×ゲーム
+  tttCircle: 'まる',
+  tttCross: 'ばつ',
+  reachLabel: 'あとひとつ！',
+  drawStrong: 'ひきわけ！ふたりとも つよい！',
+
+  // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
+  praiseTitle: 'きょうの すごいところ',
+  praise: {
+    finished_game: 'さいごまで できたね！',
+    waited_turn: 'じゅんばんを まてたね！',
+    blocked_reach: 'あいての リーチに きづいて ふせげたね！',
+    draw_positive: 'さいごまで よく かんがえたね！',
+    took_corner: 'かどを とれたね！',
+    comeback: 'ぎゃくてん できたね！',
+    remembered_pair: 'ばしょを よく おぼえてたね！',
+    combo: 'つづけて あてられたね！',
+    found_pair: 'おなじ すうじを みつけられたね！',
+    thought_long: 'じっくり かんがえられたね！',
+    new_record: 'じぶんの きろくを こえたね！',
+    retried: 'なんかいも チャレンジして えらい！',
+    perfect_patience: 'たたかないで がまん できたね！',
+  },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
   replay: 'もういちど',
@@ -73,11 +97,13 @@ export const text = {
 };
 
 // ゲーム一覧: idはファイル構成（js/games/<id>/）と一致させる。
-// iconはv0.1の仮表示（絵文字）。v0.7でSVGアイコンに置き換える予定。
+// iconは仮表示（絵文字）。v0.10でSVGアイコンに置き換える予定。
 export const games = [
+  { id: 'tictactoe', name: 'まるばつ', icon: '⭕' },
+  { id: 'memory', name: 'しんけいすいじゃく', icon: '🍎' },
   { id: 'othello', name: 'オセロ', icon: '⚫' },
   { id: 'sevens', name: 'しちならべ', icon: '7' },
-  { id: 'memory', name: 'しんけいすいじゃく', icon: '🍎' },
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },
   { id: 'balance', name: 'バランスゲーム', icon: '🧱' },
+  { id: 'mole', name: 'もぐらたたき', icon: '🔨' },
 ];

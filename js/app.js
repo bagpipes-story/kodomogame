@@ -8,14 +8,16 @@ import { loadStats } from './storage.js';
 import { mount as mountMemory } from './games/memory/ui.js';
 import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
+import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 
-const APP_VERSION = 'v0.4.1';
+const APP_VERSION = 'v0.5';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
   memory: mountMemory,
   othello: mountOthello,
   sevens: mountSevens,
+  tictactoe: mountTictactoe,
 };
 
 const screens = {
@@ -39,6 +41,13 @@ const LEVEL_OPTIONS = [
 ];
 
 const setupConfigs = {
+  tictactoe: {
+    defaults: { mode: 'cpu', level: 'weak' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+    ],
+  },
   memory: {
     defaults: { mode: 'cpu', size: 'easy', level: 'weak' },
     groups: [
