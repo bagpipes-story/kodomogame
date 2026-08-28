@@ -37,6 +37,11 @@ export const text = {
   cpuName: 'ロボット',
   redName: 'あか',
   blueName: 'あお',
+  blackName: 'くろ',
+  whiteName: 'しろ',
+  turnBlack: 'くろの ばん',
+  turnWhite: 'しろの ばん',
+  passSuffix: 'は パス！', // 「くろは パス！」のように名前の後ろに付ける
 
   // 結果画面（ネガティブ表現禁止。「またあそぼう！」トーン）
   movesLabel: 'めくった かいすう',
@@ -47,6 +52,8 @@ export const text = {
   winCpu: 'ロボットの かち！',
   winRed: 'あかの かち！',
   winBlue: 'あおの かち！',
+  winBlack: 'くろの かち！',
+  winWhite: 'しろの かち！',
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
   replay: 'もういちど',

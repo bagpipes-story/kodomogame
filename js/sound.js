@@ -84,6 +84,11 @@ export function playBuzzer() {
   playTone(160, 0.25, 'square', 0.1);
 }
 
+// 石・カードを置く音
+export function playPlace() {
+  playTone(330, 0.07, 'triangle', 0.14);
+}
+
 // カードをめくる音
 export function playFlip() {
   playTone(660, 0.06, 'triangle', 0.12);

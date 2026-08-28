@@ -418,6 +418,27 @@ html, body {
   white-space: pre-line; /* めくったかいすう等を改行で並べるため */
 }
 
+/* ---------- トースト（「パス！」などの短い通知） ---------- */
+
+.kgb-toast {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  padding: 16px 32px;
+  border-radius: 20px;
+  background: var(--kgb-white);
+  font-size: 28px;
+  font-weight: bold;
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  white-space: nowrap;
+}
+
+.kgb-toast[hidden] {
+  display: none;
+}
+
 /* ---------- 紙吹雪（勝利演出。transformのみ） ---------- */
 
 .kgb-confetti-wrap {

@@ -5,12 +5,14 @@
 import { text, games } from './i18n.js';
 import { playTap, isMuted, toggleMute } from './sound.js';
 import { mount as mountMemory } from './games/memory/ui.js';
+import { mount as mountOthello } from './games/othello/ui.js';
 
-const APP_VERSION = 'v0.2';
+const APP_VERSION = 'v0.3';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
   memory: mountMemory,
+  othello: mountOthello,
 };
 
 const screens = {
@@ -26,8 +28,37 @@ const quitOverlay = document.getElementById('quitOverlay');
 let currentGameId = null;
 let currentGame = null; // マウント中のゲーム（{ destroy }を持つ）
 
-// 設定画面の選択状態（セッション中は前回の選択を覚えておく）
-const setupSelection = { mode: 'cpu', size: 'easy', level: 'weak' };
+// ゲームごとの設定画面の定義。選択状態はセッション中覚えておく
+const LEVEL_OPTIONS = [
+  ['weak', text.levelWeak],
+  ['normal', text.levelNormal],
+  ['strong', text.levelStrong],
+];
+
+const setupConfigs = {
+  memory: {
+    defaults: { mode: 'cpu', size: 'easy', level: 'weak' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'size', label: text.sizeLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+    ],
+  },
+  othello: {
+    defaults: { mode: 'cpu', level: 'weak' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+    ],
+  },
+};
+
+const setupSelections = {}; // gameId -> 選択状態
+
+function currentSelection() {
+  setupSelections[currentGameId] ??= { ...setupConfigs[currentGameId].defaults };
+  return setupSelections[currentGameId];
+}
 
 // ---------- 画面遷移（hidden切り替えのみ） ----------
 
@@ -89,42 +120,12 @@ function buildGameList() {
   });
 }
 
-// ---------- あそびかた設定画面 ----------
+// ---------- あそびかた設定画面（ゲーム別定義から都度組み立てる） ----------
 
-const setupGroups = [
-  {
-    key: 'mode',
-    label: text.modeLabel,
-    options: [
-      ['solo', text.modeSolo],
-      ['cpu', text.modeCpu],
-      ['two', text.modeTwo],
-    ],
-  },
-  {
-    key: 'size',
-    label: text.sizeLabel,
-    options: [
-      ['easy', text.sizeEasy],
-      ['normal', text.sizeNormal],
-      ['hard', text.sizeHard],
-    ],
-  },
-  {
-    key: 'level',
-    label: text.levelLabel,
-    options: [
-      ['weak', text.levelWeak],
-      ['normal', text.levelNormal],
-      ['strong', text.levelStrong],
-    ],
-  },
-];
-
-function buildSetupScreen() {
+function buildSetupScreen(gameId) {
   const body = document.getElementById('setupBody');
   const fragment = document.createDocumentFragment();
-  for (const group of setupGroups) {
+  for (const group of setupConfigs[gameId].groups) {
     const section = document.createElement('div');
     section.className = 'kgb-setup-group';
     section.dataset.groupKey = group.key;
@@ -148,28 +149,22 @@ function buildSetupScreen() {
     section.append(label, row);
     fragment.append(section);
   }
-  body.append(fragment);
-
-  body.addEventListener('click', (event) => {
-    const button = event.target.closest('.kgb-option-button');
-    if (!button) return;
-    playTap();
-    setupSelection[button.dataset.key] = button.dataset.value;
-    updateSetupScreen();
-  });
+  body.replaceChildren(fragment);
+  updateSetupScreen();
 }
 
 function updateSetupScreen() {
+  const selection = currentSelection();
   // 選択状態は一括class切替（§9: ループ内で書き込むのはclassのみ）
   for (const button of document.querySelectorAll('.kgb-option-button')) {
     button.classList.toggle(
       'is-selected',
-      setupSelection[button.dataset.key] === button.dataset.value,
+      selection[button.dataset.key] === button.dataset.value,
     );
   }
-  // つよさの選択はコンピュータ対戦のときだけ意味がある
+  // つよさの選択はロボット対戦のときだけ意味がある
   const levelGroup = document.querySelector('[data-group-key="level"]');
-  levelGroup.hidden = setupSelection.mode !== 'cpu';
+  if (levelGroup) levelGroup.hidden = selection.mode !== 'cpu';
 }
 
 // ---------- ゲーム起動 ----------
@@ -180,7 +175,7 @@ function openGame(gameId) {
   currentGameId = gameId;
   if (gameMounters[gameId]) {
     document.getElementById('setupTitle').textContent = game.name;
-    updateSetupScreen();
+    buildSetupScreen(gameId);
     showScreen('setup');
   } else {
     document.getElementById('dummyTitle').textContent = game.name;
@@ -197,7 +192,7 @@ function startGame() {
   showScreen('play');
   currentGame = gameMounters[currentGameId](
     document.getElementById('gameRoot'),
-    { ...setupSelection },
+    { ...currentSelection() },
     { onExit: goHome },
   );
 }
@@ -214,9 +209,16 @@ function renderMuteButton() {
 
 applyStaticText();
 buildGameList();
-buildSetupScreen();
-updateSetupScreen();
 renderMuteButton();
+
+// 設定画面の選択肢は都度作り直すため、リスナーは親に1回だけ登録しておく
+document.getElementById('setupBody').addEventListener('click', (event) => {
+  const button = event.target.closest('.kgb-option-button');
+  if (!button) return;
+  playTap();
+  currentSelection()[button.dataset.key] = button.dataset.value;
+  updateSetupScreen();
+});
 
 document.getElementById('setupBackButton').addEventListener('click', () => {
   playTap();
