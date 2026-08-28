@@ -9,7 +9,7 @@ import { mount as mountMemory } from './games/memory/ui.js';
 import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
 
-const APP_VERSION = 'v0.4';
+const APP_VERSION = 'v0.4.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -44,21 +44,22 @@ const setupConfigs = {
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
       { key: 'size', label: text.sizeLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
-      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
     ],
   },
   othello: {
     defaults: { mode: 'cpu', level: 'weak' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
-      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
     ],
   },
   sevens: {
-    defaults: { mode: 'cpu', level: 'weak' },
+    defaults: { mode: 'cpu', robots: '1', level: 'weak' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
-      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS },
+      { key: 'robots', label: text.robotsLabel, options: [['1', '1だい'], ['2', '2だい'], ['3', '3だい']], cpuOnly: true },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
     ],
   },
 };
@@ -190,9 +191,12 @@ function updateSetupScreen() {
       selection[button.dataset.key] === button.dataset.value,
     );
   }
-  // つよさの選択はロボット対戦のときだけ意味がある
-  const levelGroup = document.querySelector('[data-group-key="level"]');
-  if (levelGroup) levelGroup.hidden = selection.mode !== 'cpu';
+  // ロボット対戦のときだけ意味がある選択肢（つよさ・ロボットのかず）を隠す
+  for (const group of setupConfigs[currentGameId].groups) {
+    if (!group.cpuOnly) continue;
+    const el = document.querySelector(`[data-group-key="${group.key}"]`);
+    if (el) el.hidden = selection.mode !== 'cpu';
+  }
 }
 
 // ---------- ゲーム起動 ----------

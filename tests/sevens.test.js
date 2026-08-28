@@ -95,7 +95,7 @@ function makeRng(values) {
   assert.strictEqual(playCard(state, cardId(1, 6)).ok, false, '終了後は出せない');
 }
 
-// ---------- パス: 3回まで。4回目で敗北し手札が場に開く ----------
+// ---------- パス: 3回まで。4回目でリタイアし手札が場に開く（2人なら残りの人の勝ち） ----------
 
 {
   const state = createGame({ rng: makeRng([0.5]) });
@@ -111,13 +111,48 @@ function makeRng(values) {
   }
   assert.strictEqual(state.passesLeft[0], 0);
   const r = passTurn(state);
-  assert.strictEqual(r.type, 'lose', '4回目のパスで敗北');
+  assert.strictEqual(r.type, 'retire', '4回目のパスでリタイア');
+  assert.strictEqual(r.retiredPlayer, 0);
   assert.deepStrictEqual(r.placedCards, [cardId(0, 2), cardId(1, 2)], '残り手札が場に開く');
   assert.strictEqual(state.board[0][1], true, '開いたカードが場に置かれる');
-  assert.strictEqual(state.winner, 1);
-  assert.strictEqual(state.loser, 0);
+  assert.strictEqual(state.retired[0], true);
+  assert.strictEqual(state.winner, 1, '2人戦なら残った人の勝ち');
+  assert.strictEqual(state.finished, true);
   assert.strictEqual(state.endReason, 'passOver');
   assert.strictEqual(state.hands[0].length, 0);
+}
+
+// ---------- 多人数戦: 配札とリタイア後の続行 ----------
+
+{
+  const state3 = createGame({ playerCount: 3, rng: makeRng([0.5]) });
+  assert.deepStrictEqual(state3.hands.map((h) => h.length), [16, 16, 16], '3人なら16枚ずつ');
+  const state4 = createGame({ playerCount: 4, rng: makeRng([0.5]) });
+  assert.deepStrictEqual(state4.hands.map((h) => h.length), [12, 12, 12, 12], '4人なら12枚ずつ');
+
+  // 3人戦: プレイヤー1がリタイアしてもゲームは続き、手番は1を飛ばす
+  const state = createGame({ playerCount: 3, rng: makeRng([0.5]) });
+  state.current = 1;
+  state.passesLeft[1] = 0;
+  state.hands[1] = [cardId(0, 2)];
+  const r = passTurn(state);
+  assert.strictEqual(r.type, 'retire');
+  assert.strictEqual(state.finished, false, '2人残っているので続行');
+  assert.strictEqual(state.current, 2, '次の手番へ');
+  // プレイヤー0に手番が回るときも1を飛ばす
+  state.current = 0;
+  state.hands[0] = [cardId(0, 6), cardId(0, 5)];
+  playCard(state, cardId(0, 6));
+  assert.strictEqual(state.current, 2, 'リタイアした1を飛ばして2へ');
+
+  // 2も リタイアしたら残った0の勝ち
+  state.current = 2;
+  state.passesLeft[2] = 0;
+  const r2 = passTurn(state);
+  assert.strictEqual(r2.type, 'retire');
+  assert.strictEqual(state.finished, true);
+  assert.strictEqual(state.winner, 0, '最後まで残った人の勝ち');
+  assert.strictEqual(state.endReason, 'passOver');
 }
 
 // ---------- CPU: よわい（出せるなら必ず出す・出せなければパス） ----------
@@ -169,21 +204,21 @@ function makeRng(values) {
   assert.deepStrictEqual(action, { type: 'play', cardId: cardId(0, 8) }, '自分の続きが多ければ出す');
 }
 
-// ---------- 通しプレイ: つよいvsふつうで終局まで壊れないこと ----------
+// ---------- 通しプレイ: 2人戦と4人戦で終局まで壊れないこと ----------
 
-{
+for (const playerCount of [2, 3, 4]) {
   const rng = makeRng([0.31, 0.72, 0.15, 0.94, 0.48, 0.66]);
-  const state = createGame({ rng });
+  const state = createGame({ playerCount, rng });
+  const levels = ['strong', 'normal', 'weak', 'normal'];
   let guard = 0;
-  while (!state.finished && guard < 300) {
+  while (!state.finished && guard < 500) {
     guard++;
-    const level = state.current === 0 ? 'strong' : 'normal';
-    const action = chooseAction(state, level, rng);
+    const action = chooseAction(state, levels[state.current], rng);
     const result = action.type === 'play' ? playCard(state, action.cardId) : passTurn(state);
-    assert.strictEqual(result.ok, true, 'CPUの行動は常に正しい');
+    assert.strictEqual(result.ok, true, `${playerCount}人戦: CPUの行動は常に正しい`);
   }
-  assert.ok(state.finished, '終局に到達する');
-  assert.ok(state.winner === 0 || state.winner === 1, '勝者が決まる');
+  assert.ok(state.finished, `${playerCount}人戦: 終局に到達する`);
+  assert.ok(state.winner >= 0 && state.winner < playerCount, `${playerCount}人戦: 勝者が決まる`);
 }
 
 console.log('sevens.test.js: すべてのテストに合格');

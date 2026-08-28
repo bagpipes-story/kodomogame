@@ -14,19 +14,35 @@
 .kgb-suit-2 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-2 { color: #f0913b; }
 .kgb-suit-3 .kgb-hand-suit, .kgb-sevens-row-label.kgb-suit-3 { color: #3f9e6e; }
 
-/* ---------- 相手情報 ---------- */
+/* ---------- 相手情報（ロボットの人数ぶんバッジが並ぶ） ---------- */
+
+.kgb-sevens-opp-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
 
 .kgb-sevens-opp {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 14px;
-  margin-bottom: 10px;
+  padding: 5px 14px;
+  border: 2px solid transparent;
   border-radius: 14px;
   background: var(--kgb-white);
   font-size: 20px;
   box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+/* いま考えている相手がわかる枠 */
+.kgb-sevens-opp.is-active {
+  border-color: var(--kgb-accent);
+}
+
+.kgb-sevens-opp.is-retired {
+  opacity: 0.55;
 }
 
 .kgb-sevens-hearts {
@@ -65,16 +81,18 @@
   font-weight: bold;
 }
 
-/* 置かれたカード（ポンと出るアニメはtransformのみ） */
+/* 置かれたカード=「表向き」: 白地＋マーク色の数字（手札と同じ見た目でベタ塗りにしない） */
 .kgb-sevens-cell.is-placed {
-  color: #fff;
+  background: var(--kgb-white);
+  border: 1px solid rgba(74, 63, 53, 0.25);
+  box-shadow: 0 1px 0 var(--kgb-shadow);
   animation: kgbPop 0.25s ease;
 }
 
-.kgb-suit-bg-0 { background: #4a4a55; }
-.kgb-suit-bg-1 { background: #e2566b; }
-.kgb-suit-bg-2 { background: #f0913b; }
-.kgb-suit-bg-3 { background: #3f9e6e; }
+.kgb-suit-text-0 { color: #4a4a55; }
+.kgb-suit-text-1 { color: #e2566b; }
+.kgb-suit-text-2 { color: #f0913b; }
+.kgb-suit-text-3 { color: #3f9e6e; }
 
 @keyframes kgbPop {
   0% { transform: scale(0.3); }
@@ -82,10 +100,11 @@
   100% { transform: scale(1); }
 }
 
-/* 次に出せる数字のガイド（知育: 「7のつぎは8」を目で覚える） */
+/* 次に出せる数字のガイド: 点線ワクの「まだ置いていない」見た目にして置いたカードと区別する */
 .kgb-sevens-cell.is-need {
-  background: rgba(255, 255, 255, 0.95);
-  color: #c96a7d;
+  background: transparent;
+  border: 2px dashed #d89aa7;
+  color: #c07d8d;
 }
 
 /* ---------- パスボタン ---------- */

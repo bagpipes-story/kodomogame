@@ -1,6 +1,7 @@
-// ui.js — 7ならべの描画・入力（v0.4）
+// ui.js — 7ならべの描画・入力（v0.4.1）
 // 場の52マスはmount時に一度だけ生成し、置く/ガイドはclass切り替えのみ（§9全再描画禁止）。
 // 手札はカード単位でノードを削除する。ふたりモードは手札が見えるため交代オーバーレイ必須（仕様§3.3）。
+// v0.4.1: ロボット1〜3たい（2〜4人戦）対応。置いたカードは白地＋色数字の「表向き」見た目に変更。
 
 import {
   SUITS,
@@ -19,20 +20,26 @@ import { text } from '../../i18n.js';
 import { playPlace, playTurn, playWin, playTap, playBuzzer } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
 
-// マークは色＋形の両方で見分けられる（分類あそびの知育方針。仕様§12）
+// マークは色＋形の両方で見分けられる（分類あそびの知育方針。仕様§11）
 const SUIT_CHARS = ['♠', '♥', '♦', '♣'];
 
 const CPU_THINK_MS = [600, 1200];
+const CPU_FAST_MS = [250, 450]; // 人間がリタイアした後はロボット同士を早回しする
 const PASS_TOAST_MS = 1100;
-const LOSE_PLACE_STEP_MS = 60; // パス超過時に手札が場に開いていく間隔
+const LOSE_PLACE_STEP_MS = 60; // リタイア時に手札が場に開いていく間隔
 
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
   const timers = new Set();
 
   const isCpuMode = config.mode === 'cpu';
-  const names = isCpuMode ? [text.you, text.cpuName] : [text.redName, text.blueName];
-  const turnTexts = isCpuMode ? [text.turnYou, text.turnCpu] : [text.turnRed, text.turnBlue];
+  const robotCount = isCpuMode ? Number(config.robots ?? 1) : 0;
+  const playerCount = isCpuMode ? robotCount + 1 : 2;
+
+  const names = isCpuMode
+    ? [text.you, ...Array.from({ length: robotCount }, (_, i) =>
+        robotCount === 1 ? text.cpuName : `${text.cpuName}${i + 1}`)]
+    : [text.redName, text.blueName];
 
   let state = null;
   let inputLocked = false;
@@ -60,15 +67,23 @@ export function mount(root, config, { onExit }) {
   const banner = document.createElement('div');
   banner.className = 'kgb-turn-banner';
 
-  // 相手情報（名前・のこり枚数・パスのハート）
-  const oppRow = document.createElement('div');
-  oppRow.className = 'kgb-sevens-opp';
-  const oppName = document.createElement('span');
-  const oppCount = document.createElement('span');
-  oppCount.className = 'kgb-sevens-opp-count';
-  const oppHearts = document.createElement('span');
-  oppHearts.className = 'kgb-sevens-hearts';
-  oppRow.append(oppName, oppCount, oppHearts);
+  // 相手情報（人数ぶんのバッジ: 名前・のこり枚数・パスのハート）
+  const oppArea = document.createElement('div');
+  oppArea.className = 'kgb-sevens-opp-area';
+  const oppBadges = [];
+  const badgeCount = isCpuMode ? robotCount : 1;
+  for (let i = 0; i < badgeCount; i++) {
+    const badge = document.createElement('div');
+    badge.className = 'kgb-sevens-opp';
+    const nameEl = document.createElement('span');
+    const countEl = document.createElement('span');
+    countEl.className = 'kgb-sevens-opp-count';
+    const heartsEl = document.createElement('span');
+    heartsEl.className = 'kgb-sevens-hearts';
+    badge.append(nameEl, countEl, heartsEl);
+    oppArea.append(badge);
+    oppBadges.push({ badge, nameEl, countEl, heartsEl });
+  }
 
   // 場: 左端にマーク列＋13マス×4段
   const board = document.createElement('div');
@@ -127,7 +142,7 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(banner, oppRow, board, controls, handEls[0], handEls[1]);
+  container.append(banner, oppArea, board, controls, handEls[0], handEls[1]);
   root.append(container, handover, toast, resultOverlay);
 
   // ---------- 表示の差分更新 ----------
@@ -148,9 +163,12 @@ export function mount(root, config, { onExit }) {
   }
 
   function buildHands() {
+    // ふたりモードは両者ぶん、ロボットモードは人間(0)のぶんだけ表示に使う
     for (const player of [0, 1]) {
       const fragment = document.createDocumentFragment();
-      for (const id of state.hands[player]) fragment.append(cardButton(id));
+      if (player === 0 || !isCpuMode) {
+        for (const id of state.hands[player]) fragment.append(cardButton(id));
+      }
       handEls[player].replaceChildren(fragment);
     }
   }
@@ -160,15 +178,18 @@ export function mount(root, config, { onExit }) {
     handEls[1].hidden = shownPlayer !== 1;
   }
 
+  // 置いたカードは「表向き」＝白地に色つき数字（手札と同じ見た目）
   function placeChip(id) {
     const cell = cellEls[id];
     cell.textContent = String(rankOf(id));
-    cell.className = `kgb-sevens-cell is-placed kgb-suit-bg-${suitOf(id)}`;
+    cell.className = `kgb-sevens-cell is-placed kgb-suit-text-${suitOf(id)}`;
   }
 
-  // 「次に出せる数字」のガイド（数の順番を学べる知育要素。仕様§12）
+  // 「次に出せる数字」のガイド（数の順番を学べる知育要素。仕様§11）
   function updateNeeds() {
     for (const cell of needCells) {
+      // ガイドだったマスにカードが置かれた場合は消さない（置いたカードを白紙に戻さない）
+      if (cell.classList.contains('is-placed')) continue;
       cell.textContent = '';
       cell.className = 'kgb-sevens-cell';
     }
@@ -200,13 +221,20 @@ export function mount(root, config, { onExit }) {
   }
 
   function updateInfo() {
-    const opp = 1 - shownPlayer;
-    oppName.textContent = names[opp];
-    oppCount.textContent = text.remainPrefix + state.hands[opp].length + text.sheetsSuffix;
-    oppHearts.textContent = heartsText(state.passesLeft[opp]);
+    const oppPlayers = isCpuMode
+      ? Array.from({ length: robotCount }, (_, i) => i + 1)
+      : [1 - shownPlayer];
+    oppBadges.forEach((entry, i) => {
+      const p = oppPlayers[i];
+      entry.nameEl.textContent = names[p];
+      entry.countEl.textContent = text.remainPrefix + state.hands[p].length + text.sheetsSuffix;
+      entry.heartsEl.textContent = heartsText(state.passesLeft[p]);
+      entry.badge.classList.toggle('is-active', !state.finished && state.current === p);
+      entry.badge.classList.toggle('is-retired', state.retired[p]);
+    });
     myHearts.textContent = heartsText(state.passesLeft[shownPlayer]);
-    banner.textContent = turnTexts[state.current];
-    banner.className = `kgb-turn-banner is-blinking kgb-player-${state.current}`;
+    banner.textContent = names[state.current] + text.turnSuffix;
+    banner.className = `kgb-turn-banner is-blinking kgb-player-${state.current % 2}`;
   }
 
   function refreshAll() {
@@ -216,7 +244,7 @@ export function mount(root, config, { onExit }) {
   }
 
   function isCpuTurn() {
-    return isCpuMode && state.current === 1;
+    return isCpuMode && state.current !== 0;
   }
 
   // ---------- 行動（人間・ロボット共通の入口） ----------
@@ -227,8 +255,8 @@ export function mount(root, config, { onExit }) {
     if (!result.ok) return;
     playPlace();
     placeChip(id);
-    // 手札からカードのノードを取り除く（差分更新）
-    handEls[player].querySelector(`[data-card-id="${id}"]`)?.remove();
+    // 手札からカードのノードを取り除く（差分更新。ロボットの手札はDOMを持たない）
+    handEls[player]?.querySelector?.(`[data-card-id="${id}"]`)?.remove();
     if (result.type === 'win') {
       finishGame();
       return;
@@ -241,21 +269,29 @@ export function mount(root, config, { onExit }) {
     const result = passTurn(state);
     if (!result.ok) return;
     playTurn();
-    toast.textContent = names[player] + text.passSuffix;
+    toast.textContent = result.type === 'retire'
+      ? names[player] + text.retireSuffix
+      : names[player] + text.passSuffix;
     toast.hidden = false;
     inputLocked = true;
     updateGlow();
     later(() => {
       toast.hidden = true;
-      if (result.type === 'lose') {
+      if (result.type === 'retire') {
         // 残り手札が1枚ずつ場に開いていく（仕様§4.2）
         result.placedCards.forEach((id, step) => {
           later(() => {
             placeChip(id);
-            handEls[player].querySelector(`[data-card-id="${id}"]`)?.remove();
+            handEls[player]?.querySelector?.(`[data-card-id="${id}"]`)?.remove();
           }, step * LOSE_PLACE_STEP_MS);
         });
-        later(finishGame, result.placedCards.length * LOSE_PLACE_STEP_MS + 400);
+        later(() => {
+          if (state.finished) finishGame();
+          else {
+            inputLocked = false;
+            nextTurn();
+          }
+        }, result.placedCards.length * LOSE_PLACE_STEP_MS + 400);
         return;
       }
       inputLocked = false;
@@ -276,7 +312,7 @@ export function mount(root, config, { onExit }) {
   function showHandover() {
     inputLocked = true;
     refreshAll();
-    handoverTitle.textContent = turnTexts[state.current];
+    handoverTitle.textContent = names[state.current] + text.turnSuffix;
     handover.hidden = false;
   }
 
@@ -292,12 +328,14 @@ export function mount(root, config, { onExit }) {
   function scheduleCpu() {
     inputLocked = true;
     updateGlow();
+    // 人間がリタイアした後の「ロボットだけの続き」は早回しで見せる
+    const delay = isCpuMode && state.retired[0] ? CPU_FAST_MS : CPU_THINK_MS;
     later(() => {
       const action = chooseAction(state, config.level);
       inputLocked = false;
       if (action.type === 'play') doPlay(action.cardId);
       else doPass();
-    }, randomBetween(CPU_THINK_MS));
+    }, randomBetween(delay));
   }
 
   // ---------- 終了処理 ----------
@@ -317,9 +355,12 @@ export function mount(root, config, { onExit }) {
     banner.className = 'kgb-turn-banner';
 
     const humanWon = !isCpuMode || state.winner === 0;
-    const title = isCpuMode
-      ? (state.winner === 0 ? text.winYou : text.winCpu)
-      : (state.winner === 0 ? text.winRed : text.winBlue);
+    let title;
+    if (isCpuMode) {
+      title = state.winner === 0 ? text.winYou : names[state.winner] + text.winSuffix;
+    } else {
+      title = state.winner === 0 ? text.winRed : text.winBlue;
+    }
     let detail = state.endReason === 'empty' ? text.reasonEmpty : text.reasonPassOver;
     if (!humanWon) detail += `\n${text.playAgainTone}`; // ネガティブ演出禁止
 
@@ -392,7 +433,7 @@ export function mount(root, config, { onExit }) {
     resultOverlay.replaceChildren();
     needCells = [];
 
-    state = createGame();
+    state = createGame({ playerCount });
     // 場のマスを初期状態に戻し、7だけ置く
     cellEls.forEach((cell, id) => {
       cell.textContent = '';

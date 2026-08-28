@@ -50,6 +50,10 @@ export const text = {
   handoverTap: 'タップして スタート',
   reasonEmpty: 'てふだを ぜんぶ だした！',
   reasonPassOver: 'パスが なくなった',
+  robotsLabel: 'ロボットの かず',
+  turnSuffix: 'の ばん',   // 「ロボット2の ばん」のように名前と組み合わせる
+  winSuffix: 'の かち！',
+  retireSuffix: 'は パスが なくなった',
 
   // 結果画面（ネガティブ表現禁止。「またあそぼう！」トーン）
   movesLabel: 'めくった かいすう',
