@@ -9,8 +9,9 @@ import { mount as mountMemory } from './games/memory/ui.js';
 import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
 import { mount as mountTictactoe } from './games/tictactoe/ui.js';
+import { mount as mountMole } from './games/mole/ui.js';
 
-const APP_VERSION = 'v0.5.1';
+const APP_VERSION = 'v0.6';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -18,6 +19,7 @@ const gameMounters = {
   othello: mountOthello,
   sevens: mountSevens,
   tictactoe: mountTictactoe,
+  mole: mountMole,
 };
 
 const screens = {
@@ -41,6 +43,13 @@ const LEVEL_OPTIONS = [
 ];
 
 const setupConfigs = {
+  mole: {
+    defaults: { mode: 'solo', difficulty: 'easy' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['two', text.modeTwo]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+    ],
+  },
   tictactoe: {
     defaults: { mode: 'cpu', level: 'weak' },
     groups: [

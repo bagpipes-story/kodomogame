@@ -1,0 +1,148 @@
+/* mole.css — もぐらたたき（v0.6）
+   キャラクターの出入りはtranslateYのみ（§9アニメ規定）。穴のoverflowで隠す */
+
+.kgb-mole {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ---------- スコア（数唱: 大きな数字） ---------- */
+
+.kgb-mole-score-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  min-height: 64px;
+}
+
+.kgb-mole-player {
+  font-size: 22px;
+  margin-right: 8px;
+}
+
+.kgb-mole-score {
+  font-size: 52px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.kgb-mole-score.is-pop {
+  animation: kgbScorePop 0.25s ease;
+}
+
+@keyframes kgbScorePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+.kgb-mole-score-unit {
+  font-size: 22px;
+}
+
+/* ---------- 残り時間（バーはscaleXのみで動かす） ---------- */
+
+.kgb-mole-time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 0 4px;
+}
+
+.kgb-mole-time-bar {
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  background: rgba(74, 63, 53, 0.12);
+  overflow: hidden;
+}
+
+.kgb-mole-time-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 7px;
+  background: var(--kgb-color-mole);
+  transform-origin: left center;
+  transition: transform 1s linear;
+}
+
+.kgb-mole-time-num {
+  font-size: 16px;
+  opacity: 0.6;
+  min-width: 64px;
+  text-align: right;
+}
+
+/* ---------- コンボ／ちょうちょメッセージ ---------- */
+
+.kgb-mole-status {
+  min-height: 32px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--kgb-accent);
+}
+
+.kgb-mole-status.is-oops {
+  color: #4a63b8;
+}
+
+/* ---------- 3×3の穴 ---------- */
+
+.kgb-mole-field {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+  margin: 8px auto 0;
+}
+
+.kgb-mole-hole {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  background: #efe3cd;
+  /* キャラクターが穴の下から出てくるように見せる */
+  overflow: hidden;
+  cursor: pointer;
+  /* マルチタッチ（両手たたき）対応 */
+  touch-action: manipulation;
+}
+
+.kgb-mole-pit {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 8%;
+  height: 22%;
+  border-radius: 50%;
+  background: #8a6a4e;
+  pointer-events: none;
+}
+
+.kgb-mole-char {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12%;
+  text-align: center;
+  font-size: 52px;
+  line-height: 1;
+  transform: translateY(140%);
+  transition: transform 0.12s ease-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.kgb-mole-char.is-up {
+  transform: translateY(0);
+}
+
+/* たたかれた瞬間: ぺしゃっとつぶれる（transformのみ） */
+.kgb-mole-char.is-hit {
+  transform: translateY(30%) scaleY(0.5);
+  transition: transform 0.1s ease-in;
+}

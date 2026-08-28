@@ -73,6 +73,16 @@ export const text = {
   reachLabel: 'あとひとつ！',
   drawStrong: 'ひきわけ！ふたりとも つよい！',
 
+  // もぐらたたき
+  difficultyLabel: 'むずかしさ',
+  readyTitle: 'じゅんびは いいかな？',
+  moleCountSuffix: ' ひき',
+  moleResultPrefix: 'きょうは ',
+  moleResultSuffix: ' ひき たたけたね！',
+  comboSuffix: 'こ つづけて！',
+  butterflyOops: 'あっ、ちょうちょさん！',
+  secondsSuffix: ' びょう',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {

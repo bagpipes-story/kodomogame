@@ -107,6 +107,27 @@ export function playTurn() {
   playTone(440, 0.09, 'sine', 0.1);
 }
 
+// もぐら出現音（ひかえめに）
+export function playPop() {
+  playTone(520, 0.05, 'triangle', 0.07);
+}
+
+// もぐらヒット音（ぽこっ）
+export function playBonk() {
+  playNotes([
+    { freq: 240, at: 0, dur: 0.07 },
+    { freq: 180, at: 0.05, dur: 0.09 },
+  ], 'square', 0.12);
+}
+
+// ちょうちょをたたいてしまった音（やわらかく。ネガティブに響かせない）
+export function playFlutter() {
+  playNotes([
+    { freq: 620, at: 0, dur: 0.1 },
+    { freq: 470, at: 0.1, dur: 0.16 },
+  ], 'sine', 0.09);
+}
+
 // 勝利ファンファーレ（ドミソド）
 export function playWin() {
   playNotes([
