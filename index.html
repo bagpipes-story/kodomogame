@@ -10,6 +10,7 @@
   <!-- 仮のfavicon（404防止）。正式なアイコンはv0.7で追加する -->
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/games/memory.css">
 </head>
 <body>
 
@@ -27,17 +28,49 @@
     </footer>
   </section>
 
-  <!-- ダミー画面（v0.1では全ゲーム共通。v0.2以降でゲーム画面に置き換える） -->
-  <section id="screen-game" class="kgb-screen" hidden>
+  <!-- あそびかた設定画面（モード・カードのかず・つよさを選んでスタート） -->
+  <section id="screen-setup" class="kgb-screen" hidden>
     <header class="kgb-screen-header">
-      <button id="backButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
-      <h2 id="gameTitle" class="kgb-screen-title"></h2>
+      <button id="setupBackButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 id="setupTitle" class="kgb-screen-title"></h2>
+    </header>
+    <div id="setupBody" class="kgb-setup-body">
+      <!-- 選択肢グループはapp.jsが生成する -->
+    </div>
+    <button id="startButton" class="kgb-start-button" type="button" data-i18n="start"></button>
+  </section>
+
+  <!-- ゲーム画面（中身は各ゲームのui.jsがgameRootに描画する） -->
+  <section id="screen-play" class="kgb-screen" hidden>
+    <header class="kgb-screen-header">
+      <button id="playBackButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 id="playTitle" class="kgb-screen-title"></h2>
+    </header>
+    <div id="gameRoot" class="kgb-game-root"></div>
+  </section>
+
+  <!-- ダミー画面（未実装ゲーム用。全ゲーム実装後に削除） -->
+  <section id="screen-dummy" class="kgb-screen" hidden>
+    <header class="kgb-screen-header">
+      <button id="dummyBackButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 id="dummyTitle" class="kgb-screen-title"></h2>
     </header>
     <div class="kgb-dummy-body">
-      <div id="gameIcon" class="kgb-dummy-icon" aria-hidden="true"></div>
+      <div id="dummyIcon" class="kgb-dummy-icon" aria-hidden="true"></div>
       <p class="kgb-dummy-message" data-i18n="preparing"></p>
     </div>
   </section>
+
+  <!-- やめる確認ダイアログ（ゲーム中の誤タップ対策。仕様§3.1） -->
+  <div id="quitOverlay" class="kgb-overlay" hidden>
+    <div class="kgb-dialog">
+      <p class="kgb-dialog-message" data-i18n="quitMessage"></p>
+      <div class="kgb-dialog-buttons">
+        <button id="quitYesButton" class="kgb-dialog-button" type="button" data-i18n="quitYes"></button>
+        <button id="quitNoButton" class="kgb-dialog-button kgb-dialog-primary" type="button" data-i18n="quitNo"></button>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="js/app.js"></script>
 </body>

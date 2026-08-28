@@ -1,0 +1,87 @@
+/* memory.css — 神経衰弱の盤面（v0.2） */
+
+.kgb-memory {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.kgb-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+/* カードはボタン。めくりは.is-open/.is-matchedのclass切り替えだけで表現する */
+.kgb-card {
+  position: relative;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  aspect-ratio: 3 / 4;
+  /* 3D回転の視点。カードごとに設定するとめくれ方が自然になる */
+  perspective: 500px;
+}
+
+/* むずかしい(24枚)は縦に入り切らないため平たいカードにする（iPhone SE対策） */
+.kgb-grid-hard .kgb-card {
+  aspect-ratio: 4 / 3;
+}
+
+.kgb-card-inner {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease;
+}
+
+.kgb-card.is-open .kgb-card-inner,
+.kgb-card.is-matched .kgb-card-inner {
+  transform: rotateY(180deg);
+}
+
+.kgb-card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: clamp(24px, 9vw, 44px);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.kgb-grid-hard .kgb-card-face {
+  font-size: clamp(18px, 7vw, 32px);
+}
+
+.kgb-card-back {
+  background: var(--kgb-color-memory);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-card-front {
+  background: var(--kgb-white);
+  transform: rotateY(180deg);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+/* 一致したカードはジャンプして表のまま残る（仕様§4.3の演出） */
+.kgb-card.is-matched {
+  pointer-events: none;
+}
+
+.kgb-card.is-matched .kgb-card-inner {
+  animation: kgbCardJump 0.45s ease;
+}
+
+@keyframes kgbCardJump {
+  0% { transform: rotateY(180deg) scale(1); }
+  40% { transform: rotateY(180deg) scale(1.18); }
+  100% { transform: rotateY(180deg) scale(1); }
+}
