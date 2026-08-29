@@ -6,12 +6,12 @@ export const ROUND_SECONDS = 30;
 export const HOLE_COUNT = 9;
 
 // 出現間隔・同時最大数・ちょうちょ出現率・穴の数で難易度を表現（仕様§4.7）
-// おとな: 穴2倍(18こ)＋高速＋ちょうちょ多め。保護者向けの本気モード
+// おとな: 穴4倍(6×6=36こ)＋高速＋ちょうちょ多め。保護者向けの本気モード
 export const DIFFICULTY = {
   easy: { spawnMs: 1200, maxUp: 1, butterflyRate: 0, holeCount: 9 },
   normal: { spawnMs: 900, maxUp: 2, butterflyRate: 0.15, holeCount: 9 },
   hard: { spawnMs: 650, maxUp: 3, butterflyRate: 0.25, holeCount: 9 },
-  adult: { spawnMs: 450, maxUp: 4, butterflyRate: 0.35, holeCount: 18 },
+  adult: { spawnMs: 450, maxUp: 4, butterflyRate: 0.35, holeCount: 36 },
 };
 
 export function createGame({ difficulty = 'easy', rng = Math.random } = {}) {

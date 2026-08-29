@@ -95,12 +95,12 @@ function makeRng(values) {
 // ---------- おとなモード（穴2倍・高速） ----------
 
 {
-  assert.strictEqual(DIFFICULTY.adult.holeCount, 18, 'おとなは穴2倍の18こ');
+  assert.strictEqual(DIFFICULTY.adult.holeCount, 36, 'おとなは6×6の36こ');
   assert.ok(DIFFICULTY.adult.spawnMs < DIFFICULTY.hard.spawnMs, 'むずかしいより速い');
   assert.ok(DIFFICULTY.adult.butterflyRate > DIFFICULTY.hard.butterflyRate, 'ちょうちょも多い');
 
   const state = createGame({ difficulty: 'adult', rng: makeRng([0.0, 0.9, 0.3, 0.9, 0.6, 0.9, 0.85, 0.9]) });
-  assert.strictEqual(state.holes.length, 18, '盤面は18穴');
+  assert.strictEqual(state.holes.length, 36, '盤面は36穴');
   for (let i = 0; i < 4; i++) assert.ok(spawn(state) !== null, `${i + 1}体目が出る`);
   assert.strictEqual(spawn(state), null, '同時4体まで');
   const upIndexes = state.holes.map((k, i) => (k ? i : -1)).filter((i) => i >= 0);

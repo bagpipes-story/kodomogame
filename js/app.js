@@ -11,7 +11,7 @@ import { mount as mountSevens } from './games/sevens/ui.js';
 import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 import { mount as mountMole } from './games/mole/ui.js';
 
-const APP_VERSION = 'v0.6.1';
+const APP_VERSION = 'v0.6.2';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

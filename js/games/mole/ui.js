@@ -94,7 +94,7 @@ export function mount(root, config, { onExit }) {
 
   // 3×3の穴。キャラクターのspanも先に作っておく
   const field = document.createElement('div');
-  // おとなモードは穴2倍(18こ)を6列で並べる
+  // おとなモードは6×6=36この穴を並べる
   field.className = holeCount > 9 ? 'kgb-mole-field is-wide' : 'kgb-mole-field';
   const charEls = [];
   {
