@@ -12,7 +12,7 @@ import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 import { mount as mountMole } from './games/mole/ui.js';
 import { mount as mountOldmaid } from './games/oldmaid/ui.js';
 
-const APP_VERSION = 'v0.7';
+const APP_VERSION = 'v0.7.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -49,9 +49,9 @@ const setupConfigs = {
     defaults: { mode: 'cpu', robots: '2', size: 'easy', level: 'weak' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
-      { key: 'robots', label: text.robotsLabel, options: [['1', '1だい'], ['2', '2だい']], cpuOnly: true },
+      { key: 'robots', label: text.omOppCountLabel, options: [['1', '1'], ['2', '2'], ['3', '3'], ['4', '4'], ['5', '5']], cpuOnly: true },
       { key: 'size', label: text.sizeLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal]] },
-      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+      { key: 'level', label: text.omOppLevelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
     ],
   },
   mole: {
@@ -193,8 +193,8 @@ function buildSetupScreen(gameId) {
     label.textContent = group.label;
 
     const row = document.createElement('div');
-    // 4択以上は1行に収まらないため2×2のグリッドにする
-    row.className = group.options.length > 3 ? 'kgb-option-row is-grid' : 'kgb-option-row';
+    // 文字ラベル4つは1行に収まらないため2×2にする（数字だけの5択は1行のまま）
+    row.className = group.options.length === 4 ? 'kgb-option-row is-grid' : 'kgb-option-row';
     for (const [value, optionLabel] of group.options) {
       const button = document.createElement('button');
       button.type = 'button';

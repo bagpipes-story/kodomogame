@@ -86,14 +86,24 @@ export const text = {
 
   // ばばぬき
   omDrawPrompt: 'カードを 1まい えらんでね',
-  omDrewSuffix: 'が ひいた！',
+  omDrawFromSuffix: ' から 1まい えらんでね',
+  omRobotDrawMid: 'は ',
+  omRobotDrawSuffix: ' から ひくよ…',
   omPairMade: 'ペアが できた！',
+  omPairMini: 'ペア！',
   omShuffled: 'まぜまぜ！',
   omFinishedSuffix: 'は あがり！',
+  omFinishedLabel: 'あがり！',
   omLoserPrefix: 'ばばを もってたのは ',
   omLoserBang: '！',
   omEscaped: 'にげきれた！',
   omRankSuffix: 'ぬけ',
+  omDealing: 'カードを くばるよ！',
+  omDropPairs: 'おなじ すうじの ペアは すてるよ！',
+  omOppCountLabel: 'あいての かず',
+  omOppLevelLabel: 'あいての つよさ',
+  // 対戦あいてのどうぶつたち（人と対戦している感を出すキャラクター）
+  omFriends: ['くまさん', 'うさぎさん', 'ねこさん', 'ぱんださん', 'ひよこさん'],
 
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',

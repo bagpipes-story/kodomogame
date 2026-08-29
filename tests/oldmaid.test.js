@@ -147,7 +147,7 @@ function makeRng(values) {
 
 // ---------- 通しプレイ: ランダムに引き続けて必ず決着する ----------
 
-for (const [smallDeck, playerCount] of [[true, 3], [false, 3], [true, 2], [false, 4]]) {
+for (const [smallDeck, playerCount] of [[true, 3], [false, 3], [true, 2], [false, 4], [true, 6], [false, 6]]) {
   const rng = makeRng([0.13, 0.67, 0.42, 0.91, 0.28, 0.55]);
   const state = createGame({ smallDeck, playerCount, rng });
   let guard = 0;

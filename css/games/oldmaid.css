@@ -7,34 +7,158 @@
   flex: 1;
 }
 
-/* ---------- 相手バッジ ---------- */
+/* ---------- おともだちの席（テーブル型レイアウト） ---------- */
 
-.kgb-om-opp-area {
+.kgb-om-table {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-height: 100px;
+}
+
+.kgb-om-seat {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: var(--kgb-white);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+  flex: 0 1 70px;
+  min-width: 56px;
 }
 
-.kgb-om-opp {
+/* 手番の子は光って弾む（transformのみ） */
+.kgb-om-seat.is-active {
+  border-color: var(--kgb-accent);
+  animation: kgbSeatBounce 0.9s ease-in-out infinite;
+}
+
+@keyframes kgbSeatBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.kgb-om-seat.is-finished {
+  opacity: 0.55;
+}
+
+.kgb-om-face {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.kgb-om-name {
+  font-size: 14px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+/* あいてが4〜5たいのときは席が狭いので文字と顔を小さく */
+.kgb-om-table.is-crowd .kgb-om-name {
+  font-size: 11px;
+}
+
+.kgb-om-table.is-crowd .kgb-om-face {
+  font-size: 26px;
+}
+
+.kgb-om-table.is-crowd .kgb-om-count {
+  font-size: 13px;
+}
+
+.kgb-om-count {
+  font-size: 15px;
+  font-weight: bold;
+  color: #8a7a66;
+  white-space: nowrap;
+}
+
+/* 自分の席は横ならび */
+.kgb-om-me-row {
+  display: flex;
+  margin: 6px 0 4px;
+}
+
+.kgb-om-seat.is-me {
+  flex-direction: row;
+  gap: 8px;
+  padding: 4px 14px;
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.kgb-om-seat.is-me .kgb-om-face {
+  font-size: 24px;
+}
+
+.kgb-om-seat.is-me .kgb-om-name {
+  font-size: 18px;
+}
+
+/* おともだちのペア成立チップ */
+.kgb-om-minipair {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 15px;
+  font-weight: bold;
+  padding: 2px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+  animation: kgbPop 0.25s ease;
+  z-index: 5;
+}
+
+.kgb-om-minipair[hidden] {
+  display: none;
+}
+
+/* くばる山札 */
+.kgb-om-deck {
+  width: 44px;
+  height: 60px;
+  margin: 0 auto 6px;
+  border-radius: 8px;
+  background: var(--kgb-color-oldmaid);
+  color: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 5px 14px;
-  border: 2px solid transparent;
-  border-radius: 14px;
-  background: var(--kgb-white);
-  font-size: 20px;
-  box-shadow: 0 3px 0 var(--kgb-shadow);
+  justify-content: center;
+  box-shadow: 3px 3px 0 rgba(74, 63, 53, 0.25), 6px 6px 0 rgba(74, 63, 53, 0.12);
 }
 
-.kgb-om-opp.is-active {
-  border-color: var(--kgb-accent);
+.kgb-om-deck[hidden] {
+  display: none;
 }
 
-.kgb-om-opp.is-retired {
-  opacity: 0.55;
+/* 飛ぶカード（配る・引くの移動演出。transformのみで動かす） */
+.kgb-om-flight {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 36px;
+  height: 50px;
+  border-radius: 6px;
+  background: var(--kgb-color-oldmaid);
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  pointer-events: none;
+  box-shadow: 0 2px 0 var(--kgb-shadow);
+}
+
+.kgb-om-flight[hidden] {
+  display: none;
 }
 
 /* ---------- メッセージ行 ---------- */

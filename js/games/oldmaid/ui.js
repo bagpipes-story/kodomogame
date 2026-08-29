@@ -1,7 +1,8 @@
-// ui.js — ばばぬきの描画・入力（v0.7）
-// 手札はカード単位のノード追加・削除のみ（§9全再描画禁止）。
-// ロボットの手番はタイマー連鎖で進み、全タイマーはtimersで管理してdestroyで解除する。
-// ふたりモードは手札が見えるため交代オーバーレイ必須（仕様§3.3）。
+// ui.js — ばばぬきの描画・入力（v0.7.1）
+// 「人と対戦している」見た目のためのテーブル型レイアウト:
+//   上段にどうぶつのおともだち（アバター）が並び、手番の子が光って弾む。
+//   カードは配るとき・引くときに実際に飛んでいく（transformのみのアニメ）。
+// 手札はカード単位のノード追加・削除のみ（§9）。タイマーは全部timersで管理しdestroyで解除。
 
 import {
   JOKER,
@@ -17,12 +18,16 @@ import { playFlip, playMatch, playPlace, playTurn, playWin, playTap } from '../.
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 
 const SUIT_CHARS = ['♠', '♥', '♦', '♣'];
+const FRIEND_FACES = ['🐻', '🐰', '🐱', '🐼', '🐥'];
 
-const ROBOT_THINK_MS = [700, 1100]; // ロボットが引くまでの間
-const TAKE_SHOW_MS = 450;           // 人間の手札から抜かれるカードのハイライト時間
-const PAIR_SHOW_MS = 1000;          // ペア表示の時間
-const FINISH_TOAST_MS = 900;        // 「◯◯は あがり！」の表示時間
-const SHUFFLE_MS = 800;             // まぜまぜ演出の時間
+const ROBOT_THINK_MS = [800, 1200]; // 「◯◯から ひくよ…」を見せる時間
+const FLIGHT_MS = 450;              // カードが飛ぶ時間
+const DEAL_STEP_MS = 150;           // 配り演出の1枚あたりの間隔
+const TAKE_SHOW_MS = 450;
+const PAIR_SHOW_MS = 1000;
+const MINI_PAIR_MS = 900;
+const FINISH_TOAST_MS = 900;
+const SHUFFLE_MS = 800;
 
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
@@ -34,13 +39,15 @@ export function mount(root, config, { onExit }) {
   const smallDeck = config.size === 'easy';
 
   const names = isCpuMode
-    ? [text.you, ...Array.from({ length: robotCount }, (_, i) =>
-        robotCount === 1 ? text.cpuName : `${text.cpuName}${i + 1}`)]
+    ? [text.you, ...text.omFriends.slice(0, robotCount)]
     : [text.redName, text.blueName];
+  const faces = isCpuMode
+    ? ['😊', ...FRIEND_FACES.slice(0, robotCount)]
+    : ['🔴', '🔵'];
 
   let state = null;
   let inputLocked = true;
-  let shownPlayer = 0; // 手札を表示しているプレイヤー（ふたりモードで交代）
+  let shownPlayer = 0;
 
   function later(fn, ms) {
     const id = setTimeout(() => {
@@ -60,40 +67,56 @@ export function mount(root, config, { onExit }) {
   const container = document.createElement('div');
   container.className = 'kgb-oldmaid';
 
-  const banner = document.createElement('div');
-  banner.className = 'kgb-turn-banner';
-
-  // 相手バッジ（表示中プレイヤー以外の人数ぶん）
-  const oppArea = document.createElement('div');
-  oppArea.className = 'kgb-om-opp-area';
-  const oppBadges = [];
-  for (let i = 0; i < playerCount - 1; i++) {
-    const badge = document.createElement('div');
-    badge.className = 'kgb-om-opp';
-    const nameEl = document.createElement('span');
-    const countEl = document.createElement('span');
-    countEl.className = 'kgb-om-opp-count';
-    badge.append(nameEl, countEl);
-    oppArea.append(badge);
-    oppBadges.push({ badge, nameEl, countEl });
+  // おともだち（対戦あいて）のアバター列
+  const tableRow = document.createElement('div');
+  tableRow.className = playerCount - 1 >= 4 ? 'kgb-om-table is-crowd' : 'kgb-om-table';
+  const playerEls = []; // 全プレイヤーぶん（自分も含む。自分は下段に置く）
+  for (let p = 0; p < playerCount; p++) {
+    const seat = document.createElement('div');
+    seat.className = 'kgb-om-seat';
+    const face = document.createElement('div');
+    face.className = 'kgb-om-face';
+    face.textContent = faces[p];
+    const nameEl = document.createElement('div');
+    nameEl.className = 'kgb-om-name';
+    nameEl.textContent = names[p];
+    const countEl = document.createElement('div');
+    countEl.className = 'kgb-om-count';
+    const miniPair = document.createElement('div');
+    miniPair.className = 'kgb-om-minipair';
+    miniPair.hidden = true;
+    seat.append(face, nameEl, countEl, miniPair);
+    playerEls.push({ seat, face, countEl, miniPair });
   }
 
-  // メッセージ行（えらんでね／◯◯が ひいた！ など）
+  // 中央: くばる山札（演出用）＋メッセージ
+  const deckEl = document.createElement('div');
+  deckEl.className = 'kgb-om-deck';
+  deckEl.textContent = '★';
+  deckEl.hidden = true;
+
   const messageEl = document.createElement('div');
   messageEl.className = 'kgb-om-message';
 
-  // 引き札の扇（となりの手札のうら面）
   const fan = document.createElement('div');
   fan.className = 'kgb-om-fan';
 
-  // ペア成立の表示（2枚を大きく見せる）
+  // 自分の席（アバター＋名前）
+  const meRow = document.createElement('div');
+  meRow.className = 'kgb-om-me-row';
+
+  const handEls = [document.createElement('div'), document.createElement('div')];
+  for (const el of handEls) el.className = 'kgb-om-hand';
+
+  // 飛ぶカード（使い回しの1枚。transformで移動）
+  const flightEl = document.createElement('div');
+  flightEl.className = 'kgb-om-flight';
+  flightEl.textContent = '★';
+  flightEl.hidden = true;
+
   const pairPopup = document.createElement('div');
   pairPopup.className = 'kgb-om-pair-popup';
   pairPopup.hidden = true;
-
-  // 手札（ふたりモードは2人ぶん作って切り替え）
-  const handEls = [document.createElement('div'), document.createElement('div')];
-  for (const el of handEls) el.className = 'kgb-om-hand';
 
   const handover = document.createElement('div');
   handover.className = 'kgb-handover';
@@ -113,8 +136,20 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(banner, oppArea, messageEl, fan, handEls[0], handEls[1]);
-  root.append(container, pairPopup, handover, toast, resultOverlay);
+  container.append(tableRow, deckEl, messageEl, fan, meRow, handEls[0], handEls[1]);
+  root.append(container, flightEl, pairPopup, handover, toast, resultOverlay);
+
+  // 席の配置: 表示中プレイヤーは下段(meRow)、それ以外は上段(tableRow)
+  function arrangeSeats() {
+    for (let p = 0; p < playerCount; p++) {
+      if (p === shownPlayer) meRow.append(playerEls[p].seat);
+      else tableRow.append(playerEls[p].seat);
+    }
+    playerEls[shownPlayer].seat.classList.add('is-me');
+    for (let p = 0; p < playerCount; p++) {
+      if (p !== shownPlayer) playerEls[p].seat.classList.remove('is-me');
+    }
+  }
 
   // ---------- カードのDOM ----------
 
@@ -154,7 +189,6 @@ export function mount(root, config, { onExit }) {
     handEls[1].hidden = shownPlayer !== 1;
   }
 
-  // 引いたカードを手札の正しい位置に挿し込む（差分更新）
   function insertCardNode(player, id) {
     const index = state.hands[player].indexOf(id);
     const el = handEls[player];
@@ -165,7 +199,6 @@ export function mount(root, config, { onExit }) {
     handEls[player].querySelector(`[data-card-id="${id}"]`)?.remove();
   }
 
-  // 扇（うら面）を引き先の枚数ぶん並べる
   function buildFan() {
     const source = sourceOf(state);
     const fragment = document.createDocumentFragment();
@@ -178,19 +211,15 @@ export function mount(root, config, { onExit }) {
   }
 
   function updateInfo() {
-    const oppPlayers = [];
     for (let p = 0; p < playerCount; p++) {
-      if (p !== shownPlayer) oppPlayers.push(p);
+      const entry = playerEls[p];
+      const finished = !state.hands[p].length;
+      entry.countEl.textContent = finished
+        ? text.omFinishedLabel
+        : state.hands[p].length + text.sheetsSuffix;
+      entry.seat.classList.toggle('is-active', !state.finished && state.current === p);
+      entry.seat.classList.toggle('is-finished', finished && !state.finished);
     }
-    oppBadges.forEach((entry, i) => {
-      const p = oppPlayers[i];
-      entry.nameEl.textContent = names[p];
-      entry.countEl.textContent = text.remainPrefix + state.hands[p].length + text.sheetsSuffix;
-      entry.badge.classList.toggle('is-active', !state.finished && state.current === p);
-      entry.badge.classList.toggle('is-retired', !state.hands[p].length);
-    });
-    banner.textContent = names[state.current] + text.turnSuffix;
-    banner.className = `kgb-turn-banner is-blinking kgb-player-${state.current % 2}`;
   }
 
   function showToast(message, ms, next) {
@@ -202,21 +231,63 @@ export function mount(root, config, { onExit }) {
     }, ms);
   }
 
-  // ペアの2枚（またはひいた1枚）を中央に見せる
-  function showDrawn(cards, isPair, next) {
+  // ---------- カードが飛ぶ演出（fromEl→toElへtransformで移動） ----------
+
+  function flyCard(fromEl, toEl, next) {
+    const from = fromEl.getBoundingClientRect();
+    const to = toEl.getBoundingClientRect();
+    flightEl.hidden = false;
+    flightEl.style.transition = 'none';
+    flightEl.style.transform =
+      `translate(${from.left + from.width / 2 - 18}px, ${from.top + from.height / 2 - 25}px)`;
+    void flightEl.offsetWidth; // reflowを挟んでアニメを確実に開始する
+    flightEl.style.transition = `transform ${FLIGHT_MS}ms ease`;
+    flightEl.style.transform =
+      `translate(${to.left + to.width / 2 - 18}px, ${to.top + to.height / 2 - 25}px)`;
+    later(() => {
+      flightEl.hidden = true;
+      next?.();
+    }, FLIGHT_MS + 30);
+  }
+
+  // 自分のペア: 中央に大きく／おともだちのペア: その子の上に小さく「ペア！」
+  function showOwnPair(cards, next) {
     pairPopup.replaceChildren();
-    const label = document.createElement('p');
-    label.className = 'kgb-om-pair-label';
-    label.textContent = isPair ? text.omPairMade : '';
     const row = document.createElement('div');
     row.className = 'kgb-om-pair-cards';
     for (const id of cards) row.append(cardNode(id, true));
+    const label = document.createElement('p');
+    label.className = 'kgb-om-pair-label';
+    label.textContent = text.omPairMade;
     pairPopup.append(row, label);
     pairPopup.hidden = false;
     later(() => {
       pairPopup.hidden = true;
       next?.();
     }, PAIR_SHOW_MS);
+  }
+
+  function showMiniPair(player, rank, next) {
+    const mini = playerEls[player].miniPair;
+    mini.textContent = `${rank} ${text.omPairMini}`;
+    mini.hidden = false;
+    later(() => {
+      mini.hidden = true;
+      next?.();
+    }, MINI_PAIR_MS);
+  }
+
+  function showDrawnSingle(card, next) {
+    pairPopup.replaceChildren();
+    const row = document.createElement('div');
+    row.className = 'kgb-om-pair-cards';
+    row.append(cardNode(card, true));
+    pairPopup.append(row);
+    pairPopup.hidden = false;
+    later(() => {
+      pairPopup.hidden = true;
+      next?.();
+    }, PAIR_SHOW_MS * 0.8);
   }
 
   // ---------- ターン進行 ----------
@@ -232,7 +303,6 @@ export function mount(root, config, { onExit }) {
     }
     updateInfo();
     if (!isCpuMode && state.current !== shownPlayer) {
-      // ふたりモード: 手番の人に持ち替えてもらう
       inputLocked = true;
       handoverTitle.textContent = names[state.current] + text.turnSuffix;
       handover.hidden = false;
@@ -249,6 +319,7 @@ export function mount(root, config, { onExit }) {
     playTap();
     handover.hidden = true;
     shownPlayer = state.current;
+    arrangeSeats();
     updateHandVisibility();
     buildHand(shownPlayer);
     updateInfo();
@@ -257,17 +328,17 @@ export function mount(root, config, { onExit }) {
 
   function prepareHumanDraw() {
     buildFan();
-    messageEl.textContent = text.omDrawPrompt;
-    // つよいロボットは引かれる前に手札をまぜる（仕様§4.4）
-    if (isCpuMode && config.level === 'strong' && sourceOf(state) !== 0) {
+    const source = sourceOf(state);
+    messageEl.textContent = names[source] + text.omDrawFromSuffix;
+    if (isCpuMode && config.level === 'strong' && source !== 0) {
       inputLocked = true;
       fan.classList.add('is-shuffling');
-      messageEl.textContent = text.omShuffled;
+      messageEl.textContent = names[source] + 'の ' + text.omShuffled;
       playTurn();
       later(() => {
         shuffleSourceHand(state);
         fan.classList.remove('is-shuffling');
-        messageEl.textContent = text.omDrawPrompt;
+        messageEl.textContent = names[source] + text.omDrawFromSuffix;
         inputLocked = false;
       }, SHUFFLE_MS);
       return;
@@ -277,34 +348,39 @@ export function mount(root, config, { onExit }) {
 
   function scheduleRobotDraw() {
     inputLocked = true;
-    fan.replaceChildren(); // ロボットの手番中は扇をしまう
-    messageEl.textContent = '';
+    fan.replaceChildren();
+    const robot = state.current;
+    const source = sourceOf(state);
+    // だれがだれから引くのかを先に見せる（人と遊んでいる感）
+    messageEl.textContent = names[robot] + text.omRobotDrawMid + names[source] + text.omRobotDrawSuffix;
     later(() => {
-      const robot = state.current;
-      const source = sourceOf(state);
       const pos = Math.floor(Math.random() * state.hands[source].length);
       const takenId = state.hands[source][pos];
+      const fromEl = source === shownPlayer
+        ? (handEls[shownPlayer].querySelector(`[data-card-id="${takenId}"]`) ?? playerEls[source].seat)
+        : playerEls[source].seat;
+      const toEl = playerEls[robot].seat;
 
-      const apply = () => {
-        const result = drawAt(state, pos);
-        messageEl.textContent = names[robot] + text.omDrewSuffix;
-        resolveDraw(result, false);
+      const doFly = () => {
+        playFlip();
+        flyCard(fromEl, toEl, () => {
+          const result = drawAt(state, pos);
+          messageEl.textContent = '';
+          resolveDraw(result, false);
+        });
       };
       if (source === shownPlayer) {
-        // 自分の手札から抜かれるカードを一瞬ハイライトしてから消す
-        const node = handEls[shownPlayer].querySelector(`[data-card-id="${takenId}"]`);
-        node?.classList.add('is-taken');
+        fromEl.classList?.add('is-taken');
         later(() => {
           removeCardNode(shownPlayer, takenId);
-          apply();
+          doFly();
         }, TAKE_SHOW_MS);
       } else {
-        apply();
+        doFly();
       }
     }, randomBetween(ROBOT_THINK_MS));
   }
 
-  // 引いた結果の共通処理（人間・ロボット両方）
   function resolveDraw(result, byShownHuman) {
     updateInfo();
     const finishToasts = [];
@@ -321,50 +397,103 @@ export function mount(root, config, { onExit }) {
     };
 
     if (result.pair) {
-      playMatch();
-      if (byShownHuman) emitPraise('found_pair');
-      // 「おなじさがし」: そろった2枚を見せる（仕様§4.4の補助）
-      showDrawn(result.pair, true, proceed);
+      if (byShownHuman) {
+        // 自分のペア: 大きく見せて一致音
+        playMatch();
+        emitPraise('found_pair');
+        showOwnPair(result.pair, proceed);
+      } else {
+        // おともだちのペア: その子の上に小さく＋ひかえめな音
+        playPlace();
+        showMiniPair(result.player, rankOf(result.pair[0]), proceed);
+      }
     } else if (byShownHuman) {
       playFlip();
-      showDrawn([result.card], false, () => {
+      showDrawnSingle(result.card, () => {
         insertCardNode(shownPlayer, result.card);
         playPlace();
         proceed();
       });
     } else {
-      playFlip();
       proceed();
     }
   }
 
-  // 人間が扇からカードを選ぶ
   fan.addEventListener('click', (event) => {
     const back = event.target.closest('.kgb-om-back');
     if (!back) return;
     if (inputLocked || state.finished || !isHumanTurn() || state.current !== shownPlayer) return;
     inputLocked = true;
     const pos = Number(back.dataset.pos);
-    const result = drawAt(state, pos);
-    if (!result.ok) {
-      inputLocked = false;
-      return;
-    }
-    fan.replaceChildren();
-    messageEl.textContent = '';
-    resolveDraw(result, true);
+    const source = sourceOf(state);
+    // 引いたカードが自分の席へ飛んでくる
+    playFlip();
+    flyCard(back, playerEls[shownPlayer].seat, () => {
+      const result = drawAt(state, pos);
+      if (!result.ok) {
+        inputLocked = false;
+        return;
+      }
+      fan.replaceChildren();
+      messageEl.textContent = '';
+      resolveDraw(result, true);
+    });
   }, { signal: abort.signal });
+
+  // ---------- くばる演出（スタート時） ----------
+
+  function playDealIntro() {
+    inputLocked = true;
+    deckEl.hidden = false;
+    fan.replaceChildren();
+    handEls[0].replaceChildren();
+    handEls[1].replaceChildren();
+    messageEl.textContent = text.omDealing;
+
+    // 1人2枚ぶんだけ飛ばして「配った感」を出す（全部飛ばすと長すぎるため）
+    const flights = [];
+    for (let round = 0; round < 2; round++) {
+      for (let p = 0; p < playerCount; p++) flights.push(p);
+    }
+    flights.forEach((p, i) => {
+      later(() => {
+        playFlip();
+        flyCard(deckEl, playerEls[p].seat, null);
+      }, i * DEAL_STEP_MS);
+    });
+
+    later(() => {
+      deckEl.hidden = true;
+      buildHand(shownPlayer);
+      if (!isCpuMode) buildHand(1 - shownPlayer);
+      playPlace();
+      updateInfo();
+      // 初期ペアの自動捨て
+      messageEl.textContent = text.omDropPairs;
+      const myDiscards = state.initialDiscards[shownPlayer];
+      const step2 = () => {
+        messageEl.textContent = '';
+        advanceTurn();
+      };
+      later(() => {
+        if (myDiscards.length) {
+          playMatch();
+          showOwnPair(myDiscards[0], step2); // 代表して1くみ見せる
+        } else {
+          step2();
+        }
+      }, 900);
+    }, flights.length * DEAL_STEP_MS + FLIGHT_MS + 200);
+  }
 
   // ---------- 終了処理（保存はここで1回だけ。§9） ----------
 
   function finishGame() {
     emitPraise('finished_game');
-    banner.className = 'kgb-turn-banner';
     fan.replaceChildren();
     messageEl.textContent = '';
     updateInfo();
 
-    const humanIndex = isCpuMode ? 0 : null;
     const humanLost = isCpuMode ? state.loser === 0 : false;
     recordPlay('oldmaid', { won: isCpuMode && state.loser !== 0 });
 
@@ -379,7 +508,6 @@ export function mount(root, config, { onExit }) {
       title = text.omLoserPrefix + names[state.loser] + text.omLoserBang;
     }
 
-    // あがった順とばばもちを一覧で見せる
     const lines = state.finishedOrder.map(
       (player, i) => `${i + 1}${text.omRankSuffix}: ${names[player]}`,
     );
@@ -463,6 +591,7 @@ export function mount(root, config, { onExit }) {
     inputLocked = true;
     toast.hidden = true;
     pairPopup.hidden = true;
+    flightEl.hidden = true;
     handover.hidden = true;
     resultOverlay.hidden = true;
     resultOverlay.replaceChildren();
@@ -470,20 +599,10 @@ export function mount(root, config, { onExit }) {
 
     state = createGame({ smallDeck, playerCount });
     shownPlayer = isCpuMode ? 0 : state.current;
+    arrangeSeats();
     updateHandVisibility();
-    buildHand(0);
-    if (!isCpuMode) buildHand(1);
-    fan.replaceChildren();
     updateInfo();
-
-    // 初期ペアの自動捨てを一言見せてから開始（仕様§4.4のアニメは簡易版）
-    const discarded = state.initialDiscards.reduce((n, d) => n + d.length, 0);
-    if (discarded > 0) {
-      playMatch();
-      showToast(text.omPairMade, 900, advanceTurn);
-    } else {
-      advanceTurn();
-    }
+    playDealIntro();
   }
 
   startRound();
