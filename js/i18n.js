@@ -107,6 +107,23 @@ export const text = {
   // 対戦あいてのどうぶつたち（人と対戦している感を出すキャラクター）
   omFriends: ['くまさん', 'うさぎさん', 'ねこさん', 'ぱんださん', 'ひよこさん'],
 
+  // バランスゲーム
+  shapes: {
+    square: 'ましかく',
+    rect: 'ながしかく',
+    circle: 'まる',
+    triangle: 'さんかく',
+    lshape: 'エルがた',
+  },
+  balanceCount: 'つんだ かず',
+  balanceClear: '30こ つめた！すごい！',
+  balanceResultSuffix: 'こ つめたね！',
+  balanceTip: 'まんなかに のせると つよいよ',
+  balanceCrashSuffix: 'の ブロックが おっこちた！',
+  balanceLeft: 'ひだりへ',
+  balanceRight: 'みぎへ',
+  balanceDrop: 'おとす',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {

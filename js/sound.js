@@ -128,6 +128,23 @@ export function playFlutter() {
   ], 'sine', 0.09);
 }
 
+// ブロック落下音（ひゅっ）
+export function playFall() {
+  playNotes([
+    { freq: 420, at: 0, dur: 0.08 },
+    { freq: 300, at: 0.07, dur: 0.1 },
+  ], 'triangle', 0.1);
+}
+
+// くずれた音（やわらかめのガラガラ。おどろかせすぎない）
+export function playCrash() {
+  playNotes([
+    { freq: 180, at: 0, dur: 0.12 },
+    { freq: 140, at: 0.09, dur: 0.12 },
+    { freq: 110, at: 0.18, dur: 0.16 },
+  ], 'square', 0.09);
+}
+
 // 勝利ファンファーレ（ドミソド）
 export function playWin() {
   playNotes([
