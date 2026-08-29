@@ -95,6 +95,49 @@ export function mount(root, config, { onExit }) {
   deckEl.textContent = '★';
   deckEl.hidden = true;
 
+  // すてば（カード捨て場）: そろったペアがここへ飛んで積み重なる
+  const pileRow = document.createElement('div');
+  pileRow.className = 'kgb-om-pile-row';
+  const pileEl = document.createElement('div');
+  pileEl.className = 'kgb-om-pile';
+  const pileSlot = document.createElement('div');
+  pileSlot.className = 'kgb-om-pile-slot';
+  pileSlot.textContent = text.omPileEmpty;
+  const pileCards = document.createElement('div');
+  pileCards.className = 'kgb-om-pile-cards';
+  const pileCount = document.createElement('div');
+  pileCount.className = 'kgb-om-pile-count';
+  pileCount.hidden = true;
+  pileEl.append(pileSlot, pileCards, pileCount);
+  pileRow.append(pileEl);
+
+  let discards = []; // 捨てられたカード（表示は最新3枚だけ重ねる）
+
+  function renderPile() {
+    const latest = discards.slice(-3);
+    const fragment = document.createDocumentFragment();
+    latest.forEach((id, i) => {
+      const card = cardNode(id, true);
+      // 少しずつ傾けて「積み重なった」見た目にする
+      card.style.transform = `rotate(${(i - 1) * 9}deg)`;
+      fragment.append(card);
+    });
+    pileCards.replaceChildren(fragment);
+    pileSlot.hidden = discards.length > 0;
+    pileCount.hidden = discards.length === 0;
+    pileCount.textContent = discards.length + text.sheetsSuffix;
+  }
+
+  // fromElからすてばへカードが飛び、着地したら積まれる
+  function flyToPile(fromEl, cards, next) {
+    flyCard(fromEl, pileEl, () => {
+      discards.push(...cards);
+      renderPile();
+      playPlace();
+      next?.();
+    });
+  }
+
   const messageEl = document.createElement('div');
   messageEl.className = 'kgb-om-message';
 
@@ -141,7 +184,7 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(tableRow, deckEl, messageEl, fanOwner, fan, meRow, handEls[0], handEls[1]);
+  container.append(tableRow, deckEl, pileRow, messageEl, fanOwner, fan, meRow, handEls[0], handEls[1]);
   root.append(container, flightEl, pairPopup, handover, toast, resultOverlay);
 
   // 席の配置: 表示中プレイヤーは下段(meRow)、それ以外は上段(tableRow)
@@ -276,15 +319,18 @@ export function mount(root, config, { onExit }) {
     pairPopup.append(row, label);
     pairPopup.hidden = false;
     later(() => {
+      // 見せたペアがすてばへ飛んでいく（位置を読んでからポップアップを消す）
+      flyToPile(pairPopup, cards, next);
       pairPopup.hidden = true;
-      next?.();
     }, PAIR_SHOW_MS);
   }
 
-  function showMiniPair(player, rank, next) {
+  function showMiniPair(player, pair, next) {
     const mini = playerEls[player].miniPair;
-    mini.textContent = `${rank} ${text.omPairMini}`;
+    mini.textContent = `${rankOf(pair[0])} ${text.omPairMini}`;
     mini.hidden = false;
+    // チップ表示と同時に、その子の席からすてばへカードが飛ぶ
+    flyToPile(playerEls[player].seat, pair, null);
     later(() => {
       mini.hidden = true;
       next?.();
@@ -421,8 +467,7 @@ export function mount(root, config, { onExit }) {
         showOwnPair(result.pair, proceed);
       } else {
         // おともだちのペア: その子の上に小さく＋ひかえめな音
-        playPlace();
-        showMiniPair(result.player, rankOf(result.pair[0]), proceed);
+        showMiniPair(result.player, result.pair, proceed);
       }
     } else if (byShownHuman) {
       playFlip();
@@ -485,17 +530,23 @@ export function mount(root, config, { onExit }) {
       if (!isCpuMode) buildHand(1 - shownPlayer);
       playPlace();
       updateInfo();
-      // 初期ペアの自動捨て
+      // 初期ペアの自動捨て（全員ぶんがすてばに積まれる）
       messageEl.textContent = text.omDropPairs;
       const myDiscards = state.initialDiscards[shownPlayer];
+      const allInitial = state.initialDiscards.flat(2);
       const step2 = () => {
+        // 代表演出で加えたぶんを含め、初期ペア全部の枚数に合わせ直す
+        discards = [...allInitial];
+        renderPile();
         messageEl.textContent = '';
         advanceTurn();
       };
       later(() => {
         if (myDiscards.length) {
           playMatch();
-          showOwnPair(myDiscards[0], step2); // 代表して1くみ見せる
+          showOwnPair(myDiscards[0], step2); // 代表して1くみ見せてすてばへ
+        } else if (allInitial.length) {
+          flyToPile(playerEls[sourceOf(state)].seat, [], step2);
         } else {
           step2();
         }
@@ -613,6 +664,8 @@ export function mount(root, config, { onExit }) {
     resultOverlay.hidden = true;
     resultOverlay.replaceChildren();
     resetPraise();
+    discards = [];
+    renderPile();
 
     state = createGame({ smallDeck, playerCount });
     shownPlayer = isCpuMode ? 0 : state.current;
