@@ -100,6 +100,7 @@ export const text = {
   omRankSuffix: 'ぬけ',
   omDealing: 'カードを くばるよ！',
   omDropPairs: 'おなじ すうじの ペアは すてるよ！',
+  omFanOwnerSuffix: 'の てふだ',
   omOppCountLabel: 'あいての かず',
   omOppLevelLabel: 'あいての つよさ',
   // 対戦あいてのどうぶつたち（人と対戦している感を出すキャラクター）

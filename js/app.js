@@ -12,7 +12,7 @@ import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 import { mount as mountMole } from './games/mole/ui.js';
 import { mount as mountOldmaid } from './games/oldmaid/ui.js';
 
-const APP_VERSION = 'v0.7.1';
+const APP_VERSION = 'v0.7.2';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

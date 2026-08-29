@@ -47,6 +47,15 @@
   opacity: 0.55;
 }
 
+/* 引き元の子は前にせり出す（「この子の てふだ から えらんでいる」の見える化） */
+.kgb-om-seat.is-source {
+  border-color: var(--kgb-color-oldmaid);
+  background: #eef2fd;
+  transform: scale(1.14) translateY(4px);
+  transition: transform 0.25s ease;
+  z-index: 2;
+}
+
 .kgb-om-face {
   font-size: 32px;
   line-height: 1;
@@ -170,6 +179,26 @@
   font-weight: bold;
   color: var(--kgb-accent);
   margin-bottom: 4px;
+}
+
+/* 扇の持ち主ラベル（🐻 くまさんの てふだ） */
+.kgb-om-fan-owner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  margin-bottom: 4px;
+  padding: 3px 12px;
+  border-radius: 12px;
+  background: #eef2fd;
+  border: 2px solid var(--kgb-color-oldmaid);
+  font-size: 16px;
+  font-weight: bold;
+  color: #4a63b8;
+}
+
+.kgb-om-fan-owner[hidden] {
+  display: none;
 }
 
 /* ---------- 引き札の扇（うら面） ---------- */

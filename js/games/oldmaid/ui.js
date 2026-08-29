@@ -98,6 +98,11 @@ export function mount(root, config, { onExit }) {
   const messageEl = document.createElement('div');
   messageEl.className = 'kgb-om-message';
 
+  // 「だれの てふだ」から選んでいるかのラベル（扇の持ち主）
+  const fanOwner = document.createElement('div');
+  fanOwner.className = 'kgb-om-fan-owner';
+  fanOwner.hidden = true;
+
   const fan = document.createElement('div');
   fan.className = 'kgb-om-fan';
 
@@ -136,7 +141,7 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(tableRow, deckEl, messageEl, fan, meRow, handEls[0], handEls[1]);
+  container.append(tableRow, deckEl, messageEl, fanOwner, fan, meRow, handEls[0], handEls[1]);
   root.append(container, flightEl, pairPopup, handover, toast, resultOverlay);
 
   // 席の配置: 表示中プレイヤーは下段(meRow)、それ以外は上段(tableRow)
@@ -219,7 +224,16 @@ export function mount(root, config, { onExit }) {
         : state.hands[p].length + text.sheetsSuffix;
       entry.seat.classList.toggle('is-active', !state.finished && state.current === p);
       entry.seat.classList.toggle('is-finished', finished && !state.finished);
+      entry.seat.classList.remove('is-source'); // 引き元の強調は毎回リセットして付け直す
     }
+    fanOwner.hidden = true;
+  }
+
+  // 引き元の子を前にせり出させて「だれの てふだ か」を見せる
+  function highlightSource(source) {
+    playerEls[source].seat.classList.add('is-source');
+    fanOwner.textContent = `${faces[source]} ${names[source]}${text.omFanOwnerSuffix}`;
+    fanOwner.hidden = false;
   }
 
   function showToast(message, ms, next) {
@@ -329,6 +343,7 @@ export function mount(root, config, { onExit }) {
   function prepareHumanDraw() {
     buildFan();
     const source = sourceOf(state);
+    highlightSource(source);
     messageEl.textContent = names[source] + text.omDrawFromSuffix;
     if (isCpuMode && config.level === 'strong' && source !== 0) {
       inputLocked = true;
@@ -352,6 +367,7 @@ export function mount(root, config, { onExit }) {
     const robot = state.current;
     const source = sourceOf(state);
     // だれがだれから引くのかを先に見せる（人と遊んでいる感）
+    if (source !== shownPlayer) playerEls[source].seat.classList.add('is-source');
     messageEl.textContent = names[robot] + text.omRobotDrawMid + names[source] + text.omRobotDrawSuffix;
     later(() => {
       const pos = Math.floor(Math.random() * state.hands[source].length);
@@ -398,7 +414,8 @@ export function mount(root, config, { onExit }) {
 
     if (result.pair) {
       if (byShownHuman) {
-        // 自分のペア: 大きく見せて一致音
+        // 自分のペア: そろった側のカードを手札の表示からも取り除く（消し忘れバグ修正）
+        removeCardNode(shownPlayer, result.pair[1]);
         playMatch();
         emitPraise('found_pair');
         showOwnPair(result.pair, proceed);
