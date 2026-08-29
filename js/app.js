@@ -10,8 +10,9 @@ import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
 import { mount as mountTictactoe } from './games/tictactoe/ui.js';
 import { mount as mountMole } from './games/mole/ui.js';
+import { mount as mountOldmaid } from './games/oldmaid/ui.js';
 
-const APP_VERSION = 'v0.6.2';
+const APP_VERSION = 'v0.7';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -20,6 +21,7 @@ const gameMounters = {
   sevens: mountSevens,
   tictactoe: mountTictactoe,
   mole: mountMole,
+  oldmaid: mountOldmaid,
 };
 
 const screens = {
@@ -43,6 +45,15 @@ const LEVEL_OPTIONS = [
 ];
 
 const setupConfigs = {
+  oldmaid: {
+    defaults: { mode: 'cpu', robots: '2', size: 'easy', level: 'weak' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'robots', label: text.robotsLabel, options: [['1', '1だい'], ['2', '2だい']], cpuOnly: true },
+      { key: 'size', label: text.sizeLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+    ],
+  },
   mole: {
     defaults: { mode: 'solo', difficulty: 'easy' },
     groups: [

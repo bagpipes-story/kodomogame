@@ -84,6 +84,17 @@ export const text = {
   butterflyOops: 'あっ、ちょうちょさん！',
   secondsSuffix: ' びょう',
 
+  // ばばぬき
+  omDrawPrompt: 'カードを 1まい えらんでね',
+  omDrewSuffix: 'が ひいた！',
+  omPairMade: 'ペアが できた！',
+  omShuffled: 'まぜまぜ！',
+  omFinishedSuffix: 'は あがり！',
+  omLoserPrefix: 'ばばを もってたのは ',
+  omLoserBang: '！',
+  omEscaped: 'にげきれた！',
+  omRankSuffix: 'ぬけ',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {

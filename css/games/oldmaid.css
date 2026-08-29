@@ -1,0 +1,175 @@
+/* oldmaid.css — ばばぬき（v0.7）
+   マーク色は7ならべと共通（kgb-suit-N）。ばば=🃏 */
+
+.kgb-oldmaid {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+/* ---------- 相手バッジ ---------- */
+
+.kgb-om-opp-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.kgb-om-opp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--kgb-white);
+  font-size: 20px;
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-om-opp.is-active {
+  border-color: var(--kgb-accent);
+}
+
+.kgb-om-opp.is-retired {
+  opacity: 0.55;
+}
+
+/* ---------- メッセージ行 ---------- */
+
+.kgb-om-message {
+  min-height: 30px;
+  text-align: center;
+  font-size: 21px;
+  font-weight: bold;
+  color: var(--kgb-accent);
+  margin-bottom: 4px;
+}
+
+/* ---------- 引き札の扇（うら面） ---------- */
+
+.kgb-om-fan {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  min-height: 56px;
+  margin-bottom: 10px;
+}
+
+.kgb-om-back {
+  aspect-ratio: 5 / 7;
+  border: none;
+  border-radius: 7px;
+  background: var(--kgb-color-oldmaid);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 16px;
+  box-shadow: 0 2px 0 var(--kgb-shadow);
+  cursor: pointer;
+  padding: 0;
+  /* ドキドキ演出: ゆっくり小さくゆれる（transformのみ） */
+  animation: kgbOmWiggle 1.6s ease-in-out infinite;
+}
+
+.kgb-om-back:nth-child(2n) {
+  animation-delay: 0.4s;
+}
+
+.kgb-om-back:nth-child(3n) {
+  animation-delay: 0.9s;
+}
+
+@keyframes kgbOmWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-3deg) translateY(-2px); }
+  70% { transform: rotate(3deg); }
+}
+
+/* まぜまぜ演出 */
+.kgb-om-fan.is-shuffling .kgb-om-back {
+  animation: kgbOmShuffle 0.25s ease-in-out infinite;
+}
+
+@keyframes kgbOmShuffle {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(6px) rotate(6deg); }
+}
+
+/* ---------- 手札 ---------- */
+
+.kgb-om-hand {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+  margin-top: auto;
+}
+
+.kgb-om-hand[hidden] {
+  display: none;
+}
+
+.kgb-om-card {
+  position: relative;
+  aspect-ratio: 5 / 7;
+  border: none;
+  border-radius: 7px;
+  background: var(--kgb-white);
+  box-shadow: 0 2px 0 var(--kgb-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0;
+  color: var(--kgb-text);
+}
+
+.kgb-om-joker {
+  font-size: 26px;
+}
+
+/* ロボットに抜かれるカードのハイライト */
+.kgb-om-card.is-taken {
+  transform: translateY(-8px) scale(1.08);
+  transition: transform 0.2s ease;
+  outline: 3px solid var(--kgb-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- ペア表示 ---------- */
+
+.kgb-om-pair-popup {
+  position: fixed;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 15;
+  padding: 14px 22px;
+  border-radius: 18px;
+  background: var(--kgb-white);
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  text-align: center;
+}
+
+.kgb-om-pair-popup[hidden] {
+  display: none;
+}
+
+.kgb-om-pair-cards {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.kgb-om-pair-cards .kgb-om-card {
+  width: 56px;
+}
+
+.kgb-om-pair-label {
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--kgb-accent);
+  margin: 8px 0 0;
+  white-space: nowrap;
+}
