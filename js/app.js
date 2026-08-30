@@ -13,7 +13,7 @@ import { mount as mountMole } from './games/mole/ui.js';
 import { mount as mountOldmaid } from './games/oldmaid/ui.js';
 import { mount as mountBalance } from './games/balance/ui.js';
 
-const APP_VERSION = 'v0.8';
+const APP_VERSION = 'v0.8.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

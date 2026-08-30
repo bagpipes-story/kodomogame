@@ -123,6 +123,7 @@ export const text = {
   balanceLeft: 'ひだりへ',
   balanceRight: 'みぎへ',
   balanceDrop: 'おとす',
+  balanceRotate: 'まわす',
 
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',

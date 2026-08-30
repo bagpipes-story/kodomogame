@@ -25,7 +25,6 @@ const SHAPE_COLORS = {
   lshape: '#a5b8f3',
 };
 
-const MOVE_STEP = 26;        // 左右タップ1回の移動量
 const SETTLE_FRAMES = 25;    // 静止とみなす連続フレーム数
 const SETTLE_TIMEOUT_MS = 5000;
 const CRASH_SHOW_MS = 1200;  // 崩れてから結果画面までの時間（⭐マーカー表示）
@@ -45,6 +44,7 @@ export function mount(root, config, { onExit }) {
   let aiming = false;        // 落下前の照準中か
   let previewShape = null;
   let previewX = 0;
+  let previewAngle = 0;      // 落下前の向き（90°単位で回せる）
   let dropping = null;       // 落下中のMatterボディ
   let previewBody = null;    // 照準表示用のゴースト（worldには入れない）
   let stableFrames = 0;
@@ -81,21 +81,15 @@ export function mount(root, config, { onExit }) {
 
   const controls = document.createElement('div');
   controls.className = 'kgb-balance-controls';
-  const leftButton = document.createElement('button');
-  leftButton.type = 'button';
-  leftButton.className = 'kgb-balance-button';
-  leftButton.textContent = '◀';
-  leftButton.setAttribute('aria-label', text.balanceLeft);
+  const rotateButton = document.createElement('button');
+  rotateButton.type = 'button';
+  rotateButton.className = 'kgb-balance-button';
+  rotateButton.textContent = `⟳ ${text.balanceRotate}`;
   const dropButton = document.createElement('button');
   dropButton.type = 'button';
   dropButton.className = 'kgb-balance-button kgb-balance-drop';
   dropButton.textContent = text.balanceDrop;
-  const rightButton = document.createElement('button');
-  rightButton.type = 'button';
-  rightButton.className = 'kgb-balance-button';
-  rightButton.textContent = '▶';
-  rightButton.setAttribute('aria-label', text.balanceRight);
-  controls.append(leftButton, dropButton, rightButton);
+  controls.append(rotateButton, dropButton);
 
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'kgb-overlay';
@@ -133,7 +127,7 @@ export function mount(root, config, { onExit }) {
   // ---------- Matterボディの生成 ----------
 
   function makeBody(shape, x, y) {
-    const options = { friction: 0.9, frictionStatic: 1.2, restitution: 0.02, density: 0.002 };
+    const options = { friction: 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
     let body;
     if (shape === 'circle') {
       body = M.Bodies.circle(x, y, 23, { ...options, friction: 0.7 });
@@ -207,8 +201,9 @@ export function mount(root, config, { onExit }) {
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.globalAlpha = 0.85;
-      // ゴーストは使い回し（毎フレーム生成しない）。位置だけ動かす
+      // ゴーストは使い回し（毎フレーム生成しない）。位置と向きだけ動かす
       M.Body.setPosition(previewBody, { x: previewX, y: py });
+      M.Body.setAngle(previewBody, (previewAngle * Math.PI) / 180);
       drawBody(previewBody);
       ctx.globalAlpha = 1;
     }
@@ -277,6 +272,7 @@ export function mount(root, config, { onExit }) {
   function spawnPreview() {
     previewShape = nextShape(state);
     previewX = W / 2;
+    previewAngle = 0;
     previewBody = makeBody(previewShape, previewX, 52); // 表示専用（worldに追加しない）
     aiming = true;
     updateBanner();
@@ -287,6 +283,7 @@ export function mount(root, config, { onExit }) {
     aiming = false;
     dropStarted(state);
     const body = makeBody(previewShape, previewX, cameraY + 52);
+    M.Body.setAngle(body, (previewAngle * Math.PI) / 180);
     M.Composite.add(engine.world, body);
     dropping = body;
     stableFrames = 0;
@@ -457,6 +454,9 @@ export function mount(root, config, { onExit }) {
       M.Engine.clear(engine);
     }
     engine = M.Engine.create({ enableSleeping: true }); // 静止ブロックはスリープ（性能規定）
+    engine.gravity.y = 0.75;          // 落下をゆるめてバウンドを控えめに
+    engine.positionIterations = 12;   // 着地の食い込み跳ね返りを抑える
+    engine.velocityIterations = 8;
     const platform = M.Bodies.rectangle(W / 2, GROUND_Y, PLATFORM_W, 18, {
       isStatic: true,
       friction: 1,
@@ -474,30 +474,38 @@ export function mount(root, config, { onExit }) {
 
   // ---------- 入力（ボタン＋キャンバスのゾーンタップ・下スワイプ） ----------
 
-  function moveBy(dx) {
+  rotateButton.addEventListener('click', () => {
     if (!aiming || state.finished) return;
-    previewX = Math.max(44, Math.min(W - 44, previewX + dx));
-  }
-
-  leftButton.addEventListener('click', () => moveBy(-MOVE_STEP), { signal: abort.signal });
-  rightButton.addEventListener('click', () => moveBy(MOVE_STEP), { signal: abort.signal });
+    playTap();
+    previewAngle = (previewAngle + 90) % 360; // 90°単位で回す
+  }, { signal: abort.signal });
   dropButton.addEventListener('click', () => doDrop(), { signal: abort.signal });
 
-  let touchStartY = null;
+  // 落下位置は指でなぞって動かす。画面の端を越えたら反対側から出てくる（無限軌道）
+  let dragLastX = null;
+  let dragStart = null;
   canvas.addEventListener('pointerdown', (event) => {
-    touchStartY = event.clientY;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    // 左1/3=ひだり・右1/3=みぎ・まんなか=おとす（仕様§4.5の操作）
-    if (x < W / 3) moveBy(-MOVE_STEP);
-    else if (x > (W * 2) / 3) moveBy(MOVE_STEP);
-    else doDrop();
+    dragLastX = event.clientX;
+    dragStart = { x: event.clientX, y: event.clientY };
+    canvas.setPointerCapture?.(event.pointerId);
+  }, { signal: abort.signal });
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (dragLastX === null || !aiming || state.finished) return;
+    const dx = event.clientX - dragLastX;
+    dragLastX = event.clientX;
+    previewX = ((previewX + dx) % W + W) % W; // 端でループ
   }, { signal: abort.signal });
 
   canvas.addEventListener('pointerup', (event) => {
-    // 下スワイプでも落とせる
-    if (touchStartY !== null && event.clientY - touchStartY > 40) doDrop();
-    touchStartY = null;
+    // ほぼ真下へのスワイプなら落とす（横なぞりと区別する）
+    if (dragStart) {
+      const dy = event.clientY - dragStart.y;
+      const dxTotal = Math.abs(event.clientX - dragStart.x);
+      if (dy > 50 && dxTotal < 40) doDrop();
+    }
+    dragLastX = null;
+    dragStart = null;
   }, { signal: abort.signal });
 
   startRound();
