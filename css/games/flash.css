@@ -1,0 +1,165 @@
+/* flash.css — すうじフラッシュ（v0.9） */
+/* アニメーションはtransform/opacityのみ（§9）。カードの表裏はclass切替のopacityで表現 */
+
+.kgb-flash {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* 状態メッセージ＋おぼえる時間リング */
+.kgb-flash-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 34px;
+}
+
+.kgb-flash-status {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kgb-text);
+}
+
+.kgb-flash-ring {
+  width: 28px;
+  height: 28px;
+  transform: rotate(-90deg); /* 真上から減り始める */
+  opacity: 0;
+}
+
+.kgb-flash-ring.is-on {
+  opacity: 1;
+}
+
+.kgb-flash-ring-bg {
+  fill: none;
+  stroke: rgba(74, 63, 53, 0.15);
+  stroke-width: 5;
+}
+
+.kgb-flash-ring-fill {
+  fill: none;
+  stroke: var(--kgb-color-flash);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 94.2; /* r=15の円周。JSのRING_Cと合わせる */
+}
+
+/* カード盤: 4列×6行の固定グリッド（カードはセル単位配置なので重ならない） */
+.kgb-flash-board {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+  height: 390px;
+}
+
+.kgb-flash-card {
+  position: relative;
+  border: none;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 3px 0 rgba(74, 63, 53, 0.15);
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kgb-flash-card-num,
+.kgb-flash-card-mask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--kgb-text);
+  transition: opacity 0.25s;
+}
+
+.kgb-flash-card-mask {
+  opacity: 0;
+  color: rgba(74, 63, 53, 0.45);
+}
+
+/* おぼえる時間: 数字を見せる（ふわっと登場） */
+.kgb-flash-card.is-shown {
+  animation: kgbFlashIn 0.3s ease-out;
+}
+
+@keyframes kgbFlashIn {
+  from { transform: scale(0.5); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* 裏返し: 「？」だけ見せる */
+.kgb-flash-card.is-masked .kgb-flash-card-num { opacity: 0; }
+.kgb-flash-card.is-masked .kgb-flash-card-mask { opacity: 1; }
+
+/* 正解タップ済み: テーマ色でキラン */
+.kgb-flash-card.is-done {
+  background: var(--kgb-color-flash);
+  animation: kgbFlashDone 0.35s ease-out;
+}
+
+@keyframes kgbFlashDone {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* ミス時の正解見せ */
+.kgb-flash-card.is-reveal {
+  background: #fff3c9;
+}
+
+.kgb-flash-card.is-wrong {
+  animation: kgbShake 0.4s;
+}
+
+/* 正解タップで中央に大きく出る数字＋よみがな（数唱） */
+.kgb-flash-big {
+  position: absolute;
+  top: 40%;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.kgb-flash-big.is-pop {
+  animation: kgbFlashBigPop 0.7s ease-out;
+}
+
+@keyframes kgbFlashBigPop {
+  0% { opacity: 0; transform: scale(0.4); }
+  25% { opacity: 1; transform: scale(1.15); }
+  60% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+.kgb-flash-big-num {
+  font-size: 64px;
+  font-weight: 800;
+  color: var(--kgb-accent);
+  text-shadow: 0 2px 0 #ffffff;
+}
+
+.kgb-flash-big-read {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--kgb-text);
+  text-shadow: 0 1px 0 #ffffff;
+}

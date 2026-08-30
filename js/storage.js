@@ -21,6 +21,7 @@ const DEFAULT_STATS = {
   balance: { best: 0, plays: 0 },
   tictactoe: { wins: 0, plays: 0 },
   mole: { best: 0, bestBy: {}, plays: 0 },
+  flash: { best: 0, plays: 0 },
   // 5つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0 },
   stamps: 0,

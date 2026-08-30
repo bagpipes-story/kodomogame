@@ -125,6 +125,18 @@ export const text = {
   balanceDrop: 'おとす',
   balanceRotate: 'まわす',
 
+  // すうじフラッシュ（別冊03§5）
+  flashRemember: 'おぼえてね！',
+  flashTapOrder: '1から じゅんばんに タップ！',
+  flashLevelUp: '＋1こ ふえるよ！',
+  flashMiss: 'おしい！もういっかい みてみよう',
+  flashLevelLabel: 'おぼえる かず',
+  flashCountSuffix: 'こ',
+  flashResultPrefix: 'すうじ ',
+  flashResultSuffix: 'こ おぼえられた！',
+  // 数字のよみがな（タップ時の数唱表示）
+  flashNumbers: ['いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'],
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {
@@ -141,6 +153,7 @@ export const text = {
     new_record: 'じぶんの きろくを こえたね！',
     retried: 'なんかいも チャレンジして えらい！',
     perfect_patience: 'たたかないで がまん できたね！',
+    perfect_first_try: 'ひとめで ぜんぶ おぼえられたね！',
   },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
@@ -153,6 +166,7 @@ export const text = {
 export const games = [
   { id: 'tictactoe', name: 'まるばつ', icon: '⭕' },
   { id: 'memory', name: 'しんけいすいじゃく', icon: '🍎' },
+  { id: 'flash', name: 'すうじフラッシュ', icon: '🔢' },
   { id: 'othello', name: 'オセロ', icon: '⚫' },
   { id: 'sevens', name: 'しちならべ', icon: '7' },
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },

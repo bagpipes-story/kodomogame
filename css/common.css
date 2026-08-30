@@ -17,6 +17,7 @@
   --kgb-color-balance: #c9a7eb;   /* むらさき */
   --kgb-color-tictactoe: #f0c94a; /* きいろ */
   --kgb-color-mole: #c8a284;      /* ちゃいろ */
+  --kgb-color-flash: #6ec6e6;     /* みずいろ */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -159,6 +160,7 @@ html, body {
 .kgb-theme-balance { background: var(--kgb-color-balance); }
 .kgb-theme-tictactoe { background: var(--kgb-color-tictactoe); }
 .kgb-theme-mole { background: var(--kgb-color-mole); }
+.kgb-theme-flash { background: var(--kgb-color-flash); }
 
 .kgb-home-footer {
   margin-top: auto;

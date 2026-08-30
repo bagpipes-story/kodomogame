@@ -10,6 +10,7 @@ const PRAISE_PRIORITY = [
   'perfect_patience',
   'blocked_reach',
   'took_corner',
+  'perfect_first_try',
   'comeback',
   'remembered_pair',
   'combo',
@@ -31,6 +32,7 @@ const SKILL_MAP = {
   tictactoe: ['thinkPower'],
   mole: ['numberLetter', 'shapeBalance'],
   balance: ['shapeBalance'],
+  flash: ['memoryPower', 'numberLetter'], // 視空間記憶＋数の順序（別冊03§6）
 };
 
 let events = new Set();
