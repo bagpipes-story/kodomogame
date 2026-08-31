@@ -18,8 +18,9 @@ import {
 
 const EXPECTED = {
   easy: { count: 5, cols: 6, rows: 9, minHoles: 0, maxHoles: 0 },
-  normal: { count: 5, cols: 8, rows: 12, minHoles: 2, maxHoles: 3 },
-  hard: { count: 5, cols: 10, rows: 14, minHoles: 4, maxHoles: 5 },
+  normal: { count: 5, cols: 9, rows: 13, minHoles: 3, maxHoles: 5 },
+  hard: { count: 5, cols: 11, rows: 15, minHoles: 5, maxHoles: 8 },
+  adult: { count: 5, cols: 21, rows: 29, minHoles: 10, maxHoles: 16 },
 };
 
 for (const [difficulty, spec] of Object.entries(EXPECTED)) {

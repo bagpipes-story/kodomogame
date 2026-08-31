@@ -37,8 +37,11 @@ export function mount(root, config, { onExit }) {
   const timers = new Set();
   const intervals = new Set();
 
-  const isHard = config.difficulty === 'hard';
+  // タイム表示は「むずかしい」以上（別冊03§3。おとなも表示）
+  const showTime = config.difficulty === 'hard' || config.difficulty === 'adult';
   const hintOn = config.hint !== 'off';
+  // おとな盤は広いのでルートヒントを長めに見せる
+  const hintMs = config.difficulty === 'adult' ? 3500 : HINT_MS;
   const debugMode = new URLSearchParams(window.location.search).has('debug');
 
   let state = null;
@@ -139,7 +142,7 @@ export function mount(root, config, { onExit }) {
 
   function updateBanner() {
     let label = `${text.mazeFallsLabel}: ${state.falls}`;
-    if (isHard && state.startedAt !== null && phase === 'play') {
+    if (showTime && state.startedAt !== null && phase === 'play') {
       label += `　${((performance.now() - state.startedAt) / 1000).toFixed(1)}${text.rcSecSuffix}`;
     }
     banner.textContent = label;
@@ -221,13 +224,13 @@ export function mount(root, config, { onExit }) {
   }
 
   function beginRound() {
-    startRound(state, performance.now() + (hintOn ? HINT_MS : 0));
-    if (isHard) every(() => updateBanner(), 200); // タイム表示（むずかしいのみ）
+    startRound(state, performance.now() + (hintOn ? hintMs : 0));
+    if (showTime) every(() => updateBanner(), 200); // タイム表示（むずかしい・おとな）
     if (hintOn && state.path) {
       phase = 'hint';
       hintStartedAt = performance.now();
       setStatus(text.mazeRouteHint);
-      later(() => spawnBall(), HINT_MS);
+      later(() => spawnBall(), hintMs);
     } else {
       spawnBall();
     }
@@ -284,7 +287,7 @@ export function mount(root, config, { onExit }) {
 
     const title = `${text.mazeClear} ${'⭐'.repeat(result.stars)}`;
     let detail = `${text.mazeFallsLabel}: ${result.falls}${text.mazeFallCountSuffix}`;
-    if (isHard) {
+    if (showTime) {
       detail += `\n${text.rcTimeLabel}: ${(result.elapsedMs / 1000).toFixed(1)}${text.rcSecSuffix}`;
     }
 

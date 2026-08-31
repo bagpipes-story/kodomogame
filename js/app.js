@@ -16,7 +16,7 @@ import { mount as mountFlash } from './games/flash/ui.js';
 import { mount as mountRollcatch } from './games/rollcatch/ui.js';
 import { mount as mountMaze } from './games/maze/ui.js';
 
-const APP_VERSION = 'v0.11';
+const APP_VERSION = 'v0.11.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -57,7 +57,7 @@ const setupConfigs = {
     // ひとりプレイ専用（別冊03§1）。むずかしさ＋ルートヒントのありなし
     defaults: { difficulty: 'easy', hint: 'on' },
     groups: [
-      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard], ['adult', text.sizeAdult]] },
       { key: 'hint', label: text.mazeHintLabel, options: [['on', text.hintOn], ['off', text.hintOff]] },
     ],
   },
