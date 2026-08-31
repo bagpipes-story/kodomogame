@@ -11,8 +11,6 @@ const PRAISE_PRIORITY = [
   'blocked_reach',
   'took_corner',
   'perfect_first_try',
-  'all_goal',
-  'smooth_run',
   'comeback',
   'remembered_pair',
   'combo',

@@ -15,7 +15,7 @@ import { mount as mountBalance } from './games/balance/ui.js';
 import { mount as mountFlash } from './games/flash/ui.js';
 import { mount as mountRollcatch } from './games/rollcatch/ui.js';
 
-const APP_VERSION = 'v0.10';
+const APP_VERSION = 'v0.10.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

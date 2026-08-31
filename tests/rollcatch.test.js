@@ -1,106 +1,101 @@
-// rollcatch.test.js — ころころキャッチの純ロジック（game.js）のNodeテスト
+// rollcatch.test.js — ころころキャッチ（シーソー型 v0.10.1）の純ロジックのNodeテスト
 // 実行方法: node tests/rollcatch.test.js
 
 import assert from 'node:assert';
 import {
-  BALLS_PER_ROUND,
   DIFFICULTY,
+  WAVE_LENGTH,
+  buildShelves,
   createGame,
-  togglePlate,
-  launchBall,
-  ballGoal,
-  ballOut,
+  startRun,
+  elapsedOf,
+  finishRun,
 } from '../js/games/rollcatch/game.js';
 
 // ---------- 難易度定義 ----------
 
 {
-  assert.strictEqual(DIFFICULTY.easy.walls, true, 'かんたんは壁あり（失敗なし）');
-  assert.strictEqual(DIFFICULTY.normal.walls, false, 'ふつうは壁なし');
-  assert.strictEqual(DIFFICULTY.hard.plateCount, 5, 'むずかしいは板5段');
-  assert.ok(DIFFICULTY.hard.plateLenRatio < DIFFICULTY.normal.plateLenRatio, 'むずかしいは板が短い');
-  assert.ok(DIFFICULTY.easy.gravity < DIFFICULTY.hard.gravity, 'かんたんはゆっくり');
-  assert.strictEqual(BALLS_PER_ROUND, 3, '1ラウンド=ボール3個');
+  assert.strictEqual(DIFFICULTY.easy.wave, 0, 'かんたんはまっすぐな坂');
+  assert.ok(DIFFICULTY.normal.wave < DIFFICULTY.hard.wave, 'むずかしいほど波が大きい');
+  assert.ok(DIFFICULTY.easy.shelfCount < DIFFICULTY.hard.shelfCount, 'むずかしいほど段が多い');
+  assert.ok(DIFFICULTY.hard.gapRatio < DIFFICULTY.easy.gapRatio, 'むずかしいほど切れ目がせまい');
+  // むずかしいの波の最大坂角度は最大チルトを超える（揺らして勢いをつける必要がある）
+  const hardSlopeDeg = (Math.atan((DIFFICULTY.hard.wave * Math.PI * 2) / WAVE_LENGTH) * 180) / Math.PI;
+  assert.ok(hardSlopeDeg > DIFFICULTY.hard.maxTiltDeg, 'むずかしいは傾けるだけでは越えられない波');
+  // ふつうは傾けるだけで越えられる
+  const normalSlopeDeg = (Math.atan((DIFFICULTY.normal.wave * Math.PI * 2) / WAVE_LENGTH) * 180) / Math.PI;
+  assert.ok(normalSlopeDeg < DIFFICULTY.normal.maxTiltDeg, 'ふつうは傾けだけで越えられる波');
 }
 
-// ---------- 板の反転と初期配置 ----------
+// ---------- 段の形: 互い違いの切れ目・範囲内・波 ----------
 
 {
-  const state = createGame({ difficulty: 'normal' });
-  assert.deepStrictEqual(state.tilts, [1, -1, 1, -1], '初期は互い違い');
-  assert.strictEqual(togglePlate(state, 0), -1, 'タップで反転');
-  assert.strictEqual(togglePlate(state, 0), 1, 'もう一度で元に戻る');
-  assert.strictEqual(togglePlate(state, 9), null, '範囲外は無視');
-  assert.strictEqual(state.tapsThisBall, 0, 'ボールが出る前のタップは数えない');
+  const W = 375;
+  for (const key of ['easy', 'normal', 'hard']) {
+    const shelves = buildShelves(DIFFICULTY[key], W);
+    assert.strictEqual(shelves.length, DIFFICULTY[key].shelfCount, `${key}: 段数`);
+    for (let i = 0; i < shelves.length; i++) {
+      const shelf = shelves[i];
+      assert.strictEqual(shelf.gapSide, i % 2 === 0 ? 'right' : 'left', '切れ目は互い違い');
+      for (const p of shelf.points) {
+        assert.ok(p.x >= 0 && p.x <= W, 'xは盤の中');
+        assert.ok(Math.abs(p.y - shelf.baseY) <= DIFFICULTY[key].wave + 0.01, '波の振れ幅は設定どおり');
+      }
+      // 切れ目側に届いていない（ボールが落ちる隙間がある）
+      const xs = shelf.points.map((p) => p.x);
+      if (shelf.gapSide === 'right') {
+        assert.ok(Math.max(...xs) <= W * (1 - DIFFICULTY[key].gapRatio) + 0.01, '右に切れ目');
+        assert.ok(Math.min(...xs) <= 4, '左は壁まで');
+      } else {
+        assert.ok(Math.min(...xs) >= W * DIFFICULTY[key].gapRatio - 0.01, '左に切れ目');
+        assert.ok(Math.max(...xs) >= W - 4.01, '右は壁まで');
+      }
+    }
+  }
+  // かんたんは波ゼロ=直線
+  const flat = buildShelves(DIFFICULTY.easy, W);
+  for (const p of flat[0].points) assert.strictEqual(p.y, flat[0].baseY, 'かんたんは平らな坂');
 }
 
-// ---------- ボール3個のラウンド進行とsmooth判定 ----------
+// ---------- タイム計測 ----------
 
 {
   const state = createGame({ difficulty: 'easy' });
-  assert.strictEqual(launchBall(state), 1, '1個目');
-  assert.strictEqual(launchBall(state), null, '転がっている間は次を出せない');
-
-  // 1個目: タップなしでゴール → smooth
-  const g1 = ballGoal(state);
-  assert.strictEqual(g1.smooth, true, '0タップゴールはsmooth');
-  assert.strictEqual(g1.goals, 1);
-  assert.strictEqual(g1.roundOver, null, 'まだ続く');
-  assert.strictEqual(state.smoothGoals, 1);
-
-  // 2個目: 転がし中にタップしてからゴール → smoothではない
-  launchBall(state);
-  togglePlate(state, 1);
-  const g2 = ballGoal(state);
-  assert.strictEqual(g2.smooth, false, 'タップしたのでsmoothではない');
-
-  // 3個目: 飛び出し → ラウンド終了。スコアは2
-  launchBall(state);
-  const out = ballOut(state);
-  assert.strictEqual(out.roundOver.finished, true, '3個でラウンド終了');
-  assert.strictEqual(state.goals, 2, 'ゴール数は2');
+  assert.strictEqual(startRun(state, 1000), true);
+  assert.strictEqual(startRun(state, 1500), false, '計測中は二重スタートしない');
+  assert.strictEqual(elapsedOf(state, 3500), 2500);
+  const result = finishRun(state, 13500);
+  assert.strictEqual(result.elapsedMs, 12500, 'タイム12.5秒');
+  assert.strictEqual(result.finished, true);
   assert.strictEqual(state.finished, true);
-  assert.strictEqual(launchBall(state), null, '終了後は出せない');
-  assert.strictEqual(ballGoal(state), null, '終了後のゴールは無視');
+  assert.strictEqual(finishRun(state, 14000), null, '終了後は無視');
 }
 
-// ---------- こうたい対戦: 交代と勝敗 ----------
-
-{
-  const state = createGame({ difficulty: 'normal', mode: 'two' });
-  // あか: 2ゴール1アウト
-  launchBall(state); ballGoal(state);
-  launchBall(state); ballGoal(state);
-  togglePlate(state, 0); // 板の状態を変えておく
-  launchBall(state);
-  const over = ballOut(state);
-  assert.strictEqual(over.roundOver.nextPlayer, 1, 'あおに交代');
-  assert.strictEqual(state.currentPlayer, 1);
-  assert.strictEqual(state.goals, 0, 'あおのスコアは0から');
-  assert.strictEqual(state.ballIndex, 0, 'ボールも3個から');
-  assert.deepStrictEqual(state.tilts, [1, -1, 1, -1], '板は初期配置に戻る（フェア）');
-
-  // あお: 1ゴール2アウト → あかの勝ち
-  launchBall(state); ballGoal(state);
-  launchBall(state); ballOut(state);
-  launchBall(state);
-  const end = ballOut(state);
-  assert.strictEqual(end.roundOver.finished, true);
-  assert.strictEqual(end.roundOver.winner, 0, 'あか2 vs あお1であかの勝ち');
-  assert.deepStrictEqual(state.results, [2, 1]);
-}
-
-// ---------- こうたい対戦: ひきわけ ----------
+// ---------- こうたい対戦: タイムが短いほうの勝ち ----------
 
 {
   const state = createGame({ mode: 'two' });
-  for (let p = 0; p < 2; p++) {
-    launchBall(state); ballGoal(state);
-    launchBall(state); ballOut(state);
-    launchBall(state); ballOut(state);
-  }
-  assert.strictEqual(state.finished, true);
-  assert.deepStrictEqual(state.results, [1, 1]);
+  startRun(state, 0);
+  const first = finishRun(state, 20000); // あか20秒
+  assert.strictEqual(first.nextPlayer, 1, 'あおに交代');
+  assert.strictEqual(state.currentPlayer, 1);
+  assert.strictEqual(state.finished, false);
+  startRun(state, 100000);
+  const end = finishRun(state, 112000); // あお12秒
+  assert.strictEqual(end.finished, true);
+  assert.strictEqual(end.winner, 1, 'はやいあおの勝ち');
+  assert.deepStrictEqual(state.results, [20000, 12000]);
+}
+
+// ---------- こうたい対戦: 同タイムはひきわけ ----------
+
+{
+  const state = createGame({ mode: 'two' });
+  startRun(state, 0);
+  finishRun(state, 5000);
+  startRun(state, 10000);
+  const end = finishRun(state, 15000);
+  assert.strictEqual(end.winner, null, 'ひきわけ');
 }
 
 console.log('rollcatch.test.js: すべてのテストに合格');

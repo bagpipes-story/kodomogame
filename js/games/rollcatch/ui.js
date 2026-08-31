@@ -1,33 +1,33 @@
-// ui.js — ころころキャッチの描画・入力（v0.10。別冊03§4）
-// 物理はMatter.js（バランスゲームと同じローカル同梱）、描画はCanvas。
-// 性能規定: 動的ボディはボール1個のみ（同時1個しか出さない）。板は静的ボディで、
-// 回転はタップ後200msのトゥイーン中だけBody.setAngleで更新する。rAF内でDOMは触らない。
+// ui.js — ころころキャッチの描画・入力（v0.10.1: 駄菓子屋シーソー型に作り直し）
+// 指を左右に動かすと盤ぜんたいが傾き、互い違いの段（坂・波波）をボールが
+// ジグザグに転がり下りる。ゴールまでのタイムがスコア（失敗なし）。
+// 物理の工夫: 盤を回す代わりに重力の向きを傾ける（幾何は固定のまま）。
+//   見た目はCanvas全体を回転して「盤が傾いている」ように見せる。等価で軽い。
+// 性能規定: 動的ボディはボール1個のみ。段は固定の静的セグメント（生成は開始時だけ）。
 
 import {
-  BALLS_PER_ROUND,
+  buildShelves,
   createGame,
-  togglePlate,
-  launchBall,
-  ballGoal,
-  ballOut,
+  startRun,
+  elapsedOf,
+  finishRun,
 } from './game.js';
 import { text } from '../../i18n.js';
-import { playTap, playFlip, playGoal, playFlutter, playWin } from '../../sound.js';
+import { playTap, playGoal, playWin } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
 
-// 板の傾きは±16°の2状態。別冊03§4は±12°だが、Matter.jsの実測で12°は
-// 転がりが遅すぎた（板1枚3.8秒）ため、テンポの出る16°に調整
-const TILT_RAD = (16 * Math.PI) / 180;
-const TILT_ANIM_MS = 200;              // 傾け替えアニメ
 const BALL_R = 12;
-const NEXT_BALL_WAIT_MS = 1000;        // ゴール/アウト表示から次のボールまで
-const NUDGE_AFTER_MS = 2600;           // 止まったままのボールをそっと押すまでの時間
+const GRAVITY = 1.6; // 段1本を2〜3秒で渡れるテンポ（実測調整）
+const TILT_LERP = 0.16;        // 指の位置へ傾きが追いつく速さ
+const TIMER_TICK_MS = 100;     // タイム表示の更新間隔（DOM更新はこの間隔のみ）
+const NEXT_WAIT_MS = 1200;     // ゴール演出から次へ進むまで
 
 export function mount(root, config, { onExit }) {
   const M = window.Matter;
   const abort = new AbortController();
   const timers = new Set();
+  const intervals = new Set();
 
   const isTwoMode = config.mode === 'two';
   const names = [text.redName, text.blueName];
@@ -36,13 +36,14 @@ export function mount(root, config, { onExit }) {
   let state = null;
   let engine = null;
   let rafId = null;
-  let plates = [];        // {body, cx, cy, animStart, fromAngle, toAngle}
+  let shelves = [];
   let ballBody = null;
-  let ballStillSince = 0; // ボールが止まりはじめた時刻（つっかえ防止のそっと押し用）
   let collisionHandler = null;
-  let funnels = [];       // かんたんのすり鉢の床（描画と物理で同じ値を使う）
+  let tilt = 0;          // 現在の盤の傾き(rad)
+  let targetTilt = 0;    // 指の位置から決まる目標の傾き
+  let roundsPlayed = 0;  // 「なんかいもチャレンジ」ほめ用
+  let maxTiltRad = 0;
 
-  // fps計測（?debug）
   let frameCount = 0;
   let fpsValue = 0;
   let fpsLastTime = 0;
@@ -55,9 +56,17 @@ export function mount(root, config, { onExit }) {
     timers.add(id);
   }
 
+  function every(fn, ms) {
+    const id = setInterval(fn, ms);
+    intervals.add(id);
+    return id;
+  }
+
   function clearAllTimers() {
     for (const id of timers) clearTimeout(id);
     timers.clear();
+    for (const id of intervals) clearInterval(id);
+    intervals.clear();
   }
 
   // ---------- DOM生成（mount時に一度だけ） ----------
@@ -92,7 +101,6 @@ export function mount(root, config, { onExit }) {
   container.append(banner, statusEl, canvas);
   root.append(container, startOverlay, resultOverlay);
 
-  // キャンバス実サイズ（Retina対応）
   const W = Math.min(root.clientWidth || 375, 400);
   const H = 430;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -102,31 +110,21 @@ export function mount(root, config, { onExit }) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  // レイアウト: 板は上下に等間隔、左右互い違い。ゴールカップは下段中央
-  const CUP_X = W / 2;
-  const CUP_HALF = 44;      // カップの内のり半分
-  const LIP_H = 36;
-  // 最下段はすり鉢・カップとの間にボール直径ぶん以上の隙間を残す高さにする（はさまり防止）
-  const PLATE_TOP = 100;
-  const PLATE_BOTTOM = 305;
+  const TRAY_H = 30; // 下のうけ皿（全幅=かならずキャッチできる）
 
-  function plateCenter(index, count) {
-    const cy = PLATE_TOP + ((PLATE_BOTTOM - PLATE_TOP) * index) / (count - 1);
-    const cx = index % 2 === 0 ? W * 0.32 : W * 0.68;
-    return { cx, cy };
+  // ---------- 表示の差分更新 ----------
+
+  function formatSec(ms) {
+    return (ms / 1000).toFixed(1);
   }
 
-  // ---------- 表示の差分更新（DOMはイベント時のみ） ----------
-
-  function updateBanner() {
-    const ballsLeft = BALLS_PER_ROUND - state.ballIndex + (state.ballActive ? 1 : 0);
-    const dots = `${'●'.repeat(ballsLeft)}${'○'.repeat(BALLS_PER_ROUND - ballsLeft)}`;
+  function updateBanner(ms) {
+    const timePart = `${text.rcTimeLabel}: ${formatSec(ms)}${text.rcSecSuffix}`;
     if (isTwoMode) {
-      // 1行に収めるため短い表記（あかの ばん　0こ ●●●）
-      banner.textContent = `${names[state.currentPlayer]}${text.turnSuffix}　${state.goals}${text.flashCountSuffix} ${dots}`;
+      banner.textContent = `${names[state.currentPlayer]}${text.turnSuffix}　${timePart}`;
       banner.className = `kgb-turn-banner is-blinking kgb-player-${state.currentPlayer}`;
     } else {
-      banner.textContent = `${text.rcCatchLabel}: ${state.goals}${text.flashCountSuffix}　${text.rcBallLabel} ${dots}`;
+      banner.textContent = timePart;
       banner.className = 'kgb-turn-banner';
     }
   }
@@ -136,7 +134,7 @@ export function mount(root, config, { onExit }) {
     statusEl.classList.toggle('is-happy', Boolean(happy));
   }
 
-  // ---------- Matterワールド構築（ラウンド開始・交代のたびに作り直す） ----------
+  // ---------- Matterワールド構築 ----------
 
   function setupEngine() {
     if (engine) {
@@ -144,70 +142,42 @@ export function mount(root, config, { onExit }) {
       M.Composite.clear(engine.world, false);
       M.Engine.clear(engine);
     }
-    engine = M.Engine.create({ enableSleeping: false }); // ボール1個だけなのでsleep管理は不要
-    engine.gravity.y = state.settings.gravity;
+    engine = M.Engine.create({ enableSleeping: false });
+    engine.gravity.y = GRAVITY;
     ballBody = null;
-    plates = [];
+    tilt = 0;
+    targetTilt = 0;
+    maxTiltRad = (state.settings.maxTiltDeg * Math.PI) / 180;
 
     const staticOpts = { isStatic: true, friction: 0.05, restitution: 0.1 };
-    const count = state.settings.plateCount;
-    const plateLen = W * state.settings.plateLenRatio;
-    for (let i = 0; i < count; i++) {
-      const { cx, cy } = plateCenter(i, count);
-      const body = M.Bodies.rectangle(cx, cy, plateLen, 12, {
-        ...staticOpts,
-        chamfer: { radius: 6 },
-      });
-      M.Body.setAngle(body, state.tilts[i] * TILT_RAD);
-      plates.push({ body, cx, cy, len: plateLen, animStart: null, fromAngle: 0, toAngle: 0 });
-      M.Composite.add(engine.world, body);
+
+    // 段: 点列を短い長方形セグメントでつなぐ（波波もこの連結で表現）
+    shelves = buildShelves(state.settings, W);
+    const bodies = [];
+    for (const shelf of shelves) {
+      const pts = shelf.points;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i];
+        const b = pts[i + 1];
+        const len = Math.hypot(b.x - a.x, b.y - a.y) + 6;
+        const seg = M.Bodies.rectangle((a.x + b.x) / 2, (a.y + b.y) / 2, len, 12, staticOpts);
+        M.Body.setAngle(seg, Math.atan2(b.y - a.y, b.x - a.x));
+        bodies.push(seg);
+      }
     }
 
-    // ゴールカップ: 左右のふち＋底＋センサー
-    const lipL = M.Bodies.rectangle(CUP_X - CUP_HALF - 4, H - 22, 8, LIP_H, staticOpts);
-    const lipR = M.Bodies.rectangle(CUP_X + CUP_HALF + 4, H - 22, 8, LIP_H, staticOpts);
-    const cupFloor = M.Bodies.rectangle(CUP_X, H - 4, CUP_HALF * 2 + 16, 10, staticOpts);
-    const sensor = M.Bodies.rectangle(CUP_X, H - 14, CUP_HALF * 2 - 8, 12, {
-      isStatic: true,
-      isSensor: true,
-    });
+    // 左右の壁と天井（盤の外にボールは出ない=失敗なし）
+    bodies.push(M.Bodies.rectangle(-8, H / 2, 20, H * 2, staticOpts));
+    bodies.push(M.Bodies.rectangle(W + 8, H / 2, 20, H * 2, staticOpts));
+    bodies.push(M.Bodies.rectangle(W / 2, -30, W * 2, 20, staticOpts));
+
+    // 下のうけ皿（全幅）。底に触れたらゴール
+    const floor = M.Bodies.rectangle(W / 2, H - 6, W * 2, 14, staticOpts);
+    const sensor = M.Bodies.rectangle(W / 2, H - 18, W, 14, { isStatic: true, isSensor: true });
     sensor.plugin.kgbGoal = true;
-    M.Composite.add(engine.world, [lipL, lipR, cupFloor, sensor]);
+    bodies.push(floor, sensor);
+    M.Composite.add(engine.world, bodies);
 
-    // かんたん: 左右の壁＋カップへ向かうすり鉢の床（飛び出し・取りこぼしなし）。
-    // すり鉢の先端はカップのふちを越えて開口部の内側で終わらせる
-    // （ふちの外側で終わるとボールがふちを乗り越えられずはまる）
-    funnels = [];
-    if (state.settings.walls) {
-      const wallL = M.Bodies.rectangle(-8, H / 2, 20, H * 2, staticOpts);
-      const wallR = M.Bodies.rectangle(W + 8, H / 2, 20, H * 2, staticOpts);
-      const rad = (14 * Math.PI) / 180;
-      const endX = CUP_X - CUP_HALF + 10; // カップ開口部の内側
-      const endY = H - 54;               // ふち上端(H-40)より上
-      const funnelLen = (endX + 12) / Math.cos(rad);
-      funnels = [
-        {
-          cx: endX - (funnelLen / 2) * Math.cos(rad),
-          cy: endY - (funnelLen / 2) * Math.sin(rad),
-          len: funnelLen,
-          angle: rad,
-        },
-        {
-          cx: W - endX + (funnelLen / 2) * Math.cos(rad),
-          cy: endY - (funnelLen / 2) * Math.sin(rad),
-          len: funnelLen,
-          angle: -rad,
-        },
-      ];
-      const funnelBodies = funnels.map((f) => {
-        const body = M.Bodies.rectangle(f.cx, f.cy, f.len, 10, staticOpts);
-        M.Body.setAngle(body, f.angle);
-        return body;
-      });
-      M.Composite.add(engine.world, [wallL, wallR, ...funnelBodies]);
-    }
-
-    // ゴール判定はセンサーとの接触で（別冊03§4: ゴール穴=センサー）
     collisionHandler = (event) => {
       for (const pair of event.pairs) {
         const hitGoal =
@@ -222,212 +192,50 @@ export function mount(root, config, { onExit }) {
     M.Events.on(engine, 'collisionStart', collisionHandler);
   }
 
-  // ---------- ボールの進行 ----------
+  // ---------- ラウンド進行 ----------
 
   function spawnBall() {
-    const launched = launchBall(state);
-    if (!launched) return;
-    const { cx } = plateCenter(0, state.settings.plateCount);
-    ballBody = M.Bodies.circle(cx, 18, BALL_R, {
+    // いちばん上の段の切れ目と反対側からスタート
+    const startX = shelves[0].gapSide === 'right' ? 28 : W - 28;
+    ballBody = M.Bodies.circle(startX, 40, BALL_R, {
       friction: 0.02,
       frictionAir: 0.001,
-      restitution: 0.15,
+      restitution: 0.12,
       density: 0.003,
     });
     M.Composite.add(engine.world, ballBody);
-    ballStillSince = 0;
-    setStatus('');
-    updateBanner();
+    startRun(state, performance.now());
+    setStatus(text.rcHint);
+    updateBanner(0);
+    // タイム表示はこの間隔でだけDOMを触る（§9: rAF内でのDOM更新禁止）
+    every(() => {
+      if (state.running) updateBanner(elapsedOf(state, performance.now()));
+    }, TIMER_TICK_MS);
   }
 
-  function removeBall() {
+  function onGoal() {
+    const result = finishRun(state, performance.now());
+    if (!result) return;
+    clearAllTimers(); // タイム表示インターバルを止める
     if (ballBody) {
       M.Composite.remove(engine.world, ballBody);
       ballBody = null;
     }
-  }
-
-  function onGoal() {
-    const result = ballGoal(state);
-    if (!result) return;
-    removeBall();
     playGoal();
     setStatus(text.rcGoal, true);
-    if (result.smooth) emitPraise('smooth_run'); // 先に板を準備できていた（別冊03§4）
-    updateBanner();
-    proceed(result.roundOver);
-  }
+    updateBanner(result.elapsedMs);
 
-  function onOut() {
-    const result = ballOut(state);
-    if (!result) return;
-    removeBall();
-    playFlutter();
-    setStatus(text.rcOut, false); // ネガ禁止: 「つぎいこう！」トーン
-    updateBanner();
-    proceed(result.roundOver);
-  }
-
-  function proceed(roundOver) {
-    if (!roundOver) {
-      later(() => spawnBall(), NEXT_BALL_WAIT_MS);
-      return;
-    }
-    if (roundOver.nextPlayer !== undefined) {
+    if (result.nextPlayer !== undefined) {
       later(() => {
-        setupEngine(); // 板を初期配置に戻した状態で作り直す
+        setupEngine();
         setStatus('');
-        updateBanner();
+        updateBanner(0);
         showStartOverlay();
-      }, NEXT_BALL_WAIT_MS);
+      }, NEXT_WAIT_MS);
       return;
     }
-    later(() => finishGame(roundOver), NEXT_BALL_WAIT_MS);
+    later(() => finishGame(result), NEXT_WAIT_MS);
   }
-
-  // ---------- 描画（rAFループ） ----------
-
-  // 角丸長方形（ctx.roundRectは古いiOS Safari非対応のため自前で描く）
-  function traceRoundRect(x, y, w, h, r) {
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
-  }
-
-  function drawPlate(plate) {
-    const body = plate.body;
-    ctx.save();
-    ctx.translate(body.position.x, body.position.y);
-    ctx.rotate(body.angle);
-    ctx.fillStyle = '#d9a066';
-    ctx.strokeStyle = 'rgba(74, 63, 53, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    traceRoundRect(-plate.len / 2, -6, plate.len, 12, 6);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-    // 支点マーク（タップで回ることの手がかり）
-    ctx.fillStyle = '#8a6a4e';
-    ctx.beginPath();
-    ctx.arc(body.position.x, body.position.y, 4, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function drawCup() {
-    ctx.fillStyle = '#8a6a4e';
-    ctx.beginPath();
-    traceRoundRect(CUP_X - CUP_HALF - 8, H - 40, 8, 36, 3);
-    traceRoundRect(CUP_X + CUP_HALF, H - 40, 8, 36, 3);
-    traceRoundRect(CUP_X - CUP_HALF - 8, H - 9, CUP_HALF * 2 + 16, 8, 3);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(138, 106, 78, 0.25)';
-    ctx.fillRect(CUP_X - CUP_HALF, H - 32, CUP_HALF * 2, 28);
-  }
-
-  function drawWalls() {
-    if (!state.settings.walls) return;
-    ctx.fillStyle = 'rgba(138, 106, 78, 0.5)';
-    ctx.fillRect(0, 0, 4, H);
-    ctx.fillRect(W - 4, 0, 4, H);
-    // すり鉢の床（物理と同じ配置を描く）
-    for (const f of funnels) {
-      ctx.save();
-      ctx.translate(f.cx, f.cy);
-      ctx.rotate(f.angle);
-      ctx.fillRect(-f.len / 2, -5, f.len, 10);
-      ctx.restore();
-    }
-  }
-
-  function drawBall() {
-    if (!ballBody) return;
-    const { x, y } = ballBody.position;
-    const grad = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, BALL_R);
-    grad.addColorStop(0, '#ffffff');
-    grad.addColorStop(1, '#b7bfc9');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(74, 63, 53, 0.35)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    // ころがりが見えるよう回転マーカーを1点
-    ctx.fillStyle = 'rgba(74, 63, 53, 0.35)';
-    ctx.beginPath();
-    ctx.arc(x + Math.cos(ballBody.angle) * 6, y + Math.sin(ballBody.angle) * 6, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    drawWalls();
-    for (const plate of plates) drawPlate(plate);
-    drawCup();
-    drawBall();
-    if (debugMode) {
-      ctx.fillStyle = '#4a3f35';
-      ctx.font = 'bold 14px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`${fpsValue}fps`, 8, 18);
-      ctx.textAlign = 'center';
-    }
-  }
-
-  function loop(now) {
-    rafId = requestAnimationFrame(loop);
-
-    // 板の回転トゥイーン（アニメ中の板だけ更新。性能規定）
-    for (let i = 0; i < plates.length; i++) {
-      const plate = plates[i];
-      if (plate.animStart === null) continue;
-      const t = Math.min((now - plate.animStart) / TILT_ANIM_MS, 1);
-      const eased = 1 - (1 - t) * (1 - t); // ease-out
-      M.Body.setAngle(plate.body, plate.fromAngle + (plate.toAngle - plate.fromAngle) * eased);
-      if (t >= 1) plate.animStart = null;
-    }
-
-    M.Engine.update(engine, 1000 / 60);
-
-    frameCount++;
-    if (now - fpsLastTime >= 1000) {
-      fpsValue = frameCount;
-      frameCount = 0;
-      fpsLastTime = now;
-    }
-
-    if (ballBody && state.ballActive) {
-      const { x, y } = ballBody.position;
-      // 飛び出し判定（ふつう・むずかしい: カップを外すと下へ抜ける）
-      if (x < -40 || x > W + 40 || y > H + 50) {
-        onOut();
-      } else if (ballBody.speed < 0.06) {
-        // すみっこで止まったボールはしばらくしたらそっと押す（つっかえ対策）
-        if (!ballStillSince) ballStillSince = now;
-        if (now - ballStillSince > NUDGE_AFTER_MS) {
-          M.Body.applyForce(ballBody, ballBody.position, {
-            x: (ballBody.position.x < W / 2 ? 1 : -1) * 0.005,
-            y: -0.002,
-          });
-          ballStillSince = 0;
-        }
-      } else {
-        ballStillSince = 0;
-      }
-    }
-
-    draw();
-  }
-
-  // ---------- ラウンド開始・終了 ----------
 
   function showStartOverlay() {
     startTitle.textContent = isTwoMode
@@ -439,24 +247,30 @@ export function mount(root, config, { onExit }) {
   startOverlay.addEventListener('click', () => {
     playTap();
     startOverlay.hidden = true;
-    later(() => spawnBall(), 400);
+    later(() => spawnBall(), 300);
   }, { signal: abort.signal });
 
-  function finishGame(over) {
+  // ---------- 終了処理（保存はここで1回だけ。§9） ----------
+
+  function finishGame(result) {
+    roundsPlayed++;
     emitPraise('finished_game');
-    if (state.goals >= BALLS_PER_ROUND) emitPraise('all_goal');
+    if (roundsPlayed >= 3) emitPraise('retried');
 
     let isNewRecord = false;
-    let best = state.goals;
+    let bestMs = result.elapsedMs;
     if (!isTwoMode) {
+      // さいこうきろくは むずかしさ別のベストタイム（短いほどすごい）
       const stats = loadStats();
-      stats.rollcatch ??= { best: 0, plays: 0 };
-      best = Math.max(stats.rollcatch.best ?? 0, state.goals);
-      if (state.goals > (stats.rollcatch.best ?? 0)) {
-        stats.rollcatch.best = state.goals;
+      stats.rollcatch ??= { plays: 0 };
+      stats.rollcatch.bestBy ??= {};
+      const prev = stats.rollcatch.bestBy[config.difficulty];
+      if (prev === undefined || result.elapsedMs < prev) {
+        stats.rollcatch.bestBy[config.difficulty] = result.elapsedMs;
         isNewRecord = true;
         emitPraise('new_record');
       }
+      bestMs = Math.min(prev ?? Infinity, result.elapsedMs);
       saveStats(stats);
     }
     recordPlay('rollcatch', { won: false });
@@ -465,14 +279,14 @@ export function mount(root, config, { onExit }) {
     let detail;
     let celebrate;
     if (isTwoMode) {
-      title = over.winner === null ? text.draw : over.winner === 0 ? text.winRed : text.winBlue;
-      detail = `${text.redName} ${state.results[0]}${text.flashCountSuffix} ／ ${text.blueName} ${state.results[1]}${text.flashCountSuffix}`;
+      title = result.winner === null ? text.draw : result.winner === 0 ? text.winRed : text.winBlue;
+      detail = `${text.redName} ${formatSec(state.results[0])}${text.rcSecSuffix} ／ ${text.blueName} ${formatSec(state.results[1])}${text.rcSecSuffix}`;
       celebrate = true;
     } else {
-      title = `${state.goals}${text.rcResultSuffix}`;
-      detail = `${text.bestLabel}: ${best}${text.flashCountSuffix}`;
+      title = `${formatSec(result.elapsedMs)}${text.rcGoalSuffix}`;
+      detail = `${text.bestLabel}: ${formatSec(bestMs)}${text.rcSecSuffix}`;
       if (isNewRecord) detail += `\n${text.newRecord}`;
-      celebrate = isNewRecord || state.goals >= BALLS_PER_ROUND;
+      celebrate = isNewRecord;
     }
 
     const dialog = document.createElement('div');
@@ -553,35 +367,133 @@ export function mount(root, config, { onExit }) {
     state = createGame({ difficulty: config.difficulty, mode: config.mode });
     setupEngine();
     setStatus('');
-    updateBanner();
+    updateBanner(0);
     showStartOverlay();
   }
 
-  // ---------- 入力: 板のタップ（近い段の板を反転） ----------
+  // ---------- 描画（rAFループ。盤の傾きはCanvas全体の回転で見せる） ----------
+
+  function drawBoard() {
+    // 盤の下地（回転してもすき間が見えないよう大きめに描く）
+    ctx.fillStyle = '#f0d9b0';
+    ctx.fillRect(-90, -70, W + 180, H + 140);
+    // 左右のふち
+    ctx.fillStyle = '#c89058';
+    ctx.fillRect(-2, -60, 8, H + 120);
+    ctx.fillRect(W - 6, -60, 8, H + 120);
+  }
+
+  function drawShelves() {
+    ctx.strokeStyle = '#c89058';
+    ctx.lineWidth = 13;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const shelf of shelves) {
+      ctx.beginPath();
+      const pts = shelf.points;
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }
+    // 上面のハイライト（段の形を読み取りやすく）
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 3;
+    for (const shelf of shelves) {
+      ctx.beginPath();
+      const pts = shelf.points;
+      ctx.moveTo(pts[0].x, pts[0].y - 5);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y - 5);
+      ctx.stroke();
+    }
+  }
+
+  function drawTray() {
+    ctx.fillStyle = '#8a6a4e';
+    ctx.fillRect(-40, H - 13, W + 80, 13);
+    ctx.fillStyle = 'rgba(138, 106, 78, 0.3)';
+    ctx.fillRect(-40, H - TRAY_H, W + 80, TRAY_H - 13);
+  }
+
+  function drawBall() {
+    if (!ballBody) return;
+    const { x, y } = ballBody.position;
+    const grad = ctx.createRadialGradient(x - 4, y - 4, 2, x, y, BALL_R);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#b7bfc9');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(74, 63, 53, 0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(74, 63, 53, 0.35)';
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(ballBody.angle) * 6, y + Math.sin(ballBody.angle) * 6, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    // 盤の傾き = 見た目の回転。物理では重力の向きを傾けている。
+    // フルに回すと四隅（ボールがいる場所）が画面外に切れるため、
+    // 見た目は6割の回転＋少し縮小して、盤全体がつねに見えるようにする
+    ctx.translate(W / 2, H / 2);
+    ctx.rotate(tilt * 0.6);
+    ctx.scale(0.86, 0.86);
+    ctx.translate(-W / 2, -H / 2);
+    drawBoard();
+    drawShelves();
+    drawTray();
+    drawBall();
+    ctx.restore();
+
+    if (debugMode) {
+      ctx.fillStyle = '#4a3f35';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${fpsValue}fps`, 8, 18);
+    }
+  }
+
+  function loop(now) {
+    rafId = requestAnimationFrame(loop);
+
+    // 傾きを指の位置へなめらかに追従させ、重力の向きに反映する
+    tilt += (targetTilt - tilt) * TILT_LERP;
+    engine.gravity.x = GRAVITY * Math.sin(tilt);
+    engine.gravity.y = GRAVITY * Math.cos(tilt);
+
+    M.Engine.update(engine, 1000 / 60);
+
+    frameCount++;
+    if (now - fpsLastTime >= 1000) {
+      fpsValue = frameCount;
+      frameCount = 0;
+      fpsLastTime = now;
+    }
+
+    draw();
+  }
+
+  // ---------- 入力: 指の横位置 → 盤の傾き ----------
+
+  function pointerToTilt(event) {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = (event.clientX - rect.left) / rect.width - 0.5; // -0.5〜+0.5
+    targetTilt = Math.max(-1, Math.min(1, ratio * 2.4)) * maxTiltRad;
+  }
 
   canvas.addEventListener('pointerdown', (event) => {
-    if (state.finished) return;
-    const rect = canvas.getBoundingClientRect();
-    const y = ((event.clientY - rect.top) / rect.height) * H;
-    // タップ位置に一番近い段の板を選ぶ（横位置は問わない=タップ領域を大きく）
-    let nearest = -1;
-    let nearestDist = 48; // これより遠いタップは無視
-    for (let i = 0; i < plates.length; i++) {
-      const dist = Math.abs(plates[i].cy - y);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = i;
-      }
-    }
-    if (nearest < 0) return;
-    const tilt = togglePlate(state, nearest);
-    if (tilt === null) return;
-    playFlip();
-    const plate = plates[nearest];
-    plate.fromAngle = plate.body.angle;
-    plate.toAngle = tilt * TILT_RAD;
-    plate.animStart = performance.now();
+    canvas.setPointerCapture?.(event.pointerId);
+    pointerToTilt(event);
   }, { signal: abort.signal });
+  canvas.addEventListener('pointermove', (event) => {
+    if (event.buttons === 0 && event.pointerType === 'mouse') return; // マウスは押しながらだけ
+    pointerToTilt(event);
+  }, { signal: abort.signal });
+  // 指を離したら盤の傾きはそのまま（実物を手で持っている感覚に合わせる）
 
   restart();
   rafId = requestAnimationFrame(loop);

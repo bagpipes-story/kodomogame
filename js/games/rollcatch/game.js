@@ -1,95 +1,88 @@
-// game.js — ころころキャッチの純ロジック（DOM・物理非依存。別冊03§4)
-// 板の傾き状態・ボール3個のラウンド進行・スコア・こうたい対戦をここで管理し、
-// Matter.jsの物理とCanvas描画はui.jsに任せる。
+// game.js — ころころキャッチの純ロジック（DOM・物理非依存）
+// v0.10.1で駄菓子屋の「シーソーゲーム」型に作り直し:
+// 盤ぜんたいを左右に傾けて、互い違いの段（坂・波波）をジグザグに転がし下ろす。
+// 段の形で難易度を出し、スコアはゴールまでのタイム（失敗なし）。
 
-export const BALLS_PER_ROUND = 3;
-
-// 板の段数・壁の有無・ボールの速さ（重力）・板の長さで難易度を表現（別冊03§4）
-// 重力値は実測ベース: 1.0未満だと板1枚に4秒以上かかり子どもがだれるため下限1.0
+// 段の数・波の大きさ・切れ目の広さ・傾けられる角度で難易度を表現。
+// 波の坂の最大角度(wave*2π/波長70px)が最大チルトを超えると、
+// 傾けるだけでは越えられず「揺らして勢いをつける」技が必要になる（むずかしい）
 export const DIFFICULTY = {
-  easy: { plateCount: 4, walls: true, gravity: 1.0, plateLenRatio: 0.46 },
-  normal: { plateCount: 4, walls: false, gravity: 1.25, plateLenRatio: 0.55 },
-  hard: { plateCount: 5, walls: false, gravity: 1.55, plateLenRatio: 0.42 },
+  easy: { shelfCount: 4, wave: 0, gapRatio: 0.26, maxTiltDeg: 14 },
+  normal: { shelfCount: 5, wave: 2.5, gapRatio: 0.22, maxTiltDeg: 16 },
+  hard: { shelfCount: 6, wave: 4, gapRatio: 0.18, maxTiltDeg: 16 },
 };
 
-// 板の初期の傾き: 互い違い（1=右下がり, -1=左下がり）。
-// そのままではゴールしないことも多く「先に板を直しておく」プランニングを誘う
-function initialTilts(count) {
-  const tilts = [];
-  for (let i = 0; i < count; i++) tilts.push(i % 2 === 0 ? 1 : -1);
-  return tilts;
+export const WAVE_LENGTH = 70; // 波波の波長(px)
+export const SHELF_TOP = 92;   // いちばん上の段のy
+export const SHELF_BOTTOM = 332;
+
+// 段の形を作る: 偶数段は右に切れ目（左から右へ転がす）、奇数段は左に切れ目。
+// 波波はsinカーブ。点列はui.jsがそのまま物理セグメントと描画に使う
+export function buildShelves(settings, width) {
+  const shelves = [];
+  const step = 24;
+  const spacing = (SHELF_BOTTOM - SHELF_TOP) / (settings.shelfCount - 1);
+  for (let i = 0; i < settings.shelfCount; i++) {
+    const baseY = SHELF_TOP + spacing * i;
+    const gapSide = i % 2 === 0 ? 'right' : 'left';
+    const startX = gapSide === 'right' ? 4 : width * settings.gapRatio;
+    const endX = gapSide === 'right' ? width * (1 - settings.gapRatio) : width - 4;
+    const points = [];
+    for (let x = startX; x < endX + step; x += step) {
+      const px = Math.min(x, endX);
+      points.push({
+        x: px,
+        y: baseY + settings.wave * Math.sin((px / WAVE_LENGTH) * Math.PI * 2),
+      });
+      if (px >= endX) break;
+    }
+    shelves.push({ points, gapSide, baseY });
+  }
+  return shelves;
 }
 
 export function createGame({ difficulty = 'easy', mode = 'solo' } = {}) {
-  const settings = DIFFICULTY[difficulty];
   return {
     mode,
-    settings,
-    tilts: initialTilts(settings.plateCount),
-    ballIndex: 0,      // 何個目のボールまで出したか
-    ballActive: false, // ボールが転がっている最中か
-    goals: 0,          // キャッチできた数（スコア)
-    tapsThisBall: 0,   // smooth_run判定: ボールが出てからのタップ数
-    smoothGoals: 0,    // タップなしでゴールできた数
+    settings: DIFFICULTY[difficulty],
+    running: false,
+    startedAt: null,
+    elapsedMs: null,     // 今のラウンドの結果（ゴール時に確定）
     currentPlayer: 0,
-    results: [null, null],
+    results: [null, null], // こうたい対戦の各プレイヤーのタイム(ms)
     finished: false,
   };
 }
 
-// 板をタップ: 傾きを反転。ボールが転がっている間のタップは数えておく
-// （0タップでゴール=先に準備できていた、のほめ判定に使う）
-export function togglePlate(state, index) {
-  if (state.finished || index < 0 || index >= state.tilts.length) return null;
-  state.tilts[index] = -state.tilts[index];
-  if (state.ballActive) state.tapsThisBall++;
-  return state.tilts[index];
+// ボールが出た（タイム計測開始）。nowは注入できる（テスト用）
+export function startRun(state, now) {
+  if (state.finished || state.running) return false;
+  state.running = true;
+  state.startedAt = now;
+  state.elapsedMs = null;
+  return true;
 }
 
-// 次のボールを出す。出せないときはnull
-export function launchBall(state) {
-  if (state.finished || state.ballActive || state.ballIndex >= BALLS_PER_ROUND) return null;
-  state.ballIndex++;
-  state.ballActive = true;
-  state.tapsThisBall = 0;
-  return state.ballIndex;
+export function elapsedOf(state, now) {
+  if (!state.running || state.startedAt === null) return 0;
+  return now - state.startedAt;
 }
 
-// ラウンド終了（3個投げ切った）。こうたい対戦なら交代する
-function endRound(state) {
-  state.results[state.currentPlayer] = state.goals;
+// ゴールした。こうたい対戦なら交代、そうでなければ終了
+export function finishRun(state, now) {
+  if (!state.running) return null;
+  state.running = false;
+  state.elapsedMs = now - state.startedAt;
+  state.results[state.currentPlayer] = state.elapsedMs;
   if (state.mode === 'two' && state.currentPlayer === 0) {
     state.currentPlayer = 1;
-    state.tilts = initialTilts(state.settings.plateCount); // 同じ条件でフェアに
-    state.ballIndex = 0;
-    state.goals = 0;
-    state.smoothGoals = 0;
-    return { nextPlayer: 1 };
+    return { elapsedMs: state.elapsedMs, nextPlayer: 1 };
   }
   state.finished = true;
   let winner = null;
   if (state.mode === 'two') {
     const [a, b] = state.results;
-    winner = a === b ? null : a > b ? 0 : 1;
+    winner = a === b ? null : a < b ? 0 : 1; // タイムが短いほうの勝ち
   }
-  return { finished: true, winner };
-}
-
-// ボールがゴールに入った
-export function ballGoal(state) {
-  if (!state.ballActive) return null;
-  state.ballActive = false;
-  state.goals++;
-  const smooth = state.tapsThisBall === 0;
-  if (smooth) state.smoothGoals++;
-  const roundOver = state.ballIndex >= BALLS_PER_ROUND ? endRound(state) : null;
-  return { smooth, goals: state.goals, roundOver };
-}
-
-// ボールが画面の外へ飛び出した
-export function ballOut(state) {
-  if (!state.ballActive) return null;
-  state.ballActive = false;
-  const roundOver = state.ballIndex >= BALLS_PER_ROUND ? endRound(state) : null;
-  return { goals: state.goals, roundOver };
+  return { elapsedMs: state.elapsedMs, finished: true, winner };
 }
