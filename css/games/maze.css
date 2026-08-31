@@ -1,0 +1,29 @@
+/* maze.css — ボールめいろ（v0.11） */
+
+.kgb-maze {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kgb-maze-status {
+  min-height: 26px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--kgb-text);
+  opacity: 0.85;
+}
+
+.kgb-maze-status.is-happy {
+  color: var(--kgb-accent);
+  opacity: 1;
+}
+
+.kgb-maze-canvas {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  touch-action: none; /* ゆびモードのドラッグでスクロールさせない */
+}

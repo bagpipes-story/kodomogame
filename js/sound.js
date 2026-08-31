@@ -145,6 +145,15 @@ export function playCrash() {
   ], 'square', 0.09);
 }
 
+// 穴に吸い込まれる音（下がっていく3音。おどろかせない）
+export function playSuck() {
+  playNotes([
+    { freq: 500, at: 0, dur: 0.09 },
+    { freq: 370, at: 0.08, dur: 0.09 },
+    { freq: 250, at: 0.16, dur: 0.14 },
+  ], 'sine', 0.1);
+}
+
 // ゴールイン音（「ぽとん！」→うれしい上がり2音）
 export function playGoal() {
   playNotes([

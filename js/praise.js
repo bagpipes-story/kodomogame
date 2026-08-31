@@ -8,6 +8,7 @@ import { loadStats, saveStats } from './storage.js';
 // ほめの優先順位: 特別な行動 > がんばりの継続 > 完走（完走は必ず入る保険）
 const PRAISE_PRIORITY = [
   'perfect_patience',
+  'no_fall_clear',
   'blocked_reach',
   'took_corner',
   'perfect_first_try',
@@ -34,6 +35,7 @@ const SKILL_MAP = {
   balance: ['shapeBalance'],
   flash: ['memoryPower', 'numberLetter'], // 視空間記憶＋数の順序（別冊03§6）
   rollcatch: ['thinkPower'],              // プランニング・因果関係（別冊03§6）
+  maze: ['shapeBalance'],                 // 空間認識・ルート探索（別冊03§6）
 };
 
 let events = new Set();

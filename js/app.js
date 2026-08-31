@@ -14,8 +14,9 @@ import { mount as mountOldmaid } from './games/oldmaid/ui.js';
 import { mount as mountBalance } from './games/balance/ui.js';
 import { mount as mountFlash } from './games/flash/ui.js';
 import { mount as mountRollcatch } from './games/rollcatch/ui.js';
+import { mount as mountMaze } from './games/maze/ui.js';
 
-const APP_VERSION = 'v0.10.1';
+const APP_VERSION = 'v0.11';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -28,6 +29,7 @@ const gameMounters = {
   balance: mountBalance,
   flash: mountFlash,
   rollcatch: mountRollcatch,
+  maze: mountMaze,
 };
 
 const screens = {
@@ -51,6 +53,14 @@ const LEVEL_OPTIONS = [
 ];
 
 const setupConfigs = {
+  maze: {
+    // ひとりプレイ専用（別冊03§1）。むずかしさ＋ルートヒントのありなし
+    defaults: { difficulty: 'easy', hint: 'on' },
+    groups: [
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'hint', label: text.mazeHintLabel, options: [['on', text.hintOn], ['off', text.hintOff]] },
+    ],
+  },
   rollcatch: {
     defaults: { mode: 'solo', difficulty: 'easy' },
     groups: [

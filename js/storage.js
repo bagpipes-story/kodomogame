@@ -23,7 +23,7 @@ const DEFAULT_STATS = {
   mole: { best: 0, bestBy: {}, plays: 0 },
   flash: { best: 0, plays: 0 },
   rollcatch: { bestBy: {}, plays: 0 }, // ベストタイム(ms)を むずかしさ別に保存
-
+  maze: { clears: 0, plays: 0, noFallClears: 0 },
   // 5つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0 },
   stamps: 0,

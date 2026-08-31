@@ -144,6 +144,19 @@ export const text = {
   rcSecSuffix: 'びょう',
   rcGoalSuffix: 'びょうで ゴール！',
 
+  // ボールめいろ（別冊03§3）
+  mazeCalib: 'たいらに もって タップしてね',
+  mazeTiltHint: 'iPhoneを かたむけて ころがそう',
+  mazeFingerHint: 'ゆびで なぞった ほうに かたむくよ',
+  mazeRouteHint: 'めで たどってみよう',
+  mazeFall: 'あれれ〜！',
+  mazeClear: 'ゴール！',
+  mazeFallsLabel: 'おっこちた かず',
+  mazeFallCountSuffix: ' かい',
+  mazeHintLabel: 'ルートヒント',
+  hintOn: 'あり',
+  hintOff: 'なし',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {
@@ -161,6 +174,7 @@ export const text = {
     retried: 'なんかいも チャレンジして えらい！',
     perfect_patience: 'たたかないで がまん できたね！',
     perfect_first_try: 'ひとめで ぜんぶ おぼえられたね！',
+    no_fall_clear: 'そーっと うごかせたね！',
   },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
@@ -179,5 +193,6 @@ export const games = [
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },
   { id: 'balance', name: 'バランスゲーム', icon: '🧱' },
   { id: 'rollcatch', name: 'ころころキャッチ', icon: '🛝' },
+  { id: 'maze', name: 'ボールめいろ', icon: '🧭' },
   { id: 'mole', name: 'もぐらたたき', icon: '🔨' },
 ];
