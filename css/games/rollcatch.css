@@ -1,0 +1,32 @@
+/* rollcatch.css — ころころキャッチ（v0.10） */
+
+.kgb-rollcatch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ぽとん！／おっとっと！のメッセージ行（高さ固定でレイアウトを揺らさない） */
+.kgb-rc-status {
+  min-height: 26px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kgb-text);
+  opacity: 0.85;
+}
+
+.kgb-rc-status.is-happy {
+  color: var(--kgb-accent);
+  opacity: 1;
+}
+
+.kgb-rc-canvas {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  /* そらいろ→しばふの背景。板とボールが映える淡い色 */
+  background: linear-gradient(#eaf6fb 0%, #f3fae9 78%, #e2f0d5 100%);
+  touch-action: manipulation; /* 板タップの反応を速くする */
+}

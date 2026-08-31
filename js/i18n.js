@@ -137,6 +137,13 @@ export const text = {
   // 数字のよみがな（タップ時の数唱表示）
   flashNumbers: ['いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'],
 
+  // ころころキャッチ（別冊03§4）
+  rcGoal: 'ぽとん！ないすキャッチ！',
+  rcOut: 'おっとっと！つぎいこう！',
+  rcCatchLabel: 'キャッチ',
+  rcBallLabel: 'ボール',
+  rcResultSuffix: 'こ キャッチ できた！',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {
@@ -154,6 +161,8 @@ export const text = {
     retried: 'なんかいも チャレンジして えらい！',
     perfect_patience: 'たたかないで がまん できたね！',
     perfect_first_try: 'ひとめで ぜんぶ おぼえられたね！',
+    smooth_run: 'じゅんびが じょうずだったね！',
+    all_goal: 'ぜんぶキャッチ！すごい！',
   },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
@@ -171,5 +180,6 @@ export const games = [
   { id: 'sevens', name: 'しちならべ', icon: '7' },
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },
   { id: 'balance', name: 'バランスゲーム', icon: '🧱' },
+  { id: 'rollcatch', name: 'ころころキャッチ', icon: '🛝' },
   { id: 'mole', name: 'もぐらたたき', icon: '🔨' },
 ];

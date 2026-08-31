@@ -145,6 +145,15 @@ export function playCrash() {
   ], 'square', 0.09);
 }
 
+// ゴールイン音（「ぽとん！」→うれしい上がり2音）
+export function playGoal() {
+  playNotes([
+    { freq: 300, at: 0, dur: 0.08 },
+    { freq: 523, at: 0.1, dur: 0.1 },
+    { freq: 784, at: 0.2, dur: 0.16 },
+  ]);
+}
+
 // 勝利ファンファーレ（ドミソド）
 export function playWin() {
   playNotes([
