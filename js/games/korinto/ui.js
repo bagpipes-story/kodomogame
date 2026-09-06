@@ -31,7 +31,8 @@ const MIN_POWER = 0.12;        // これ未満は「ちょんと触った」扱�
 const CLICK_GAP_MS = 50;       // 釘の音の間引き
 const STUCK_NUDGE_TICKS = 180; // 3秒止まったらそっと押す
 const STUCK_LOST_TICKS = 720;  // 12秒止まったままなら0点で次へ
-const MAX_FLIGHT_TICKS = 1500; // 25秒たっても入らない球（跳ね続け等）は0点で次へ
+const MAX_FLIGHT_TICKS = 2400; // 40秒たっても入らない球（跳ね続け等）は0点で次へ（ワープで戻る分を見込む）
+const POCKET_REST_MS = 600;    // ポケットの底に接地して見せてから消えるまで（何点に入ったか分かるように）
 const COUNT_TICK_MS = 110;     // たしざんの数え上げ間隔
 const CAMERA_LERP = 0.1;
 
@@ -59,6 +60,7 @@ export function mount(root, config, { onExit }) {
   let warpFlashUntil = 0;
   let displayedTotal = 0;
   let pendingBonus = 0;
+  let landingPocket = null; // ポケットに入って底で休んでいる最中（二重判定と止まり判定を止める）
 
   let frameCount = 0;
   let fpsValue = 0;
@@ -212,6 +214,7 @@ export function mount(root, config, { onExit }) {
     if (phase !== 'play' || state.ballActive) return;
     if (!launchBall(state)) return;
     pendingBonus = 0;
+    landingPocket = null;
     world.launch(power);
     ticksSinceLaunch = 0;
     stillTicks = 0;
@@ -222,6 +225,14 @@ export function mount(root, config, { onExit }) {
   }
 
   function onPocket(index) {
+    if (landingPocket !== null || !state.ballActive) return;
+    landingPocket = index;
+    // 球はまだ消さず、底に接地した姿を見せてから得点処理へ
+    later(() => settlePocket(index), POCKET_REST_MS);
+  }
+
+  function settlePocket(index) {
+    landingPocket = null;
     const result = ballScored(state, index, pendingBonus);
     if (!result) return;
     world.removeBall();
@@ -428,6 +439,7 @@ export function mount(root, config, { onExit }) {
     state = createGame({ difficulty: config.difficulty, mode: config.mode });
     displayedTotal = 0;
     pendingBonus = 0;
+    landingPocket = null;
     phase = 'idle';
     setupWorld();
     setStatus('');
@@ -539,33 +551,48 @@ export function mount(root, config, { onExit }) {
         ctx.fillText('🔔', body.position.x, body.position.y);
       }
     }
-    // ワープ: 入口=あおの回るわ、出口=だいだいのわ。同じ番号がつながっている
+    // ワープ: 下段のブラックホール（吸い込み口）と上段のホワイトホール（吐き出し口）。同じ番号がつながっている
     for (const warp of layout.warps) {
       const flashing = warpFlashUntil > now;
-      for (const [pt, color, isEntry] of [[warp.a, '#3a86ff', true], [warp.b, '#f28b3b', false]]) {
-        ctx.save();
-        ctx.translate(pt.x, pt.y);
-        ctx.rotate((now / 400) * (isEntry ? 1 : -1));
-        ctx.strokeStyle = flashing ? '#ffffff' : color;
-        ctx.lineWidth = 4;
-        ctx.setLineDash([7, 5]);
+      // ブラックホール: 黒い円＋むらさきの渦
+      ctx.save();
+      ctx.translate(warp.a.x, warp.a.y);
+      ctx.fillStyle = '#1c1430';
+      ctx.beginPath();
+      ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.rotate(now / 350);
+      ctx.strokeStyle = flashing ? '#ffffff' : '#9b5de5';
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 3; k++) {
         ctx.beginPath();
-        ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
+        ctx.arc(0, 0, warp.r - 4 - k * 4, (k * 2 * Math.PI) / 3, (k * 2 * Math.PI) / 3 + 1.6);
         ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-        ctx.fillStyle = color;
-        ctx.globalAlpha = 0.18;
-        ctx.beginPath();
-        ctx.arc(pt.x, pt.y, warp.r - 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.font = 'bold 13px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = color;
-        ctx.fillText(`${warp.index + 1}`, pt.x, pt.y);
       }
+      ctx.restore();
+      // ホワイトホール: 白く光るわ
+      ctx.save();
+      ctx.translate(warp.b.x, warp.b.y);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath();
+      ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.rotate(-now / 500);
+      ctx.strokeStyle = flashing ? '#ffd65a' : '#a5b8f3';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.arc(0, 0, warp.r - 2, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.font = 'bold 13px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(`${warp.index + 1}`, warp.a.x, warp.a.y);
+      ctx.fillStyle = '#4a63b8';
+      ctx.fillText(`${warp.index + 1}`, warp.b.x, warp.b.y);
     }
   }
 
@@ -651,7 +678,7 @@ export function mount(root, config, { onExit }) {
     world.step(1000 / 60);
 
     const ball = world.getBall();
-    if (ball && state.ballActive) {
+    if (ball && state.ballActive && landingPocket === null) {
       ticksSinceLaunch++;
       const { x, y } = ball.position;
       // レーンに戻ってきた（弱すぎた）
@@ -688,6 +715,7 @@ export function mount(root, config, { onExit }) {
         ballsShot: state?.ballsShot,
         ball: ball ? { x: ball.position.x, y: ball.position.y } : null,
         zoom: cam.zoom,
+        landing: landingPocket !== null,
       };
     }
 

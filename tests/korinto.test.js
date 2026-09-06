@@ -69,7 +69,10 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     }
   }
   assert.strictEqual(DIFFICULTY.adult.boardScale, 2, 'おとなは盤が縦横2倍（面積4倍）');
-  assert.ok(DIFFICULTY.adult.warps.length >= 3 && DIFFICULTY.adult.bumpers.length >= 6, 'おとなはギミック満載');
+  assert.ok(DIFFICULTY.adult.warps.length >= 3 && DIFFICULTY.adult.bumpers.length >= 6 && DIFFICULTY.adult.bells.length === 7, 'おとなはギミック満載（ベル7個）');
+  for (const key of ['hard', 'adult']) {
+    for (const w of DIFFICULTY[key].warps) assert.ok(w.a.fy > w.b.fy, `${key}: ブラックホール(入口)は下段、ホワイトホール(出口)は上段`);
+  }
   assert.ok(DIFFICULTY.hard.warps.length >= 1, 'むずかしいにワープ');
   assert.ok(DIFFICULTY.normal.bumpers.length >= 2, 'ふつうに反発板');
 }
@@ -179,7 +182,7 @@ import { buildWorld } from '../js/games/korinto/physics.js';
       const ball = world.launch(power);
       let outcome = 'stuck';
       let stillTicks = 0;
-      for (let t = 0; t < 1800; t++) { // 30秒ぶん
+      for (let t = 0; t < 2400; t++) { // 40秒ぶん（ワープで上へ戻る分を見込む）
         world.step();
         const { x, y } = ball.position;
         assert.ok(x > -1 && x < W + 1 && y > -1 && y < H + 1, `${key} shot${shot}: 盤外に出ない (${x.toFixed(0)},${y.toFixed(0)})`);
@@ -198,7 +201,8 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     world.destroy();
     console.log(`  ${key}: 200発 → ポケット${results.pocket}・戻り${results.returned}・ひっかかり${results.stuck}・ワープ${warps}回`);
     assert.ok(results.pocket >= 170, `${key}: ほとんどの球がポケットに入る（ひっかかりが多すぎない）`);
-    assert.strictEqual(results.returned, 0, `${key}: 45%以上のパワーなら戻ってこない`);
+    // 反発板で上まではね上がってレーンに落ちる球は「もどってきた」扱い（消費しない）なので少しは許容
+    assert.ok(results.returned <= 10, `${key}: 戻り球は5%以下 (${results.returned})`);
     if (layout.warps.length) assert.ok(warps > 0, `${key}: ワープが一度は使われる`);
   }
 }

@@ -6,6 +6,8 @@
 import { BALL_R } from './game.js';
 
 const WARP_COOLDOWN_TICKS = 45; // 出口から出た直後に別のワープへ吸われないための猶予
+const BUMPER_KICK = 9;          // 反発板が球を蹴り出す速さ(px/フレーム)。反発係数だけだと弱い。
+                                // 強すぎると上のレールまで飛んでレーンに落ちる（戻り球になる）ため控えめ
 
 export function buildWorld(M, layout, handlers = {}) {
   const engine = M.Engine.create({ enableSleeping: false });
@@ -39,8 +41,7 @@ export function buildWorld(M, layout, handlers = {}) {
 
   // 反発板: 反発係数を1より大きくして「はじき返す」感触に
   for (const b of layout.bumpers) {
-    // 1.0を少し超える程度: 大きすぎると壁との間で跳ね続けて止まらなくなる
-    const body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, { ...staticOpts, restitution: 1.08, chamfer: { radius: 5 } });
+    const body = M.Bodies.rectangle(b.x, b.y, b.w, b.h, { ...staticOpts, restitution: 0.9, chamfer: { radius: 5 } });
     M.Body.setAngle(body, b.angle);
     body.plugin.kgb = { kind: 'bumper' };
     bodies.push(body);
@@ -62,6 +63,7 @@ export function buildWorld(M, layout, handlers = {}) {
 
   let ball = null;
   let warpCooldown = 0;
+  let pendingKick = null; // 反発板に当たった直後、衝突処理のあとで蹴り出す
 
   M.Events.on(engine, 'collisionStart', (event) => {
     if (!ball) return;
@@ -70,7 +72,14 @@ export function buildWorld(M, layout, handlers = {}) {
       if (!other || !other.plugin.kgb) continue;
       const info = other.plugin.kgb;
       if (info.kind === 'peg' && handlers.onPeg) handlers.onPeg(other);
-      else if (info.kind === 'bumper' && handlers.onBumper) handlers.onBumper(other);
+      else if (info.kind === 'bumper') {
+        // 板の法線（球のいる側）を求めて、衝突処理後にその向きへ蹴り出す
+        const nx = Math.sin(other.angle);
+        const ny = -Math.cos(other.angle);
+        const side = (ball.position.x - other.position.x) * nx + (ball.position.y - other.position.y) * ny >= 0 ? 1 : -1;
+        pendingKick = { x: nx * side, y: ny * side };
+        if (handlers.onBumper) handlers.onBumper(other);
+      }
       else if (info.kind === 'bell' && handlers.onBell) handlers.onBell(info.index);
       else if (info.kind === 'pocket' && handlers.onPocket) handlers.onPocket(info.index);
     }
@@ -117,10 +126,25 @@ export function buildWorld(M, layout, handlers = {}) {
     }
   }
 
-  // 1フレーム進める（風車の回転・ワープ判定もここで）
+  // 反発板のキック: 反射した速度の法線成分がBUMPER_KICKに満たなければ足す（「ボヨン」）
+  function applyKick() {
+    if (!pendingKick || !ball) {
+      pendingKick = null;
+      return;
+    }
+    const { x: nx, y: ny } = pendingKick;
+    pendingKick = null;
+    const v = ball.velocity;
+    const along = v.x * nx + v.y * ny;
+    const boost = Math.max(0, BUMPER_KICK - along);
+    M.Body.setVelocity(ball, { x: v.x + nx * boost, y: v.y + ny * boost });
+  }
+
+  // 1フレーム進める（風車の回転・反発板のキック・ワープ判定もここで）
   function step(dtMs = 1000 / 60) {
     for (const wheel of pinwheels) M.Body.setAngle(wheel, wheel.angle + layout.pinwheelSpeed);
     M.Engine.update(engine, dtMs);
+    applyKick();
     checkWarps();
   }
 
