@@ -74,7 +74,8 @@ export function mount(root, config, { onExit }) {
     const item = faceItems[card.face];
     if (item.letter) {
       statusEl.textContent = card.variant === 0 ? item.letter : item.letter.toLowerCase();
-      say(item.letter); // 小文字は"a"が冠詞に読まれることがあるので常に大文字で読む
+      // 大文字1文字はiOSが「capital D」と読んでしまうため、小文字で読ませる（文字名だけが鳴る）
+      say(item.letter.toLowerCase());
       return;
     }
     if (theme === 'english') {

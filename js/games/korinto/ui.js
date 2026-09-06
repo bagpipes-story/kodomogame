@@ -1,12 +1,12 @@
-// ui.js — コリントゲームの描画・入力（v0.12。別冊04§7）
+// ui.js — コリントゲームの描画・入力（v0.12 → v0.13.1でギミックとおとな盤を追加）
 // 物理はphysics.js（Matter.js）、盤のデータはgame.jsのbuildLayout。
 // 操作は下の大きなボタンを「押し続けてゲージ→離して発射」（ドラッグ不要）。
+// おとな（盤2×2倍）はカメラで見せる: 打つ前は全体を俯瞰、球が動いている間は等倍で追いかける。
 // 性能規定: ゲージはCSS transitionで動かし、rAF内ではCanvas描画だけ（DOMは触らない）。
 
 import {
   BALLS_PER_ROUND,
   BALL_R,
-  PEG_R,
   CANVAS_H,
   DIFFICULTY,
   buildLayout,
@@ -20,7 +20,9 @@ import {
 } from './game.js';
 import { buildWorld } from './physics.js';
 import { text } from '../../i18n.js';
-import { playTap, playPop, playClick, playBell, playGoal, playFlutter, playWin } from '../../sound.js';
+import {
+  playTap, playPop, playClick, playBell, playGoal, playFlutter, playWin, playBoing, playWarp,
+} from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
 
@@ -29,7 +31,9 @@ const MIN_POWER = 0.12;        // これ未満は「ちょんと触った」扱�
 const CLICK_GAP_MS = 50;       // 釘の音の間引き
 const STUCK_NUDGE_TICKS = 180; // 3秒止まったらそっと押す
 const STUCK_LOST_TICKS = 720;  // 12秒止まったままなら0点で次へ
+const MAX_FLIGHT_TICKS = 1500; // 25秒たっても入らない球（跳ね続け等）は0点で次へ
 const COUNT_TICK_MS = 110;     // たしざんの数え上げ間隔
+const CAMERA_LERP = 0.1;
 
 export function mount(root, config, { onExit }) {
   const M = window.Matter;
@@ -50,8 +54,9 @@ export function mount(root, config, { onExit }) {
   let ticksSinceLaunch = 0;
   let stillTicks = 0;
   let lastClickAt = 0;
-  let pegFlash = new Map(); // body → 光らせ終わる時刻
-  let bellFlashUntil = 0;
+  const flashUntil = new Map(); // body → 光らせ終わる時刻（釘・反発板）
+  const bellFlashUntil = new Map();
+  let warpFlashUntil = 0;
   let displayedTotal = 0;
   let pendingBonus = 0;
 
@@ -132,7 +137,12 @@ export function mount(root, config, { onExit }) {
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
-  const layout = buildLayout(settings, W, H);
+  // 盤はキャンバスのboardScale倍（おとな=2）。カメラで切り取って描く
+  const boardW = W * settings.boardScale;
+  const boardH = H * settings.boardScale;
+  const layout = buildLayout(settings, boardW, boardH);
+  const overviewZoom = 1 / settings.boardScale;
+  const cam = { x: boardW / 2, y: boardH / 2, zoom: overviewZoom };
 
   // ---------- 表示の差分更新 ----------
 
@@ -169,19 +179,28 @@ export function mount(root, config, { onExit }) {
     world = buildWorld(M, layout, {
       onPeg: (pegBody) => {
         const now = performance.now();
-        pegFlash.set(pegBody, now + 220);
+        flashUntil.set(pegBody, now + 220);
         if (now - lastClickAt >= CLICK_GAP_MS) {
           playClick();
           lastClickAt = now;
         }
       },
-      onBell: () => {
-        const bonus = hitBell(state);
+      onBumper: (body) => {
+        flashUntil.set(body, performance.now() + 260);
+        playBoing();
+      },
+      onBell: (index) => {
+        const bonus = hitBell(state, index);
         if (!bonus) return;
         pendingBonus += bonus;
-        bellFlashUntil = performance.now() + 500;
+        bellFlashUntil.set(index, performance.now() + 500);
         playBell();
         setStatus(text.koBell, true);
+      },
+      onWarp: () => {
+        warpFlashUntil = performance.now() + 500;
+        playWarp();
+        setStatus(text.koWarp, true);
       },
       onPocket: (index) => onPocket(index),
     });
@@ -417,14 +436,27 @@ export function mount(root, config, { onExit }) {
     showStartOverlay();
   }
 
-  // ---------- 描画（rAFループ） ----------
+  // ---------- 描画（rAFループ。盤座標で描き、カメラで切り取る） ----------
+
+  function roundRectPath(x, y, w, h, r) {
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
 
   function drawBoard() {
     ctx.fillStyle = '#f0d9b0';
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, boardW, boardH);
     // レーンの床色
     ctx.fillStyle = 'rgba(138, 106, 78, 0.12)';
-    ctx.fillRect(layout.laneWallX, 92, W - layout.laneWallX, H - 92);
+    ctx.fillRect(layout.laneWallX, 92, boardW - layout.laneWallX, boardH - 92);
     // 壁（レール・仕切り）
     ctx.fillStyle = '#a5723f';
     for (const wall of layout.walls) {
@@ -437,39 +469,39 @@ export function mount(root, config, { onExit }) {
   }
 
   function drawPockets(now) {
-    ctx.font = 'bold 15px -apple-system, sans-serif';
+    const big = settings.boardScale > 1;
+    ctx.font = `bold ${big ? 22 : 15}px -apple-system, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (const pocket of layout.pockets) {
       const cx = (pocket.x0 + pocket.x1) / 2;
-      const isAim = state.aimIndex === pocket.index;
-      if (isAim) {
+      if (state.aimIndex === pocket.index) {
         const pulse = 0.25 + 0.15 * Math.sin(now / 150);
         ctx.fillStyle = `rgba(255, 214, 90, ${pulse})`;
-        ctx.fillRect(pocket.x0 + 3, H - layout.pocketH, pocket.x1 - pocket.x0 - 6, layout.pocketH - 4);
+        ctx.fillRect(pocket.x0 + 3, boardH - layout.pocketH, pocket.x1 - pocket.x0 - 6, layout.pocketH - 4);
       }
       ctx.fillStyle = pocket.points === 0 ? 'rgba(74, 63, 53, 0.45)' : '#4a3f35';
-      ctx.fillText(`${pocket.points}`, cx, H - 26);
+      ctx.fillText(`${pocket.points}`, cx, boardH - 26);
     }
   }
 
-  function drawPegs(now) {
+  function drawGimmicks(now) {
     const bodies = M.Composite.allBodies(world.engine.world);
     for (const body of bodies) {
       const info = body.plugin.kgb;
       if (!info) continue;
       if (info.kind === 'peg') {
-        const flashing = (pegFlash.get(body) ?? 0) > now;
+        const flashing = (flashUntil.get(body) ?? 0) > now;
         ctx.fillStyle = flashing ? '#ffd65a' : '#8a6a4e';
         ctx.beginPath();
-        ctx.arc(body.position.x, body.position.y, PEG_R + (flashing ? 1.5 : 0), 0, Math.PI * 2);
+        ctx.arc(body.position.x, body.position.y, layout.pegR + (flashing ? 1.5 : 0), 0, Math.PI * 2);
         ctx.fill();
       } else if (info.kind === 'pinwheel') {
+        const len = layout.pinwheels[0].len;
         ctx.save();
         ctx.translate(body.position.x, body.position.y);
         ctx.rotate(body.angle);
         ctx.fillStyle = '#e07a5f';
-        const len = layout.pinwheels[0].len;
         ctx.fillRect(-len / 2, -3, len, 6);
         ctx.fillRect(-3, -len / 2, 6, len);
         ctx.restore();
@@ -477,13 +509,62 @@ export function mount(root, config, { onExit }) {
         ctx.beginPath();
         ctx.arc(body.position.x, body.position.y, 4, 0, Math.PI * 2);
         ctx.fill();
-      } else if (info.kind === 'bell') {
-        ctx.fillStyle = bellFlashUntil > now ? '#fff1a8' : '#f0c94a';
+      } else if (info.kind === 'bumper') {
+        // 反発板: ピンクの板。当たった直後は白く光る
+        const flashing = (flashUntil.get(body) ?? 0) > now;
+        const b = layout.bumpers.find((p) => Math.abs(p.x - body.position.x) < 1 && Math.abs(p.y - body.position.y) < 1);
+        const w = b ? b.w : 50;
+        ctx.save();
+        ctx.translate(body.position.x, body.position.y);
+        ctx.rotate(body.angle);
+        ctx.fillStyle = flashing ? '#fff1f4' : '#ff8fab';
         ctx.beginPath();
-        ctx.arc(body.position.x, body.position.y, layout.bell.r + 2, 0, Math.PI * 2);
+        roundRectPath(-w / 2, -6, w, 12, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#c0554a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-w / 2 + 8, -1.5, w - 16, 3);
+        ctx.restore();
+      } else if (info.kind === 'bell') {
+        const flashing = (bellFlashUntil.get(info.index) ?? 0) > now;
+        ctx.fillStyle = flashing ? '#fff1a8' : '#f0c94a';
+        ctx.beginPath();
+        ctx.arc(body.position.x, body.position.y, 11, 0, Math.PI * 2);
         ctx.fill();
         ctx.font = '14px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillText('🔔', body.position.x, body.position.y);
+      }
+    }
+    // ワープ: 入口=あおの回るわ、出口=だいだいのわ。同じ番号がつながっている
+    for (const warp of layout.warps) {
+      const flashing = warpFlashUntil > now;
+      for (const [pt, color, isEntry] of [[warp.a, '#3a86ff', true], [warp.b, '#f28b3b', false]]) {
+        ctx.save();
+        ctx.translate(pt.x, pt.y);
+        ctx.rotate((now / 400) * (isEntry ? 1 : -1));
+        ctx.strokeStyle = flashing ? '#ffffff' : color;
+        ctx.lineWidth = 4;
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath();
+        ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.18;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, warp.r - 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.font = 'bold 13px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = color;
+        ctx.fillText(`${warp.index + 1}`, pt.x, pt.y);
       }
     }
   }
@@ -492,12 +573,12 @@ export function mount(root, config, { onExit }) {
     // バネ: 押している間は縮んで見せる
     const charge = chargeStart === null ? 0 : Math.min((now - chargeStart) / CHARGE_MS, 1);
     const x = layout.spawn.x;
-    const top = H - 18 - 14 * (1 - charge);
+    const top = boardH - 18 - 14 * (1 - charge);
     ctx.strokeStyle = '#6b4d31';
     ctx.lineWidth = 3;
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
-      const y = top + ((H - 6 - top) * i) / 4;
+      const y = top + ((boardH - 6 - top) * i) / 4;
       ctx.moveTo(x - 9, y);
       ctx.lineTo(x + 9, y + 2);
     }
@@ -520,12 +601,42 @@ export function mount(root, config, { onExit }) {
     ctx.stroke();
   }
 
+  // カメラ: 球が動いている間は等倍で追いかけ、それ以外は盤全体を俯瞰（おとなで意味を持つ）
+  function updateCamera() {
+    const ball = world.getBall();
+    let targetZoom = overviewZoom;
+    let targetX = boardW / 2;
+    let targetY = boardH / 2;
+    if (ball && state.ballActive && settings.boardScale > 1) {
+      targetZoom = 1;
+      targetX = Math.max(W / 2, Math.min(boardW - W / 2, ball.position.x));
+      targetY = Math.max(H / 2, Math.min(boardH - H / 2, ball.position.y));
+    }
+    cam.zoom += (targetZoom - cam.zoom) * CAMERA_LERP;
+    cam.x += (targetX - cam.x) * CAMERA_LERP;
+    cam.y += (targetY - cam.y) * CAMERA_LERP;
+  }
+
+  function canvasToBoard(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const px = ((clientX - rect.left) / rect.width) * W;
+    const py = ((clientY - rect.top) / rect.height) * H;
+    return { x: (px - W / 2) / cam.zoom + cam.x, y: (py - H / 2) / cam.zoom + cam.y };
+  }
+
   function draw(now) {
+    ctx.fillStyle = '#e9d3a8';
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.translate(W / 2, H / 2);
+    ctx.scale(cam.zoom, cam.zoom);
+    ctx.translate(-cam.x, -cam.y);
     drawBoard();
     drawPockets(now);
-    drawPegs(now);
+    drawGimmicks(now);
     drawLauncher(now);
     drawBall();
+    ctx.restore();
     if (debugMode) {
       ctx.fillStyle = '#4a3f35';
       ctx.font = 'bold 14px monospace';
@@ -544,8 +655,10 @@ export function mount(root, config, { onExit }) {
       ticksSinceLaunch++;
       const { x, y } = ball.position;
       // レーンに戻ってきた（弱すぎた）
-      if (ticksSinceLaunch > 60 && x > layout.laneWallX && y > H - 40 && ball.speed < 0.3) {
+      if (ticksSinceLaunch > 60 && x > layout.laneWallX && y > boardH - 40 && ball.speed < 0.3) {
         onReturned();
+      } else if (y > boardH + 60 || x < -60 || x > boardW + 60 || ticksSinceLaunch > MAX_FLIGHT_TICKS) {
+        onStuck(); // 万一盤の外へ出た・跳ね続けて入らない球は0点で次へ
       } else {
         if (ball.speed < 0.05) stillTicks++;
         else stillTicks = 0;
@@ -557,6 +670,8 @@ export function mount(root, config, { onExit }) {
         }
       }
     }
+
+    updateCamera();
 
     frameCount++;
     if (now - fpsLastTime >= 1000) {
@@ -572,6 +687,7 @@ export function mount(root, config, { onExit }) {
         total: state?.total,
         ballsShot: state?.ballsShot,
         ball: ball ? { x: ball.position.x, y: ball.position.y } : null,
+        zoom: cam.zoom,
       };
     }
 
@@ -604,10 +720,8 @@ export function mount(root, config, { onExit }) {
 
   canvas.addEventListener('pointerdown', (event) => {
     if (phase !== 'play' || state.ballActive) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * W;
-    const y = ((event.clientY - rect.top) / rect.height) * H;
-    if (y < H - layout.pocketH - 10) return;
+    const { x, y } = canvasToBoard(event.clientX, event.clientY);
+    if (y < boardH - layout.pocketH - 10) return;
     const pocket = layout.pockets.find((p) => x >= p.x0 && x < p.x1);
     if (!pocket) return;
     // 打つ前にねらうポケットを宣言（よそうモード。ねらいを言葉にする知育）

@@ -3,6 +3,9 @@
 // iPhone内蔵の読み上げ（Web Speech API）。ゲーム側は say('apple') だけ呼ぶ。
 // iOSの制約: speak()はタップ等のユーザー操作の中でしか鳴らない → 出題音声はタップ起点で呼ぶこと。
 // 外部への通信は一切しない（読み上げは端末内蔵・オフライン動作）。
+// ミュート（sound.js）中は同梱音声も読み上げも鳴らさない。
+
+import { isMuted } from './sound.js';
 
 const AUDIO_IDS = new Set(); // フェーズ2で同梱音声を追加したらここにidを登録する
 const RATE = 0.8;            // 子ども向けにゆっくり
@@ -50,6 +53,10 @@ export function hasEnglishVoice() {
 // 単語id（words.js）または任意の英文を読み上げる。終了時にresolve（鳴らせない環境でも即resolve）
 export function say(textOrId) {
   return new Promise((resolve) => {
+    if (isMuted()) {
+      resolve();
+      return;
+    }
     if (AUDIO_IDS.has(textOrId)) {
       try {
         const audio = new Audio(`assets/audio/en/${textOrId}.mp3`);

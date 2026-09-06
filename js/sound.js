@@ -167,6 +167,23 @@ export function playBell() {
   ], 'sine', 0.12);
 }
 
+// 反発板にはじかれた音（「ぼよん」: 上がりの短い2音）
+export function playBoing() {
+  playNotes([
+    { freq: 220, at: 0, dur: 0.06 },
+    { freq: 440, at: 0.05, dur: 0.12 },
+  ], 'triangle', 0.13);
+}
+
+// ワープ音（キラキラと上がる3音）
+export function playWarp() {
+  playNotes([
+    { freq: 660, at: 0, dur: 0.08 },
+    { freq: 990, at: 0.07, dur: 0.08 },
+    { freq: 1320, at: 0.14, dur: 0.2 },
+  ], 'sine', 0.11);
+}
+
 // ゴールイン音（「ぽとん！」→うれしい上がり2音）
 export function playGoal() {
   playNotes([

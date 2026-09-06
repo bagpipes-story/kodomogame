@@ -1,6 +1,7 @@
 // game.js — コリントゲームの純ロジック（DOM・物理非依存。別冊04§7）
-// 盤のレイアウト（釘・ポケット・壁の位置）もここで決めて、physics.js（Matter）と
+// 盤のレイアウト（釘・ポケット・壁・ギミックの位置）もここで決めて、physics.js（Matter）と
 // ui.js（描画）が同じデータを使う。ラウンド進行・たしざん表示・こうたい対戦も担当。
+// v0.13.1: 反発板（バンパー）・ワープ・ベル複数を追加し、「おとな」（盤2×2倍）を新設。
 
 export const BALLS_PER_ROUND = 5;
 export const BALL_R = 9;   // 8px以上（小さいと釘をすり抜ける。別冊04§7）
@@ -9,22 +10,51 @@ export const LANE_W = 34;  // 右端の打ち出しレーンの幅
 // 盤の高さ: ヘッダー・バナー・発射ボタンと合わせてiPhone SE(667px)に収まる値
 export const CANVAS_H = 396;
 
-// 釘の並び・ポケット得点・追加要素で難易度を表現
+// 釘の並び・ポケット得点・ギミックの数で難易度を表現。
+// boardScale=2は盤が縦横2倍（面積4倍）。ギミックの位置は盤面に対する割合(fx,fy)で指定
 export const DIFFICULTY = {
   easy: {
-    pegRows: 4, pegCols: 5, staggered: false,
+    boardScale: 1, pegRows: 4, pegCols: 5, staggered: false, pegR: 4,
     pockets: [1, 2, 5, 3, 1],           // 0点なし。1〜5の数の合成（4歳）
-    pinwheels: 0, bell: false, exact: null, countStep: 1,
+    pinwheels: [], bumpers: [], warps: [], bells: [],
+    exact: null, countStep: 1, gravity: 0.9, launch: { min: 14, range: 6 },
   },
   normal: {
-    pegRows: 6, pegCols: 6, staggered: true,
+    boardScale: 1, pegRows: 6, pegCols: 6, staggered: true, pegR: 4,
     pockets: [0, 10, 20, 50, 20, 10, 0], // 10単位のたしざん（6〜8歳）
-    pinwheels: 1, bell: false, exact: null, countStep: 10,
+    pinwheels: [{ fx: 0.5, fy: 0.55 }],
+    // ななめの反発板で中央へはじく（左の板は右端を下げる=正の角度。壁側へ流すと角にはさまる）
+    bumpers: [{ fx: 0.17, fy: 0.3, deg: 28 }, { fx: 0.83, fy: 0.3, deg: -28 }],
+    warps: [], bells: [],
+    exact: null, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 },
   },
   hard: {
-    pegRows: 8, pegCols: 7, staggered: true,
+    boardScale: 1, pegRows: 8, pegCols: 7, staggered: true, pegR: 4,
     pockets: [0, 20, 50, 100, 50, 10, 0],
-    pinwheels: 2, bell: true, exact: 100, countStep: 10, // 「ぴったり100てん」モード
+    pinwheels: [{ fx: 0.33, fy: 0.47 }, { fx: 0.72, fy: 0.72 }],
+    bumpers: [{ fx: 0.16, fy: 0.2, deg: 28 }, { fx: 0.84, fy: 0.2, deg: -28 }, { fx: 0.45, fy: 0.92, deg: 0 }],
+    warps: [{ a: { fx: 0.6, fy: 0.35 }, b: { fx: 0.1, fy: 0.64 } }], // 中央やや右のわに入ると左下へワープ
+    bells: [{ fx: 0.5, fy: 0.1 }],
+    exact: 100, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 }, // 「ぴったり100てん」モード
+  },
+  adult: {
+    boardScale: 2, pegRows: 14, pegCols: 12, staggered: true, pegR: 5,
+    pockets: [0, 10, 50, 100, 200, 100, 50, 20, 0],
+    pinwheels: [
+      { fx: 0.25, fy: 0.22 }, { fx: 0.75, fy: 0.22 }, { fx: 0.5, fy: 0.47 },
+      { fx: 0.25, fy: 0.72 }, { fx: 0.75, fy: 0.72 },
+    ],
+    bumpers: [
+      { fx: 0.1, fy: 0.34, deg: 28 }, { fx: 0.9, fy: 0.34, deg: -28 }, { fx: 0.5, fy: 0.3, deg: 0 },
+      { fx: 0.12, fy: 0.58, deg: 22 }, { fx: 0.88, fy: 0.58, deg: -22 }, { fx: 0.5, fy: 0.9, deg: 0 },
+    ],
+    warps: [
+      { a: { fx: 0.5, fy: 0.06 }, b: { fx: 0.5, fy: 0.6 } },
+      { a: { fx: 0.06, fy: 0.46 }, b: { fx: 0.94, fy: 0.8 } },
+      { a: { fx: 0.94, fy: 0.06 }, b: { fx: 0.06, fy: 0.86 } },
+    ],
+    bells: [{ fx: 0.5, fy: 0.16 }, { fx: 0.3, fy: 0.92 }, { fx: 0.7, fy: 0.92 }],
+    exact: null, countStep: 10, gravity: 0.8, launch: { min: 17, range: 5 }, // 2倍の長さのレーンをパワー45%でも上りきる速さ
   },
 };
 
@@ -56,7 +86,8 @@ function arcPoints(cx, cy, r, fromDeg, toDeg, steps) {
   return pts;
 }
 
-// 盤のレイアウト。右端に打ち出しレーン、上は丸いレールで左へ、下に得点ポケット
+// 盤のレイアウト（W,Hは盤のサイズ。おとなはキャンバスの2倍）。
+// 右端に打ち出しレーン、上は丸いレールで左へ、下に得点ポケット
 export function buildLayout(settings, W, H) {
   const laneWallX = W - LANE_W - 2; // レーンと盤面を仕切る壁の中心x
   const fieldRight = laneWallX - 2; // 盤面の右端
@@ -94,41 +125,55 @@ export function buildLayout(settings, W, H) {
     if (i > 0) walls.push({ cx: x0, cy: H - POCKET_H / 2, w: 6, h: POCKET_H, angle: 0 });
   }
 
-  // 風車とベル（釘はこれらの近くには置かない）
-  const cxField = (fieldLeft + fieldRight) / 2;
-  const pinwheels = [];
-  if (settings.pinwheels === 1) pinwheels.push({ x: cxField, y: 228, len: 52 });
-  if (settings.pinwheels === 2) {
-    pinwheels.push({ x: cxField - 70, y: 200, len: 48 });
-    pinwheels.push({ x: cxField + 70, y: 272, len: 48 });
-  }
-  const bell = settings.bell ? { x: cxField, y: 140, r: 9 } : null;
-
-  // 釘: 上下に等間隔。千鳥は1行おきに半分ずらして1本減らす
-  const pegs = [];
+  // ギミックの位置: 盤面（釘の帯）に対する割合で指定 → 実座標へ
   const pegTop = 122;
   const pegBottom = H - POCKET_H - 40;
-  const rowGap = (pegBottom - pegTop) / (settings.pegRows - 1);
+  const fieldW = fieldRight - fieldLeft;
+  const band = pegBottom - pegTop;
+  const at = (p) => ({ x: fieldLeft + fieldW * p.fx, y: pegTop + band * p.fy });
+  const big = settings.boardScale > 1;
+
+  const pinwheels = settings.pinwheels.map((p) => ({ ...at(p), len: big ? 60 : 52 }));
+  // 反発板（バンパー）: ななめの板で球を強くはじく
+  const bumpers = settings.bumpers.map((p) => ({
+    ...at(p), w: big ? 64 : 50, h: 12, angle: (p.deg * Math.PI) / 180,
+  }));
+  // ワープ: aに入るとbから出てくる
+  const warps = settings.warps.map((p, index) => ({ a: at(p.a), b: at(p.b), r: big ? 18 : 15, index }));
+  const bells = settings.bells.map((p, index) => ({ ...at(p), r: 9, index }));
+
+  // ギミックの近くに釘を置かない（半径＋余白）
+  const blockers = [
+    ...pinwheels.map((p) => ({ x: p.x, y: p.y, r: p.len / 2 + 22 })),
+    ...bumpers.map((p) => ({ x: p.x, y: p.y, r: p.w / 2 + 18 })),
+    ...warps.flatMap((p) => [{ x: p.a.x, y: p.a.y, r: p.r + 26 }, { x: p.b.x, y: p.b.y, r: p.r + 26 }]),
+    ...bells.map((p) => ({ x: p.x, y: p.y, r: 30 })),
+  ];
+
+  // 釘: 上下に等間隔。千鳥は1行おきに半分ずらして1本減らす。
   // 端の釘は壁から球の直径以上はなす（壁と釘のすき間に球がはさまるのを防ぐ）
+  const pegs = [];
   const EDGE = 32;
-  const colGap = (fieldRight - fieldLeft - EDGE * 2) / (settings.pegCols - 1);
+  const rowGap = band / (settings.pegRows - 1);
+  const colGap = (fieldW - EDGE * 2) / (settings.pegCols - 1);
   for (let r = 0; r < settings.pegRows; r++) {
     const y = pegTop + rowGap * r;
     const shifted = settings.staggered && r % 2 === 1;
     const cols = shifted ? settings.pegCols - 1 : settings.pegCols;
     for (let c = 0; c < cols; c++) {
       const x = fieldLeft + EDGE + colGap * c + (shifted ? colGap / 2 : 0);
-      const nearPinwheel = pinwheels.some((p) => Math.hypot(p.x - x, p.y - y) < p.len / 2 + 22);
-      const nearBell = bell && Math.hypot(bell.x - x, bell.y - y) < 30;
-      if (!nearPinwheel && !nearBell) pegs.push({ x, y });
+      const blocked = blockers.some((b) => Math.hypot(b.x - x, b.y - y) < b.r);
+      if (!blocked) pegs.push({ x, y });
     }
   }
 
   return {
     W, H, laneWallX, fieldLeft, fieldRight, pocketH: POCKET_H,
     spawn: { x: W - 2 - LANE_W / 2, y: H - 30 },
-    walls, pockets, sensors, pinwheels, bell, pegs,
-    gravity: 0.9,
+    walls, pockets, sensors, pinwheels, bumpers, warps, bells, pegs,
+    pegR: settings.pegR,
+    gravity: settings.gravity,
+    launch: settings.launch,
     pinwheelSpeed: 0.035, // rad/フレーム
   };
 }
@@ -143,7 +188,7 @@ export function createGame({ difficulty = 'easy', mode = 'solo' } = {}) {
     total: 0,
     lastExpression: '',
     aimIndex: null,    // 「よそう」で宣言したポケット
-    bellHit: false,    // この球でベルを鳴らしたか（1球1回まで）
+    bellsHit: new Set(), // この球で鳴らしたベル（1球につき各1回まで）
     currentPlayer: 0,
     results: [null, null],
     finished: false,
@@ -160,7 +205,7 @@ export function launchBall(state) {
   if (state.finished || state.ballActive || state.ballsShot >= BALLS_PER_ROUND) return null;
   state.ballsShot++;
   state.ballActive = true;
-  state.bellHit = false;
+  state.bellsHit = new Set();
   return state.ballsShot;
 }
 
@@ -172,9 +217,9 @@ export function ballReturned(state) {
   return { ballsLeft: BALLS_PER_ROUND - state.ballsShot };
 }
 
-export function hitBell(state) {
-  if (!state.ballActive || state.bellHit) return 0;
-  state.bellHit = true;
+export function hitBell(state, index = 0) {
+  if (!state.ballActive || state.bellsHit.has(index)) return 0;
+  state.bellsHit.add(index);
   return 5;
 }
 

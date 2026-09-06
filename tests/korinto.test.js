@@ -28,31 +28,50 @@ import { buildWorld } from '../js/games/korinto/physics.js';
   assert.ok(DIFFICULTY.normal.pockets.includes(0) && DIFFICULTY.normal.pockets.includes(50), 'ふつうは0・50あり');
   assert.ok(DIFFICULTY.hard.pockets.includes(100), 'むずかしいは100あり');
   assert.strictEqual(DIFFICULTY.hard.exact, 100, 'むずかしいはぴったり100モード');
-  assert.strictEqual(DIFFICULTY.hard.pinwheels, 2, 'むずかしいは風車2個');
+  assert.strictEqual(DIFFICULTY.hard.pinwheels.length, 2, 'むずかしいは風車2個');
   assert.ok(BALL_R >= 8, '球は半径8px以上');
 }
 
-// ---------- レイアウト: 釘が重ならず、風車・ベルの近くにない ----------
+// ---------- レイアウト: 釘が重ならず、ギミック同士・ギミックと釘が干渉しない ----------
 
 {
-  const W = 375;
-  const H = CANVAS_H;
-  for (const key of ['easy', 'normal', 'hard']) {
-    const layout = buildLayout(DIFFICULTY[key], W, H);
-    assert.strictEqual(layout.pockets.length, DIFFICULTY[key].pockets.length, `${key}: ポケット数`);
+  for (const key of ['easy', 'normal', 'hard', 'adult']) {
+    const settings = DIFFICULTY[key];
+    const layout = buildLayout(settings, 375 * settings.boardScale, CANVAS_H * settings.boardScale);
+    assert.strictEqual(layout.pockets.length, settings.pockets.length, `${key}: ポケット数`);
     for (let i = 0; i < layout.pegs.length; i++) {
       for (let j = i + 1; j < layout.pegs.length; j++) {
         const d = Math.hypot(layout.pegs[i].x - layout.pegs[j].x, layout.pegs[i].y - layout.pegs[j].y);
-        assert.ok(d > BALL_R * 2 + PEG_R * 2 + 2, `${key}: 釘のすき間を球が通れる (${d.toFixed(0)})`);
+        assert.ok(d > BALL_R * 2 + layout.pegR * 2 + 2, `${key}: 釘のすき間を球が通れる (${d.toFixed(0)})`);
       }
       assert.ok(layout.pegs[i].x < layout.fieldRight - 10, `${key}: 釘はレーンに入らない`);
     }
-    for (const p of layout.pinwheels) {
+    // ギミックの円（半径＋余白）を集めて、釘との干渉とギミック同士の重なりを確認
+    const gimmicks = [
+      ...layout.pinwheels.map((p) => ({ x: p.x, y: p.y, r: p.len / 2, name: 'pinwheel' })),
+      ...layout.bumpers.map((p) => ({ x: p.x, y: p.y, r: p.w / 2, name: 'bumper' })),
+      ...layout.warps.flatMap((p) => [{ x: p.a.x, y: p.a.y, r: p.r, name: 'warpA' }, { x: p.b.x, y: p.b.y, r: p.r, name: 'warpB' }]),
+      ...layout.bells.map((p) => ({ x: p.x, y: p.y, r: p.r, name: 'bell' })),
+    ];
+    for (const g of gimmicks) {
       for (const peg of layout.pegs) {
-        assert.ok(Math.hypot(p.x - peg.x, p.y - peg.y) > p.len / 2 + 12, `${key}: 風車と釘が干渉しない`);
+        assert.ok(Math.hypot(g.x - peg.x, g.y - peg.y) > g.r + 12, `${key}: ${g.name}と釘が干渉しない`);
+      }
+      assert.ok(g.x - g.r > layout.fieldLeft + 4 && g.x + g.r < layout.fieldRight - 4, `${key}: ${g.name}が盤面の中`);
+    }
+    for (let i = 0; i < gimmicks.length; i++) {
+      for (let j = i + 1; j < gimmicks.length; j++) {
+        const a = gimmicks[i];
+        const b = gimmicks[j];
+        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        assert.ok(d > a.r + b.r + BALL_R * 2, `${key}: ${a.name}と${b.name}の間を球が通れる (${d.toFixed(0)})`);
       }
     }
   }
+  assert.strictEqual(DIFFICULTY.adult.boardScale, 2, 'おとなは盤が縦横2倍（面積4倍）');
+  assert.ok(DIFFICULTY.adult.warps.length >= 3 && DIFFICULTY.adult.bumpers.length >= 6, 'おとなはギミック満載');
+  assert.ok(DIFFICULTY.hard.warps.length >= 1, 'むずかしいにワープ');
+  assert.ok(DIFFICULTY.normal.bumpers.length >= 2, 'ふつうに反発板');
 }
 
 // ---------- ラウンド進行とたしざん表示 ----------
@@ -99,14 +118,15 @@ import { buildWorld } from '../js/games/korinto/physics.js';
 {
   const state = createGame({ difficulty: 'hard' });
   launchBall(state);
-  assert.strictEqual(hitBell(state), 5, 'ベルで+5');
-  assert.strictEqual(hitBell(state), 0, '同じ球で2回目は鳴らない');
-  ballScored(state, 3, 5); // 100 + 5 = 105
-  assert.strictEqual(state.total, 105);
+  assert.strictEqual(hitBell(state, 0), 5, 'ベルで+5');
+  assert.strictEqual(hitBell(state, 0), 0, '同じ球で同じベルは2回目は鳴らない');
+  assert.strictEqual(hitBell(state, 1), 5, 'べつのベルは鳴る');
+  ballScored(state, 3, 10); // 100 + 10 = 110
+  assert.strictEqual(state.total, 110);
   for (let i = 0; i < 3; i++) { launchBall(state); ballScored(state, 0); }
   launchBall(state);
   const end = ballScored(state, 0);
-  assert.strictEqual(end.roundOver.exact, false, '105はぴったりではない');
+  assert.strictEqual(end.roundOver.exact, false, '110はぴったりではない');
 
   const s2 = createGame({ difficulty: 'hard' });
   launchBall(s2); ballScored(s2, 2); // 50
@@ -145,15 +165,16 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     return seed / 4294967296;
   };
 
-  const W = 375;
-  const H = CANVAS_H;
-  for (const key of ['normal', 'hard']) {
+  for (const key of ['normal', 'hard', 'adult']) {
+    const W = 375 * DIFFICULTY[key].boardScale;
+    const H = CANVAS_H * DIFFICULTY[key].boardScale;
     const layout = buildLayout(DIFFICULTY[key], W, H);
     let pocketIndex = null;
-    const world = buildWorld(M, layout, { onPocket: (i) => { pocketIndex = i; } });
+    let warps = 0;
+    const world = buildWorld(M, layout, { onPocket: (i) => { pocketIndex = i; }, onWarp: () => { warps++; } });
     const results = { pocket: 0, returned: 0, stuck: 0 };
     for (let shot = 0; shot < 200; shot++) {
-      const power = shot < 100 ? 1 : 0.3 + rng() * 0.7;
+      const power = shot < 100 ? 1 : 0.45 + rng() * 0.55;
       pocketIndex = null;
       const ball = world.launch(power);
       let outcome = 'stuck';
@@ -170,14 +191,15 @@ import { buildWorld } from '../js/games/korinto/physics.js';
       // 止まった位置が釘の内部でないこと
       for (const peg of layout.pegs) {
         const d = Math.hypot(ball.position.x - peg.x, ball.position.y - peg.y);
-        assert.ok(d > PEG_R + BALL_R - 2, `${key} shot${shot}: 釘の内部に入らない (d=${d.toFixed(1)})`);
+        assert.ok(d > layout.pegR + BALL_R - 2, `${key} shot${shot}: 釘の内部に入らない (d=${d.toFixed(1)})`);
       }
       results[outcome]++;
     }
     world.destroy();
-    console.log(`  ${key}: 200発 → ポケット${results.pocket}・戻り${results.returned}・ひっかかり${results.stuck}`);
+    console.log(`  ${key}: 200発 → ポケット${results.pocket}・戻り${results.returned}・ひっかかり${results.stuck}・ワープ${warps}回`);
     assert.ok(results.pocket >= 170, `${key}: ほとんどの球がポケットに入る（ひっかかりが多すぎない）`);
-    assert.strictEqual(results.returned, 0, `${key}: 3割以上のパワーなら戻ってこない`);
+    assert.strictEqual(results.returned, 0, `${key}: 45%以上のパワーなら戻ってこない`);
+    if (layout.warps.length) assert.ok(warps > 0, `${key}: ワープが一度は使われる`);
   }
 }
 
