@@ -154,6 +154,19 @@ export function playSuck() {
   ], 'sine', 0.1);
 }
 
+// 釘に当たる音（短い「カチッ」。連続は呼び出し側で間引く）
+export function playClick() {
+  playTone(1400, 0.03, 'square', 0.05);
+}
+
+// ベルの音（明るく長めに響く）
+export function playBell() {
+  playNotes([
+    { freq: 1568, at: 0, dur: 0.35 },
+    { freq: 2093, at: 0.02, dur: 0.45 },
+  ], 'sine', 0.12);
+}
+
 // ゴールイン音（「ぽとん！」→うれしい上がり2音）
 export function playGoal() {
   playNotes([

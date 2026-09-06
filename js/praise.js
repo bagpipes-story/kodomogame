@@ -12,6 +12,8 @@ const PRAISE_PRIORITY = [
   'blocked_reach',
   'took_corner',
   'perfect_first_try',
+  'exact_hit',
+  'aimed_hit',
   'comeback',
   'remembered_pair',
   'combo',
@@ -36,6 +38,7 @@ const SKILL_MAP = {
   flash: ['memoryPower', 'numberLetter'], // 視空間記憶＋数の順序（別冊03§6）
   rollcatch: ['thinkPower'],              // プランニング・因果関係（別冊03§6）
   maze: ['shapeBalance'],                 // 空間認識・ルート探索（別冊03§6）
+  korinto: ['numberLetter', 'shapeBalance'], // たしざんの体感・跳ね返りの観察（別冊04§7）
 };
 
 let events = new Set();

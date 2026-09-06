@@ -20,6 +20,7 @@
   --kgb-color-flash: #6ec6e6;     /* みずいろ */
   --kgb-color-rollcatch: #8fd06c; /* きみどり */
   --kgb-color-maze: #e0b45e;      /* こむぎいろ */
+  --kgb-color-korinto: #f4a261;   /* だいだい */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -165,6 +166,7 @@ html, body {
 .kgb-theme-flash { background: var(--kgb-color-flash); }
 .kgb-theme-rollcatch { background: var(--kgb-color-rollcatch); }
 .kgb-theme-maze { background: var(--kgb-color-maze); }
+.kgb-theme-korinto { background: var(--kgb-color-korinto); }
 
 .kgb-home-footer {
   margin-top: auto;

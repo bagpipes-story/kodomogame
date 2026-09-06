@@ -157,6 +157,25 @@ export const text = {
   hintOn: 'あり',
   hintOff: 'なし',
 
+  // コリントゲーム（別冊04§7）
+  koTotalLabel: 'ごうけい',
+  koPointsSuffix: 'てん',
+  koResultSuffix: 'てん！',
+  koHold: 'おしてね',
+  koRelease: 'はなして！',
+  koWait: 'まってね',
+  koPushHint: 'ボタンを おしつづけて、はなすと はっしゃ！',
+  koAimSuffix: 'てんを ねらう！',
+  koAimedHit: 'ねらいどおり！',
+  koZero: 'あらら、0てん。つぎ いこう！',
+  koReturned: 'もどってきた！もういちど うてるよ',
+  koStuck: 'ひっかかっちゃった！つぎ いこう',
+  koBell: 'ベル！ ＋5',
+  koExactGoal: 'ぴったり 100てんを ねらおう！',
+  koExactTitle: 'ぴったり 100てん！',
+  koOverMessage: '100を こえちゃった！またあそぼう！',
+  koUnderMessage: '100まで あとすこし！またあそぼう！',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {
@@ -175,6 +194,8 @@ export const text = {
     perfect_patience: 'たたかないで がまん できたね！',
     perfect_first_try: 'ひとめで ぜんぶ おぼえられたね！',
     no_fall_clear: 'そーっと うごかせたね！',
+    aimed_hit: 'ねらった ところに いれられたね！',
+    exact_hit: 'ぴったり 100に できたね！',
   },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
@@ -193,6 +214,7 @@ export const games = [
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },
   { id: 'balance', name: 'バランスゲーム', icon: '🧱' },
   { id: 'rollcatch', name: 'ころころキャッチ', icon: '🛝' },
+  { id: 'korinto', name: 'コリントゲーム', icon: '🎯' },
   { id: 'maze', name: 'ボールめいろ', icon: '🧭' },
   { id: 'mole', name: 'もぐらたたき', icon: '🔨' },
 ];

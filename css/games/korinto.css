@@ -1,0 +1,67 @@
+/* korinto.css — コリントゲーム（v0.12） */
+
+.kgb-korinto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.kgb-ko-status {
+  min-height: 26px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kgb-text);
+  opacity: 0.85;
+}
+
+.kgb-ko-status.is-happy {
+  color: var(--kgb-accent);
+  opacity: 1;
+}
+
+.kgb-ko-canvas {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px;
+  touch-action: manipulation;
+}
+
+/* 発射ボタン: 押し続けるとゲージ（背景）が右へ伸びる */
+.kgb-ko-launch {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 400px;
+  min-height: 62px;
+  border: none;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 4px 0 rgba(74, 63, 53, 0.2);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kgb-text);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kgb-ko-launch:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.kgb-ko-gauge {
+  position: absolute;
+  inset: 0;
+  background: var(--kgb-color-korinto);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.kgb-ko-launch-label {
+  position: relative;
+}
