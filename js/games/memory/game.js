@@ -4,11 +4,13 @@
 // 難易度ごとのペア数（仕様§4.3: かんたん8枚/ふつう16枚/むずかしい24枚）
 export const PAIR_COUNTS = { easy: 4, normal: 8, hard: 12 };
 
-// rngを引数で受け取るのは、テストで並び順を固定できるようにするため
+// rngを引数で受け取るのは、テストで並び順を固定できるようにするため。
+// variantはペアの片割れ番号（0/1）。えいご=絵↔ことば、ABC=大文字↔小文字のように
+// 「同じfaceで見た目が違う」テーマで使う（別冊04§6）。絵合わせテーマは無視してよい
 export function createGame({ pairCount, playerCount = 1, rng = Math.random }) {
   const faces = [];
   for (let face = 0; face < pairCount; face++) {
-    faces.push(face, face);
+    faces.push({ face, variant: 0 }, { face, variant: 1 });
   }
   // Fisher-Yatesシャッフル
   for (let i = faces.length - 1; i > 0; i--) {
@@ -16,7 +18,7 @@ export function createGame({ pairCount, playerCount = 1, rng = Math.random }) {
     [faces[i], faces[j]] = [faces[j], faces[i]];
   }
   return {
-    cards: faces.map((face) => ({ face, matched: false })),
+    cards: faces.map(({ face, variant }) => ({ face, variant, matched: false })),
     playerCount,
     currentPlayer: 0,
     scores: new Array(playerCount).fill(0),
@@ -64,6 +66,16 @@ export function resolveMismatch(state) {
   state.faceUp = [];
   state.currentPlayer = (state.currentPlayer + 1) % state.playerCount;
   return indices;
+}
+
+// ABCテーマ用: アルファベットから重複なくcount文字えらぶ（テーマの中身はui.jsが決める）
+export function pickLetters(count, rng = Math.random) {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+  return letters.slice(0, count);
 }
 
 // 最多スコアのプレイヤーindex一覧（同点なら複数=ひきわけ）

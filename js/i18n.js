@@ -67,6 +67,14 @@ export const text = {
   winBlack: 'くろの かち！',
   winWhite: 'しろの かち！',
 
+  // しんけいすいじゃくのテーマ（v0.13。えいご/ABCは別冊04§6）
+  memoryThemeLabel: 'カードの えがら',
+  themeAnimal: 'どうぶつ',
+  themeFruit: 'くだもの',
+  themeEnglish: 'えいご',
+  themeAbc: 'ABC',
+  noVoiceNote: 'えいごの こえが ない iPhone です（もじで あそぼう）',
+
   // ◯×ゲーム
   tttCircle: 'まる',
   tttCross: 'ばつ',

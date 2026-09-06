@@ -11,6 +11,22 @@ import {
   getWinners,
 } from '../js/games/memory/game.js';
 import { createCpu } from '../js/games/memory/cpu.js';
+import { pickLetters } from '../js/games/memory/game.js';
+
+// ---------- ペアの片割れ(variant)とABCの文字えらび（v0.13テーマ機構） ----------
+{
+  const st = createGame({ pairCount: 4, playerCount: 1 });
+  for (let face = 0; face < 4; face++) {
+    const variants = st.cards.filter((c) => c.face === face).map((c) => c.variant).sort();
+    assert.deepStrictEqual(variants, [0, 1], `face${face}は0と1の片割れがある`);
+  }
+  let i = 0;
+  const rng = () => ((i++ * 31) % 26) / 26;
+  const letters = pickLetters(12, rng);
+  assert.strictEqual(letters.length, 12);
+  assert.strictEqual(new Set(letters).size, 12, '文字は重複しない');
+  assert.ok(letters.every((l) => /^[A-Z]$/.test(l)));
+}
 
 // 並び順を固定するためのシャッフルしないrng（Fisher-Yatesでj=0になり逆順になる）
 const fixedRng = () => 0;

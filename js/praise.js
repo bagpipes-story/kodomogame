@@ -26,7 +26,8 @@ const PRAISE_PRIORITY = [
   'finished_game',
 ];
 
-// 5つのあそびのちから: ゲームごとの担当（要件定義§4.2の表）。こころ(heartPower)は全ゲーム+1
+// 6つのあそびのちから: ゲームごとの担当（要件定義§4.2の表）。こころ(heartPower)は全ゲーム+1。
+// えいご(english)はテーマ・ゲームに応じて呼び出し側がextraSkillsで足す
 const SKILL_MAP = {
   memory: ['memoryPower', 'numberLetter'],
   oldmaid: ['memoryPower'],
@@ -62,14 +63,14 @@ export function pickPraise() {
 }
 
 // 1プレイ終了時の記録: plays・勝ち数・5つの力・スタンプ（保存はこの1回のみ。§9）
-export function recordPlay(gameId, { won = false } = {}) {
+export function recordPlay(gameId, { won = false, extraSkills = [] } = {}) {
   const stats = loadStats();
   stats[gameId] ??= {};
   stats[gameId].plays = (stats[gameId].plays ?? 0) + 1;
   if (won) stats[gameId].wins = (stats[gameId].wins ?? 0) + 1;
 
   stats.skills ??= {};
-  for (const skill of SKILL_MAP[gameId] ?? []) {
+  for (const skill of [...(SKILL_MAP[gameId] ?? []), ...extraSkills]) {
     stats.skills[skill] = (stats.skills[skill] ?? 0) + 1;
   }
   stats.skills.heartPower = (stats.skills.heartPower ?? 0) + 1;

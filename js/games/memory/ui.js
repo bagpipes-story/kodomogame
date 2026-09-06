@@ -1,6 +1,8 @@
-// ui.js — 神経衰弱の描画・入力（v0.2）
+// ui.js — 神経衰弱の描画・入力（v0.2 → v0.13でテーマ機構追加）
 // 純ロジック(game.js)とCPU(cpu.js)をつなぎ、DOMの差分更新だけを行う。
 // 盤面はゲーム開始時に一度だけ生成し、以後はカード単位のclass切り替えのみ（§9全再描画禁止）。
+// テーマ（仕様§4.3・別冊04§6）: どうぶつ/くだもの=絵合わせ、えいご=絵↔英単語、ABC=大文字↔小文字。
+// 絵柄はwords.jsの単語データを使い、めくった瞬間に名前を表示（えいご/ABCは読み上げも）。
 
 import {
   PAIR_COUNTS,
@@ -8,14 +10,16 @@ import {
   flipCard,
   resolveMismatch,
   getWinners,
+  pickLetters,
 } from './game.js';
 import { createCpu } from './cpu.js';
 import { text } from '../../i18n.js';
 import { playFlip, playMatch, playTurn, playWin, playTap } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
-
-// カードの絵柄（仮: 絵文字。v0.7でSVGイラストに差し替え予定）。むずかしい=12ペアぶん必要
-const FACES = ['🐶', '🐱', '🐰', '🦁', '🐼', '🐸', '🐥', '🍎', '🍌', '🍇', '🍓', '🚗'];
+import { pickWords } from '../../words.js';
+import { createWordVisual } from '../../wordart.js';
+import { say, hasEnglishVoice, cancelSpeech } from '../../speech.js';
+import { recordPlay } from '../../praise.js';
 
 const MISMATCH_SHOW_MS = 1000; // 不一致カードを見せる時間（仕様§4.3）
 const MATCH_PAUSE_MS = 500;    // 一致演出の間
@@ -34,6 +38,52 @@ export function mount(root, config, { onExit }) {
   let state = null;
   let cpu = null;
   let inputLocked = false;
+
+  const theme = config.theme ?? 'animal';
+  const usesSpeech = theme === 'english' || theme === 'abc';
+  let faceItems = []; // face番号 → { word } または { letter }
+
+  // テーマごとのペアの中身をえらぶ。むずかしい(12ペア)は1カテゴリ8種では足りないので
+  // どうぶつ＋くだもの混合（仕様§4.3）
+  function buildFaceItems(pairCount) {
+    if (theme === 'abc') return pickLetters(pairCount).map((letter) => ({ letter }));
+    let categories = ['animal', 'fruit'];
+    if (pairCount <= 8 && theme === 'animal') categories = ['animal'];
+    if (pairCount <= 8 && theme === 'fruit') categories = ['fruit'];
+    return pickWords(pairCount, { categories }).map((word) => ({ word }));
+  }
+
+  // カードの表面の中身（テーマとvariantで決まる）
+  function fillFront(front, card) {
+    const item = faceItems[card.face];
+    if (item.letter) {
+      front.textContent = card.variant === 0 ? item.letter : item.letter.toLowerCase();
+      front.classList.add('kgb-card-letter');
+      return;
+    }
+    if (theme === 'english' && card.variant === 1) {
+      front.textContent = item.word.en;
+      front.classList.add('kgb-card-word', item.word.en.length >= 8 ? 'is-long' : 'is-short');
+      return;
+    }
+    front.append(createWordVisual(item.word));
+  }
+
+  // めくった瞬間に名前を見せる（語彙）。えいご/ABCは読み上げも（別冊04§6）
+  function announce(card) {
+    const item = faceItems[card.face];
+    if (item.letter) {
+      statusEl.textContent = card.variant === 0 ? item.letter : item.letter.toLowerCase();
+      say(item.letter); // 小文字は"a"が冠詞に読まれることがあるので常に大文字で読む
+      return;
+    }
+    if (theme === 'english') {
+      statusEl.textContent = `${item.word.en}　${item.word.ja}`;
+      say(item.word.en);
+      return;
+    }
+    statusEl.textContent = item.word.ja;
+  }
 
   // ---------- タイマー管理（destroyで全解除するため必ずlater経由） ----------
 
@@ -58,6 +108,10 @@ export function mount(root, config, { onExit }) {
   const banner = document.createElement('div');
   banner.className = 'kgb-turn-banner';
 
+  // めくった絵の名前（テーマ共通の1行）
+  const statusEl = document.createElement('div');
+  statusEl.className = 'kgb-memory-status';
+
   const scoreRow = document.createElement('div');
   scoreRow.className = 'kgb-score-row';
   const scoreValueEls = [];
@@ -79,7 +133,7 @@ export function mount(root, config, { onExit }) {
   const grid = document.createElement('div');
   grid.className = `kgb-card-grid kgb-grid-${config.size}`;
 
-  container.append(banner);
+  container.append(banner, statusEl);
   if (playerCount === 2) container.append(scoreRow);
   container.append(grid);
 
@@ -110,7 +164,7 @@ export function mount(root, config, { onExit }) {
 
       const front = document.createElement('span');
       front.className = 'kgb-card-face kgb-card-front';
-      front.textContent = FACES[card.face];
+      fillFront(front, card);
 
       inner.append(back, front);
       button.append(inner);
@@ -151,6 +205,7 @@ export function mount(root, config, { onExit }) {
     if (!result.ok) return;
     cardEls[index].classList.add('is-open');
     playFlip();
+    announce(state.cards[index]);
     // CPUは誰がめくったカードでも見て覚える（記憶精度は難易度で変わる）
     cpu?.remember(index, state.cards[index].face);
     handleResult(result);
@@ -268,6 +323,8 @@ export function mount(root, config, { onExit }) {
   function finishGame() {
     banner.className = 'kgb-turn-banner kgb-banner-solo';
     const { title, detail, celebrate } = buildResult();
+    // 6つの力: おぼえる・かず（SKILL_MAP）＋えいご/ABCテーマなら えいご も。勝ち数はupdateStatsAtFinishで済み
+    recordPlay('memory', { won: false, extraSkills: usesSpeech ? ['english'] : [] });
 
     const dialog = document.createElement('div');
     dialog.className = 'kgb-dialog';
@@ -342,11 +399,15 @@ export function mount(root, config, { onExit }) {
     inputLocked = false;
     resultOverlay.hidden = true;
     resultOverlay.replaceChildren();
-    state = createGame({ pairCount: PAIR_COUNTS[config.size], playerCount });
+    const pairCount = PAIR_COUNTS[config.size];
+    faceItems = buildFaceItems(pairCount);
+    state = createGame({ pairCount, playerCount });
     cpu = isCpuMode ? createCpu(config.level) : null;
     buildGrid();
     updateBanner();
     updateScores();
+    // 英語音声のない端末では文字だけで遊べることを伝える（別冊04§2.2のフォールバック）
+    statusEl.textContent = usesSpeech && !hasEnglishVoice() ? text.noVoiceNote : '';
   }
 
   // ---------- 入力（リスナーはgridに1つだけ。abortで一括解除） ----------
@@ -364,6 +425,7 @@ export function mount(root, config, { onExit }) {
     destroy() {
       for (const id of timers) clearTimeout(id);
       timers.clear();
+      cancelSpeech(); // 読み上げ中に離脱してもしゃべり続けない（別冊04§10）
       abort.abort();
       root.replaceChildren();
     },

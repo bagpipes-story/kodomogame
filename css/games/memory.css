@@ -85,3 +85,41 @@
   40% { transform: rotateY(180deg) scale(1.18); }
   100% { transform: rotateY(180deg) scale(1); }
 }
+
+/* ---------- v0.13 テーマ機構 ---------- */
+
+/* めくった絵の名前（語彙・読み上げ表示） */
+.kgb-memory-status {
+  min-height: 26px;
+  margin: 4px 0 6px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--kgb-text);
+  opacity: 0.85;
+}
+
+/* えいごテーマの「ことば」カード: 長い単語は小さめに */
+.kgb-card-word {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--kgb-text);
+  padding: 0 4px;
+  word-break: break-all;
+  line-height: 1.05;
+}
+
+.kgb-card-word.is-short {
+  font-size: clamp(16px, 5.4vw, 22px);
+}
+
+.kgb-card-word.is-long {
+  font-size: clamp(12px, 4vw, 16px);
+}
+
+/* ABCテーマ: 文字を大きく */
+.kgb-card-letter {
+  font-weight: 800;
+  font-size: clamp(30px, 11vw, 48px);
+  color: var(--kgb-text);
+}

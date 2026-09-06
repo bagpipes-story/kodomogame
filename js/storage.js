@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
   muted: false,
   breakMinutes: 30, // きゅうけいリマインダー（v0.9でUI実装）
   assist: { othelloCount: true, oldmaidPairHint: true, oldmaidAutoSort: true },
+  wordCategories: ['animal', 'fruit', 'color', 'number', 'shape', 'body'], // えいごの出題カテゴリ（別冊04）
   version: 1,
 };
 
@@ -25,8 +26,8 @@ const DEFAULT_STATS = {
   rollcatch: { bestBy: {}, plays: 0 }, // ベストタイム(ms)を むずかしさ別に保存
   maze: { clears: 0, plays: 0, noFallClears: 0 },
   korinto: { bestBy: {}, plays: 0, exactHits: 0 }, // ベスト合計点を むずかしさ別に
-  // 5つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
-  skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0 },
+  // 6つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
+  skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0, english: 0 },
   stamps: 0,
   lossStreak: {}, // 難易度アシスト用の連敗カウント（ゲームごと）
   version: 1,

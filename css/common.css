@@ -584,3 +584,41 @@ html, body {
 .kgb-mute-button:active {
   transform: scale(0.96);
 }
+
+/* ---------- 単語の絵（wordart.js。えいご系ゲーム共通） ---------- */
+
+.kgb-wordart {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.kgb-wordart-dot {
+  display: block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  border: 2px solid rgba(74, 63, 53, 0.25); /* しろの丸も見えるように */
+}
+
+.kgb-wordart-digit {
+  font-weight: 800;
+  font-size: 0.9em;
+  color: var(--kgb-text);
+}
+
+.kgb-wordart-dots {
+  font-size: 0.28em;
+  letter-spacing: 1px;
+  color: var(--kgb-accent);
+  max-width: 5em;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.kgb-wordart-svg {
+  width: 0.95em;
+  height: 0.95em;
+}
