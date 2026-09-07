@@ -17,7 +17,7 @@ import { mount as mountRollcatch } from './games/rollcatch/ui.js';
 import { mount as mountMaze } from './games/maze/ui.js';
 import { mount as mountKorinto } from './games/korinto/ui.js';
 
-const APP_VERSION = 'v0.13.2';
+const APP_VERSION = 'v0.13.3';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

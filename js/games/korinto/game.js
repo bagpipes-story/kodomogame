@@ -2,6 +2,7 @@
 // 盤のレイアウト（釘・ポケット・壁・ギミックの位置）もここで決めて、physics.js（Matter）と
 // ui.js（描画）が同じデータを使う。ラウンド進行・たしざん表示・こうたい対戦も担当。
 // v0.13.1: 反発板（バンパー）・ワープ・ベル複数を追加し、「おとな」（盤2×2倍）を新設。
+// v0.13.3: ワープは「入ると別のあなからランダムに真上方向へ飛び出す」方式。天井の丸みは盤のサイズに比例。
 
 export const BALLS_PER_ROUND = 5;
 export const BALL_R = 9;   // 8px以上（小さいと釘をすり抜ける。別冊04§7）
@@ -17,7 +18,7 @@ export const DIFFICULTY = {
     boardScale: 1, pegRows: 4, pegCols: 5, staggered: false, pegR: 4,
     pockets: [1, 2, 5, 3, 1],           // 0点なし。1〜5の数の合成（4歳）
     pinwheels: [], bumpers: [], warps: [], bells: [],
-    exact: null, countStep: 1, gravity: 0.9, launch: { min: 14, range: 6 },
+    exact: null, countStep: 1, gravity: 0.9, launch: { min: 14, range: 6 }, warpExitSpeed: 11,
   },
   normal: {
     boardScale: 1, pegRows: 6, pegCols: 6, staggered: true, pegR: 4,
@@ -26,17 +27,17 @@ export const DIFFICULTY = {
     // ななめの反発板で中央へはじく（左の板は右端を下げる=正の角度。壁側へ流すと角にはさまる）
     bumpers: [{ fx: 0.17, fy: 0.3, deg: 28 }, { fx: 0.83, fy: 0.3, deg: -28 }],
     warps: [], bells: [],
-    exact: null, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 },
+    exact: null, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 }, warpExitSpeed: 11,
   },
   hard: {
     boardScale: 1, pegRows: 8, pegCols: 7, staggered: true, pegR: 4,
     pockets: [0, 20, 50, 100, 50, 10, 0],
     pinwheels: [{ fx: 0.33, fy: 0.47 }, { fx: 0.72, fy: 0.72 }],
     bumpers: [{ fx: 0.16, fy: 0.2, deg: 28 }, { fx: 0.84, fy: 0.2, deg: -28 }, { fx: 0.45, fy: 0.92, deg: 0 }],
-    // ワープ: 下段のブラックホール(a)に吸い込まれると上段のホワイトホール(b)から出てくる（もう一巡できる）
-    warps: [{ a: { fx: 0.15, fy: 0.78 }, b: { fx: 0.62, fy: 0.36 } }],
+    // ワープあな: どれかに入ると別のあなから真上±45°の範囲でランダムに飛び出す
+    warps: [{ fx: 0.15, fy: 0.78 }, { fx: 0.62, fy: 0.36 }, { fx: 0.9, fy: 0.55 }],
     bells: [{ fx: 0.5, fy: 0.1 }],
-    exact: 100, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 }, // 「ぴったり100てん」モード
+    exact: 100, countStep: 10, gravity: 0.9, launch: { min: 14, range: 6 }, warpExitSpeed: 11, // 「ぴったり100てん」モード
   },
   adult: {
     boardScale: 2, pegRows: 14, pegCols: 12, staggered: true, pegR: 5,
@@ -49,17 +50,18 @@ export const DIFFICULTY = {
       { fx: 0.1, fy: 0.34, deg: 28 }, { fx: 0.9, fy: 0.34, deg: -28 }, { fx: 0.5, fy: 0.3, deg: 0 },
       { fx: 0.12, fy: 0.58, deg: 22 }, { fx: 0.88, fy: 0.58, deg: -22 }, { fx: 0.5, fy: 0.9, deg: 0 },
     ],
-    // ブラックホール(a)は下段、ホワイトホール(b)は上段
+    // ワープあな6個（上の2つはレーンの口から離しておく: 真上へ飛び出した球がレーンに落ちないように）
     warps: [
-      { a: { fx: 0.5, fy: 0.62 }, b: { fx: 0.5, fy: 0.06 } },
-      { a: { fx: 0.06, fy: 0.8 }, b: { fx: 0.94, fy: 0.08 } },
-      { a: { fx: 0.94, fy: 0.8 }, b: { fx: 0.06, fy: 0.08 } },
+      { fx: 0.5, fy: 0.62 }, { fx: 0.5, fy: 0.06 },
+      { fx: 0.06, fy: 0.8 }, { fx: 0.86, fy: 0.14 },
+      { fx: 0.94, fy: 0.8 }, { fx: 0.08, fy: 0.14 },
     ],
     bells: [
       { fx: 0.5, fy: 0.16 }, { fx: 0.3, fy: 0.92 }, { fx: 0.7, fy: 0.92 },
       { fx: 0.18, fy: 0.45 }, { fx: 0.82, fy: 0.45 }, { fx: 0.35, fy: 0.62 }, { fx: 0.65, fy: 0.62 },
     ],
-    exact: null, countStep: 10, gravity: 0.8, launch: { min: 17, range: 5 }, // 2倍の長さのレーンをパワー45%でも上りきる速さ
+    // レーンが2倍長く天井の丸みも大きいので、最強なら盤の左端まで届く速さ（最大25px/フレーム）
+    exact: null, countStep: 10, gravity: 0.8, launch: { min: 18, range: 7 }, warpExitSpeed: 13,
   },
 };
 
@@ -76,6 +78,7 @@ function segmentsOf(points, thickness) {
       w: len + 2,
       h: thickness,
       angle: Math.atan2(b.y - a.y, b.x - a.x),
+      rail: true, // 上のレール: 球が跳ねずに沿って滑るよう、物理側で反発を殺す
     });
   }
   return rects;
@@ -98,21 +101,24 @@ export function buildLayout(settings, W, H) {
   const fieldRight = laneWallX - 2; // 盤面の右端
   const fieldLeft = 4;
   const POCKET_H = 50;
-  const LANE_TOP = 92;
+  // 上のレールの丸みは盤のサイズに比例させる（おとなは2倍。小さいままだと球が左端まで届かない）
+  const scale = settings.boardScale;
+  const bigR = 74 * scale;
+  const smallR = 40 * scale;
+  const arcCy = bigR + 4;          // 右上の丸みの中心y（丸みの上端が盤の上辺に接する）
+  const LANE_TOP = arcCy + 14;     // レーンの仕切りの上端（丸みの下で口を開ける）
 
   // 上のレール: レーン上端 → 右上の大きな丸み → 上辺 → 左上の丸み → 左壁
-  const bigR = 74;
-  const smallR = 40;
   const top = [
-    ...arcPoints(W - 4 - bigR, 78, bigR, 0, -90, 10),
-    ...arcPoints(fieldLeft + smallR, 4 + smallR, smallR, -90, -180, 6),
+    ...arcPoints(W - 4 - bigR, arcCy, bigR, 0, -90, 10 * scale),
+    ...arcPoints(fieldLeft + smallR, 4 + smallR, smallR, -90, -180, 6 * scale),
   ];
   // 壁は厚めにする: 速い球が1フレームで薄い壁の中心を越えると反対側へ押し出される
   // （自動テストで床すり抜けが再現した）ため、外周は盤の外側へ厚みをとる
   const walls = [
     ...segmentsOf(top, 14),
-    { cx: fieldLeft - 8, cy: (H + 44) / 2, w: 20, h: H - 44, angle: 0 },  // 左壁
-    { cx: W + 6, cy: (H + 78) / 2, w: 20, h: H - 78, angle: 0 },          // 右壁（レーンの外側）
+    { cx: fieldLeft - 8, cy: (H + 4 + smallR) / 2, w: 20, h: H - 4 - smallR, angle: 0 }, // 左壁
+    { cx: W + 6, cy: (H + arcCy) / 2, w: 20, h: H - arcCy, angle: 0 },     // 右壁（レーンの外側）
     { cx: laneWallX, cy: (H + LANE_TOP) / 2, w: 10, h: H - LANE_TOP, angle: 0 }, // レーンの仕切り
     { cx: W / 2, cy: H + 14, w: W + 40, h: 36, angle: 0 },                 // 床（上面はH-4）
   ];
@@ -131,7 +137,7 @@ export function buildLayout(settings, W, H) {
   }
 
   // ギミックの位置: 盤面（釘の帯）に対する割合で指定 → 実座標へ
-  const pegTop = 122;
+  const pegTop = arcCy + 44;
   const pegBottom = H - POCKET_H - 40;
   const fieldW = fieldRight - fieldLeft;
   const band = pegBottom - pegTop;
@@ -143,15 +149,15 @@ export function buildLayout(settings, W, H) {
   const bumpers = settings.bumpers.map((p) => ({
     ...at(p), w: big ? 64 : 50, h: 12, angle: (p.deg * Math.PI) / 180,
   }));
-  // ワープ: aに入るとbから出てくる
-  const warps = settings.warps.map((p, index) => ({ a: at(p.a), b: at(p.b), r: big ? 18 : 15, index }));
+  // ワープあな: どれかに入ると別のあなから飛び出す
+  const warps = settings.warps.map((p, index) => ({ ...at(p), r: big ? 18 : 15, index }));
   const bells = settings.bells.map((p, index) => ({ ...at(p), r: 9, index }));
 
   // ギミックの近くに釘を置かない（半径＋余白）
   const blockers = [
     ...pinwheels.map((p) => ({ x: p.x, y: p.y, r: p.len / 2 + 22 })),
     ...bumpers.map((p) => ({ x: p.x, y: p.y, r: p.w / 2 + 18 })),
-    ...warps.flatMap((p) => [{ x: p.a.x, y: p.a.y, r: p.r + 26 }, { x: p.b.x, y: p.b.y, r: p.r + 26 }]),
+    ...warps.map((p) => ({ x: p.x, y: p.y, r: p.r + 26 })),
     ...bells.map((p) => ({ x: p.x, y: p.y, r: 30 })),
   ];
 
@@ -173,12 +179,13 @@ export function buildLayout(settings, W, H) {
   }
 
   return {
-    W, H, laneWallX, fieldLeft, fieldRight, pocketH: POCKET_H,
+    W, H, laneWallX, fieldLeft, fieldRight, pocketH: POCKET_H, laneTop: LANE_TOP,
     spawn: { x: W - 2 - LANE_W / 2, y: H - 30 },
     walls, pockets, sensors, pinwheels, bumpers, warps, bells, pegs,
     pegR: settings.pegR,
     gravity: settings.gravity,
     launch: settings.launch,
+    warpExitSpeed: settings.warpExitSpeed,
     pinwheelSpeed: 0.035, // rad/フレーム
   };
 }

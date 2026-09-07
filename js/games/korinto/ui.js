@@ -468,7 +468,7 @@ export function mount(root, config, { onExit }) {
     ctx.fillRect(0, 0, boardW, boardH);
     // レーンの床色
     ctx.fillStyle = 'rgba(138, 106, 78, 0.12)';
-    ctx.fillRect(layout.laneWallX, 92, boardW - layout.laneWallX, boardH - 92);
+    ctx.fillRect(layout.laneWallX, layout.laneTop, boardW - layout.laneWallX, boardH - layout.laneTop);
     // 壁（レール・仕切り）
     ctx.fillStyle = '#a5723f';
     for (const wall of layout.walls) {
@@ -551,48 +551,29 @@ export function mount(root, config, { onExit }) {
         ctx.fillText('🔔', body.position.x, body.position.y);
       }
     }
-    // ワープ: 下段のブラックホール（吸い込み口）と上段のホワイトホール（吐き出し口）。同じ番号がつながっている
-    for (const warp of layout.warps) {
+    // ワープあな: 黒いあな＋むらさきの渦。入ると別のあなから飛び出す（番号は不要）
+    for (const hole of layout.warps) {
       const flashing = warpFlashUntil > now;
-      // ブラックホール: 黒い円＋むらさきの渦
       ctx.save();
-      ctx.translate(warp.a.x, warp.a.y);
+      ctx.translate(hole.x, hole.y);
       ctx.fillStyle = '#1c1430';
       ctx.beginPath();
-      ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
+      ctx.arc(0, 0, hole.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.rotate(now / 350);
       ctx.strokeStyle = flashing ? '#ffffff' : '#9b5de5';
       ctx.lineWidth = 3;
       for (let k = 0; k < 3; k++) {
         ctx.beginPath();
-        ctx.arc(0, 0, warp.r - 4 - k * 4, (k * 2 * Math.PI) / 3, (k * 2 * Math.PI) / 3 + 1.6);
+        ctx.arc(0, 0, hole.r - 4 - k * 4, (k * 2 * Math.PI) / 3, (k * 2 * Math.PI) / 3 + 1.6);
         ctx.stroke();
       }
       ctx.restore();
-      // ホワイトホール: 白く光るわ
-      ctx.save();
-      ctx.translate(warp.b.x, warp.b.y);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.strokeStyle = flashing ? '#ffd65a' : 'rgba(155, 93, 229, 0.6)';
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(0, 0, warp.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.rotate(-now / 500);
-      ctx.strokeStyle = flashing ? '#ffd65a' : '#a5b8f3';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([6, 6]);
-      ctx.beginPath();
-      ctx.arc(0, 0, warp.r - 2, 0, Math.PI * 2);
+      ctx.arc(hole.x, hole.y, hole.r + 2, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.restore();
-      ctx.font = 'bold 13px -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(`${warp.index + 1}`, warp.a.x, warp.a.y);
-      ctx.fillStyle = '#4a63b8';
-      ctx.fillText(`${warp.index + 1}`, warp.b.x, warp.b.y);
     }
   }
 

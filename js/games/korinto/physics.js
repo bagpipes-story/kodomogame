@@ -9,7 +9,7 @@ const WARP_COOLDOWN_TICKS = 45; // 出口から出た直後に別のワープへ
 const BUMPER_KICK = 9;          // 反発板が球を蹴り出す速さ(px/フレーム)。反発係数だけだと弱い。
                                 // 強すぎると上のレールまで飛んでレーンに落ちる（戻り球になる）ため控えめ
 
-export function buildWorld(M, layout, handlers = {}) {
+export function buildWorld(M, layout, handlers = {}, rng = Math.random) {
   const engine = M.Engine.create({ enableSleeping: false });
   engine.gravity.y = layout.gravity;
   engine.positionIterations = 8; // トンネリング防止（別冊04§7）
@@ -19,7 +19,10 @@ export function buildWorld(M, layout, handlers = {}) {
   const bodies = [];
 
   for (const wall of layout.walls) {
-    const body = M.Bodies.rectangle(wall.cx, wall.cy, wall.w, wall.h, staticOpts);
+    // レールは反発ゼロ・摩擦ゼロ: Matterは両者の反発係数の大きい方を使うため、
+    // 球側も低くしておく（釘・反発板は自身の反発係数で跳ねる）
+    const opts = wall.rail ? { isStatic: true, friction: 0, restitution: 0.02 } : staticOpts;
+    const body = M.Bodies.rectangle(wall.cx, wall.cy, wall.w, wall.h, opts);
     M.Body.setAngle(body, wall.angle);
     bodies.push(body);
   }
@@ -91,7 +94,7 @@ export function buildWorld(M, layout, handlers = {}) {
     ball = M.Bodies.circle(layout.spawn.x, layout.spawn.y, BALL_R, {
       friction: 0.01,
       frictionAir: 0.002,
-      restitution: 0.45,
+      restitution: 0.1, // レールに沿って滑るため低め。釘(0.6)・反発板は相手側の値で跳ねる
       density: 0.004,
     });
     M.Composite.add(engine.world, ball);
@@ -109,18 +112,26 @@ export function buildWorld(M, layout, handlers = {}) {
     }
   }
 
-  // ワープ: 入口の円に球の中心が入ったら出口へ瞬間移動（速度はそのまま）
+  // ワープ: あなに球の中心が入ったら、別のあな（ランダム）から真上±45°の範囲でランダムに飛び出す
+  // （下向きに吐き出すとすぐ終わってしまうため上向き固定。速さは難易度ごとの設定）
   function checkWarps() {
-    if (!ball) return;
+    if (!ball || layout.warps.length < 2) return;
     if (warpCooldown > 0) {
       warpCooldown--;
       return;
     }
-    for (const warp of layout.warps) {
-      if (Math.hypot(ball.position.x - warp.a.x, ball.position.y - warp.a.y) < warp.r) {
-        M.Body.setPosition(ball, { x: warp.b.x, y: warp.b.y });
+    for (const hole of layout.warps) {
+      if (Math.hypot(ball.position.x - hole.x, ball.position.y - hole.y) < hole.r) {
+        const others = layout.warps.filter((h) => h !== hole);
+        const exit = others[Math.floor(rng() * others.length)];
+        const angle = -Math.PI / 2 + (rng() - 0.5) * (Math.PI / 2); // 真上を中心に±45°
+        M.Body.setPosition(ball, { x: exit.x, y: exit.y });
+        M.Body.setVelocity(ball, {
+          x: Math.cos(angle) * layout.warpExitSpeed,
+          y: Math.sin(angle) * layout.warpExitSpeed,
+        });
         warpCooldown = WARP_COOLDOWN_TICKS;
-        if (handlers.onWarp) handlers.onWarp(warp.index);
+        if (handlers.onWarp) handlers.onWarp(exit.index);
         return;
       }
     }

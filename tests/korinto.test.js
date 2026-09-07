@@ -50,7 +50,7 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     const gimmicks = [
       ...layout.pinwheels.map((p) => ({ x: p.x, y: p.y, r: p.len / 2, name: 'pinwheel' })),
       ...layout.bumpers.map((p) => ({ x: p.x, y: p.y, r: p.w / 2, name: 'bumper' })),
-      ...layout.warps.flatMap((p) => [{ x: p.a.x, y: p.a.y, r: p.r, name: 'warpA' }, { x: p.b.x, y: p.b.y, r: p.r, name: 'warpB' }]),
+      ...layout.warps.map((p, i) => ({ x: p.x, y: p.y, r: p.r, name: `warp${i}` })),
       ...layout.bells.map((p) => ({ x: p.x, y: p.y, r: p.r, name: 'bell' })),
     ];
     for (const g of gimmicks) {
@@ -69,11 +69,8 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     }
   }
   assert.strictEqual(DIFFICULTY.adult.boardScale, 2, 'おとなは盤が縦横2倍（面積4倍）');
-  assert.ok(DIFFICULTY.adult.warps.length >= 3 && DIFFICULTY.adult.bumpers.length >= 6 && DIFFICULTY.adult.bells.length === 7, 'おとなはギミック満載（ベル7個）');
-  for (const key of ['hard', 'adult']) {
-    for (const w of DIFFICULTY[key].warps) assert.ok(w.a.fy > w.b.fy, `${key}: ブラックホール(入口)は下段、ホワイトホール(出口)は上段`);
-  }
-  assert.ok(DIFFICULTY.hard.warps.length >= 1, 'むずかしいにワープ');
+  assert.ok(DIFFICULTY.adult.warps.length >= 4 && DIFFICULTY.adult.bumpers.length >= 6 && DIFFICULTY.adult.bells.length === 7, 'おとなはギミック満載（ベル7個）');
+  assert.ok(DIFFICULTY.hard.warps.length >= 2, 'むずかしいにワープあなが2つ以上（入ると別のあなから出る）');
   assert.ok(DIFFICULTY.normal.bumpers.length >= 2, 'ふつうに反発板');
 }
 
@@ -174,7 +171,8 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     const layout = buildLayout(DIFFICULTY[key], W, H);
     let pocketIndex = null;
     let warps = 0;
-    const world = buildWorld(M, layout, { onPocket: (i) => { pocketIndex = i; }, onWarp: () => { warps++; } });
+    const world = buildWorld(M, layout, { onPocket: (i) => { pocketIndex = i; }, onWarp: () => { warps++; } }, rng);
+    const pocketHits = new Array(layout.pockets.length).fill(0);
     const results = { pocket: 0, returned: 0, stuck: 0 };
     for (let shot = 0; shot < 200; shot++) {
       const power = shot < 100 ? 1 : 0.45 + rng() * 0.55;
@@ -186,7 +184,7 @@ import { buildWorld } from '../js/games/korinto/physics.js';
         world.step();
         const { x, y } = ball.position;
         assert.ok(x > -1 && x < W + 1 && y > -1 && y < H + 1, `${key} shot${shot}: 盤外に出ない (${x.toFixed(0)},${y.toFixed(0)})`);
-        if (pocketIndex !== null) { outcome = 'pocket'; break; }
+        if (pocketIndex !== null) { outcome = 'pocket'; if (shot < 100) pocketHits[pocketIndex]++; break; }
         if (x > layout.laneWallX && y > H - 40 && ball.speed < 0.3 && t > 60) { outcome = 'returned'; break; }
         if (ball.speed < 0.05) stillTicks++; else stillTicks = 0;
         if (stillTicks > 180) break; // 3秒静止=ひっかかり
@@ -204,6 +202,10 @@ import { buildWorld } from '../js/games/korinto/physics.js';
     // 反発板で上まではね上がってレーンに落ちる球は「もどってきた」扱い（消費しない）なので少しは許容
     assert.ok(results.returned <= 10, `${key}: 戻り球は5%以下 (${results.returned})`);
     if (layout.warps.length) assert.ok(warps > 0, `${key}: ワープが一度は使われる`);
+    // 最強パワーの球が盤の左端側（左から3つのポケット）にも届くこと（おとなは天井の丸み・バネの強さで担保）
+    const leftHits = pocketHits[0] + pocketHits[1] + pocketHits[2];
+    console.log(`    最強パワー100発のポケット分布: ${pocketHits.join(' ')}`);
+    assert.ok(leftHits >= 5, `${key}: 最強パワーで左端側にも届く (${leftHits})`);
   }
 }
 
