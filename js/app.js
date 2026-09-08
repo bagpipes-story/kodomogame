@@ -16,8 +16,9 @@ import { mount as mountFlash } from './games/flash/ui.js';
 import { mount as mountRollcatch } from './games/rollcatch/ui.js';
 import { mount as mountMaze } from './games/maze/ui.js';
 import { mount as mountKorinto } from './games/korinto/ui.js';
+import { mount as mountEnword } from './games/enword/ui.js';
 
-const APP_VERSION = 'v0.13.3';
+const APP_VERSION = 'v0.14';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -32,6 +33,7 @@ const gameMounters = {
   rollcatch: mountRollcatch,
   maze: mountMaze,
   korinto: mountKorinto,
+  enword: mountEnword,
 };
 
 const screens = {
@@ -55,6 +57,16 @@ const LEVEL_OPTIONS = [
 ];
 
 const setupConfigs = {
+  enword: {
+    // ことば（出題カテゴリ）は「ぜんぶ」なら設定のwordCategories（保護者画面で変更予定）に従う
+    defaults: { mode: 'cpu', difficulty: 'easy', level: 'weak', category: 'all' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+      { key: 'category', label: text.ewCategoryLabel, options: [['all', text.catAll], ['animal', text.catAnimal], ['fruit', text.catFruit], ['color', text.catColor], ['number', text.catNumber], ['shape', text.catShape], ['body', text.catBody]] },
+    ],
+  },
   korinto: {
     defaults: { mode: 'solo', difficulty: 'easy' },
     groups: [
@@ -241,7 +253,8 @@ function buildSetupScreen(gameId) {
 
     const row = document.createElement('div');
     // 文字ラベル4つは1行に収まらないため2×2にする（数字だけの5択は1行のまま）
-    row.className = group.options.length === 4 ? 'kgb-option-row is-grid' : 'kgb-option-row';
+    row.className = group.options.length >= 6 ? 'kgb-option-row is-grid-3'
+      : group.options.length === 4 ? 'kgb-option-row is-grid' : 'kgb-option-row';
     for (const [value, optionLabel] of group.options) {
       const button = document.createElement('button');
       button.type = 'button';

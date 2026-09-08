@@ -21,6 +21,7 @@
   --kgb-color-rollcatch: #8fd06c; /* きみどり */
   --kgb-color-maze: #e0b45e;      /* こむぎいろ */
   --kgb-color-korinto: #f4a261;   /* だいだい */
+  --kgb-color-enword: #7bc4c4;    /* あおみどり */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -167,6 +168,7 @@ html, body {
 .kgb-theme-rollcatch { background: var(--kgb-color-rollcatch); }
 .kgb-theme-maze { background: var(--kgb-color-maze); }
 .kgb-theme-korinto { background: var(--kgb-color-korinto); }
+.kgb-theme-enword { background: var(--kgb-color-enword); }
 
 .kgb-home-footer {
   margin-top: auto;
@@ -267,6 +269,12 @@ html, body {
 .kgb-option-row.is-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+/* 6択以上（ことばのカテゴリ）は3列にして縦に伸びすぎないようにする */
+.kgb-option-row.is-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .kgb-option-button {

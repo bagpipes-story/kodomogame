@@ -14,6 +14,8 @@ const PRAISE_PRIORITY = [
   'perfect_first_try',
   'exact_hit',
   'aimed_hit',
+  'beat_robot',
+  'one_listen',
   'comeback',
   'remembered_pair',
   'combo',
@@ -40,6 +42,7 @@ const SKILL_MAP = {
   rollcatch: ['thinkPower'],              // プランニング・因果関係（別冊03§6）
   maze: ['shapeBalance'],                 // 空間認識・ルート探索（別冊03§6）
   korinto: ['numberLetter', 'shapeBalance'], // たしざんの体感・跳ね返りの観察（別冊04§7）
+  enword: ['english'],                    // 音と文字と意味を結ぶ（別冊04§3）
 };
 
 let events = new Set();

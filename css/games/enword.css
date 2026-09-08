@@ -1,0 +1,436 @@
+/* enword.css — えいごカードあて（v0.14。別冊04§3） */
+/* アニメーションはtransform/opacityのみ（§9）。ロボくんのゲージはscaleXのCSS transition */
+
+.kgb-enword {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  flex: 1;
+}
+
+.kgb-enword-banner {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.kgb-enword.is-cpu .kgb-enword-banner {
+  font-size: 18px;
+}
+
+/* ---------- ロボくん（考え中ゲージ） ---------- */
+
+.kgb-enword-robot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: var(--kgb-player1-bg);
+  color: var(--kgb-player1-text);
+}
+
+.kgb-enword-robot-face {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.kgb-enword-gauge {
+  flex: 1;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.kgb-enword-gauge-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--kgb-player1-text);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.kgb-enword-robot-text {
+  min-width: 96px;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: right;
+}
+
+/* ---------- ステージ ---------- */
+
+.kgb-enword-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+/* 円環（ひとり／ロボくんと）: 正方形の中に絶対配置 */
+.kgb-enword-ring {
+  position: relative;
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+
+.kgb-enword-ring .kgb-enword-card {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, 0px));
+}
+
+/* 正解カードは絵に吸い込まれる（中央へ縮みながら消える） */
+.kgb-enword-ring .kgb-enword-card.is-correct {
+  transform: translate(-50%, -50%) scale(0.15);
+  opacity: 0;
+  transition: transform 0.55s ease-in, opacity 0.45s ease-in 0.1s;
+}
+
+/* ---------- 中央の絵 ---------- */
+
+.kgb-enword-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 116px;
+}
+
+.kgb-enword-picture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 116px;
+  height: 116px;
+  border-radius: 50%;
+  background: var(--kgb-white);
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  font-size: 68px;
+  line-height: 1;
+}
+
+.kgb-enword-picture .kgb-wordart {
+  font-size: 68px;
+}
+
+.kgb-enword-picture .kgb-wordart-svg,
+.kgb-enword-picture .kgb-wordart-dot {
+  width: 74px;
+  height: 74px;
+}
+
+.kgb-enword-picture.is-pop {
+  animation: kgbEnwordPop 0.5s ease-out;
+}
+
+@keyframes kgbEnwordPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+.kgb-enword-speaker {
+  /* 絵の下ふちに重ねる（円環のカードと重ならない位置） */
+  position: absolute;
+  left: 50%;
+  top: 84px;
+  transform: translateX(-50%);
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--kgb-color-enword);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kgb-enword-speaker:active {
+  transform: translateX(-50%) translateY(2px);
+}
+
+/* 正解後は「apple！ りんご」を見せるのでスピーカーは引っ込める */
+.kgb-enword.is-done .kgb-enword-speaker {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 正解後の「apple！ りんご」: 絵の上に出す（円環の下側カードと重ならない） */
+.kgb-enword-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  transform: translateX(-50%);
+  margin: 0;
+  min-height: 26px;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--kgb-text);
+  text-align: center;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kgb-enword-caption.is-on {
+  opacity: 1;
+}
+
+/* ふたりモード: 中央の絵をタップして「つぎ！」（両席から届く） */
+.kgb-enword-center-next {
+  display: none;
+  padding: 4px 16px;
+  border-radius: 14px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kgb-enword.is-two.is-done .kgb-enword-center-next {
+  display: inline-block;
+}
+
+/* ---------- カード ---------- */
+
+.kgb-enword-card {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  width: 104px;
+  min-height: 56px;
+  padding: 4px 6px;
+  border: 3px solid transparent;
+  border-radius: 16px;
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  font-size: 28px;   /* 別冊04§3: 最小28px、頭文字はさらに大きく */
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.kgb-enword-card.is-mid {
+  font-size: 24px;
+}
+
+.kgb-enword-card.is-long {
+  font-size: 19px;
+  letter-spacing: 0;
+}
+
+.kgb-enword-card-initial {
+  font-size: 1.3em;
+  color: var(--kgb-accent);
+}
+
+/* まちがえたカードは灰色（選び直し可だが押せない見た目に） */
+.kgb-enword-card.is-wrong {
+  background: #e6e2dc;
+  color: #a39c93;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.kgb-enword-card.is-wrong .kgb-enword-card-initial {
+  color: #a39c93;
+}
+
+/* ロボくんが取った／正解を見せる: 光らせる */
+.kgb-enword-card.is-robot,
+.kgb-enword-card.is-reveal {
+  border-color: var(--kgb-player1-text);
+  animation: kgbEnwordGlow 0.9s ease-in-out infinite alternate;
+}
+
+.kgb-enword-card.is-reveal {
+  border-color: var(--kgb-accent);
+}
+
+@keyframes kgbEnwordGlow {
+  from { transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, 0px)) scale(1); }
+  to { transform: translate(-50%, -50%) translate(var(--x, 0px), var(--y, 0px)) scale(1.08); }
+}
+
+.kgb-enword-card.is-robot-miss {
+  border-color: var(--kgb-player1-text);
+  opacity: 0.8;
+}
+
+/* ---------- ふたり同時（上下2分割） ---------- */
+
+.kgb-enword-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 16px;
+}
+
+.kgb-enword-panel.kgb-player-0 { background: var(--kgb-player0-bg); }
+.kgb-enword-panel.kgb-player-1 { background: var(--kgb-player1-bg); }
+
+/* 上のパネルは向かい合って遊ぶため180°回転（別冊04§2.3） */
+.kgb-enword-panel.is-top {
+  transform: rotate(180deg);
+}
+
+.kgb-enword-panel .kgb-enword-card {
+  width: auto;
+  min-height: 62px;
+}
+
+.kgb-enword-panel .kgb-enword-card.is-correct {
+  border-color: var(--kgb-accent);
+  transform: scale(1.1);
+}
+
+/* グリッド内ではカードの位置変数を使わない（光る演出の拡大だけ） */
+.kgb-enword-panel .kgb-enword-card.is-robot,
+.kgb-enword-panel .kgb-enword-card.is-reveal {
+  animation: kgbEnwordGlowFlat 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes kgbEnwordGlowFlat {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+
+.kgb-enword-panel-score {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kgb-enword-panel.kgb-player-0 .kgb-enword-panel-score { color: var(--kgb-player0-text); }
+.kgb-enword-panel.kgb-player-1 .kgb-enword-panel-score { color: var(--kgb-player1-text); }
+
+/* まちがえた側はその問だけロック（半透明の幕で「まってね」） */
+.kgb-enword-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  background: rgba(255, 248, 231, 0.75);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--kgb-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.kgb-enword-panel.is-locked .kgb-enword-lock {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ふたりモードでは中央の絵をパネルの間に置く */
+.kgb-enword.is-two .kgb-enword-stage {
+  gap: 6px;
+}
+
+.kgb-enword.is-two .kgb-enword-center {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  width: 100%;
+  flex-direction: row;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100px;
+}
+
+.kgb-enword.is-two .kgb-enword-picture {
+  width: 92px;
+  height: 92px;
+  font-size: 54px;
+}
+
+.kgb-enword.is-two .kgb-enword-picture .kgb-wordart {
+  font-size: 54px;
+}
+
+.kgb-enword.is-two .kgb-enword-picture .kgb-wordart-svg,
+.kgb-enword.is-two .kgb-enword-picture .kgb-wordart-dot {
+  width: 58px;
+  height: 58px;
+}
+
+.kgb-enword.is-two .kgb-enword-speaker {
+  position: static;
+  transform: none;
+}
+
+.kgb-enword.is-two .kgb-enword-speaker:active {
+  transform: translateY(2px);
+}
+
+.kgb-enword.is-two .kgb-enword-caption {
+  width: 100%;
+  left: 0;
+  bottom: -4px;
+  transform: none;
+  font-size: 16px;
+}
+
+/* ---------- 下部 ---------- */
+
+.kgb-enword-status {
+  margin: 0;
+  min-height: 26px;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--kgb-text);
+}
+
+.kgb-enword-next {
+  width: 100%;
+  max-width: 260px;
+  min-height: var(--kgb-tap-min);
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 24px;
+  font-weight: 800;
+  box-shadow: 0 5px 0 rgba(74, 63, 53, 0.25);
+  cursor: pointer;
+}
+
+.kgb-enword-next:active {
+  transform: translateY(3px);
+}
+
+/* display指定つき要素のhidden（UAスタイルより優先させる） */
+.kgb-enword-card[hidden],
+.kgb-enword-robot[hidden] {
+  display: none;
+}

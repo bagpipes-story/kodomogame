@@ -26,6 +26,7 @@ const DEFAULT_STATS = {
   rollcatch: { bestBy: {}, plays: 0 }, // ベストタイム(ms)を むずかしさ別に保存
   maze: { clears: 0, plays: 0, noFallClears: 0 },
   korinto: { bestBy: {}, plays: 0, exactHits: 0 }, // ベスト合計点を むずかしさ別に
+  enword: { wins: 0, plays: 0 },  // ロボくんに勝った数（別冊04§3）
   // 6つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0, english: 0 },
   stamps: 0,
