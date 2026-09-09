@@ -18,7 +18,7 @@ import { mount as mountMaze } from './games/maze/ui.js';
 import { mount as mountKorinto } from './games/korinto/ui.js';
 import { mount as mountEnword } from './games/enword/ui.js';
 
-const APP_VERSION = 'v0.14';
+const APP_VERSION = 'v0.14.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

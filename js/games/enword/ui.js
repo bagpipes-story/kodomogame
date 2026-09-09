@@ -256,9 +256,16 @@ export function mount(root, config, { onExit }) {
 
   // ---------- 音声・ゲージ ----------
 
+  // 読み上げは「いま鳴っている1回＋予約1回」まで。連打しても2回ぶんで打ち止め（それ以上は無視）
+  const MAX_QUEUED_SAYS = 2;
+  let queuedSays = 0;
   function speak(q) {
+    if (queuedSays >= MAX_QUEUED_SAYS) return Promise.resolve();
+    queuedSays += 1;
     addListen(state);
-    return say(q.answer.en);
+    return say(q.answer.en).finally(() => {
+      queuedSays -= 1;
+    });
   }
 
   function resetGauge() {
