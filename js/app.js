@@ -17,8 +17,10 @@ import { mount as mountRollcatch } from './games/rollcatch/ui.js';
 import { mount as mountMaze } from './games/maze/ui.js';
 import { mount as mountKorinto } from './games/korinto/ui.js';
 import { mount as mountEnword } from './games/enword/ui.js';
+import { mount as mountAbc } from './games/abc/ui.js';
+import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.14.1';
+const APP_VERSION = 'v0.15';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -34,6 +36,8 @@ const gameMounters = {
   maze: mountMaze,
   korinto: mountKorinto,
   enword: mountEnword,
+  abc: mountAbc,
+  listen: mountListen,
 };
 
 const screens = {
@@ -56,7 +60,29 @@ const LEVEL_OPTIONS = [
   ['strong', text.levelStrong],
 ];
 
+const CATEGORY_OPTIONS = [['all', text.catAll], ['animal', text.catAnimal], ['fruit', text.catFruit], ['color', text.catColor], ['number', text.catNumber], ['shape', text.catShape], ['body', text.catBody]];
+
 const setupConfigs = {
+  abc: {
+    // じゅんばんABC（タイム）／はじめのもじ（頭文字3択）。ことばは はじめのもじ のときだけ意味がある
+    defaults: { game: 'order', mode: 'solo', difficulty: 'easy', category: 'all' },
+    groups: [
+      { key: 'game', label: text.abcGameLabel, options: [['order', text.abcOrder], ['initial', text.abcInitial]] },
+      { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['two', text.modeTwo]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'category', label: text.ewCategoryLabel, options: CATEGORY_OPTIONS, when: (s) => s.game === 'initial' },
+    ],
+  },
+  listen: {
+    // ことば（カテゴリ）は かんたん（単語1語）のときだけ意味がある
+    defaults: { mode: 'cpu', difficulty: 'easy', level: 'weak', category: 'all' },
+    groups: [
+      { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+      { key: 'category', label: text.ewCategoryLabel, options: CATEGORY_OPTIONS, when: (s) => s.difficulty === 'easy' },
+    ],
+  },
   enword: {
     // ことば（出題カテゴリ）は「ぜんぶ」なら設定のwordCategories（保護者画面で変更予定）に従う
     defaults: { mode: 'cpu', difficulty: 'easy', level: 'weak', category: 'all' },
@@ -64,7 +90,7 @@ const setupConfigs = {
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
       { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
       { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
-      { key: 'category', label: text.ewCategoryLabel, options: [['all', text.catAll], ['animal', text.catAnimal], ['fruit', text.catFruit], ['color', text.catColor], ['number', text.catNumber], ['shape', text.catShape], ['body', text.catBody]] },
+      { key: 'category', label: text.ewCategoryLabel, options: CATEGORY_OPTIONS },
     ],
   },
   korinto: {
@@ -281,11 +307,14 @@ function updateSetupScreen() {
       selection[button.dataset.key] === button.dataset.value,
     );
   }
-  // ロボット対戦のときだけ意味がある選択肢（つよさ・ロボットのかず）を隠す
+  // ロボット対戦のときだけ意味がある選択肢（つよさ・ロボットのかず）や、
+  // 特定の選択のときだけ意味がある選択肢（when）を隠す
   for (const group of setupConfigs[currentGameId].groups) {
-    if (!group.cpuOnly) continue;
+    if (!group.cpuOnly && !group.when) continue;
     const el = document.querySelector(`[data-group-key="${group.key}"]`);
-    if (el) el.hidden = selection.mode !== 'cpu';
+    if (!el) continue;
+    const visible = (group.cpuOnly ? selection.mode === 'cpu' : true) && (group.when ? group.when(selection) : true);
+    el.hidden = !visible;
   }
 }
 

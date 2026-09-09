@@ -22,6 +22,8 @@
   --kgb-color-maze: #e0b45e;      /* こむぎいろ */
   --kgb-color-korinto: #f4a261;   /* だいだい */
   --kgb-color-enword: #7bc4c4;    /* あおみどり */
+  --kgb-color-abc: #e58fb8;       /* こいピンク */
+  --kgb-color-listen: #9bb6e8;    /* うすあお */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -169,6 +171,8 @@ html, body {
 .kgb-theme-maze { background: var(--kgb-color-maze); }
 .kgb-theme-korinto { background: var(--kgb-color-korinto); }
 .kgb-theme-enword { background: var(--kgb-color-enword); }
+.kgb-theme-abc { background: var(--kgb-color-abc); }
+.kgb-theme-listen { background: var(--kgb-color-listen); }
 
 .kgb-home-footer {
   margin-top: auto;

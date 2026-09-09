@@ -1,0 +1,248 @@
+/* listen.css — きいてタッチ（v0.15。別冊04§5） */
+/* ロボくん行・状態・つぎ！ボタン・ロック幕は enword.css の部品を再利用する */
+
+.kgb-listen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  flex: 1;
+}
+
+.kgb-listen-banner {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+.kgb-listen.is-cpu .kgb-listen-banner {
+  font-size: 18px;
+}
+
+.kgb-listen-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex: 1;
+}
+
+/* 中央: 大きなスピーカー＋指示文 */
+.kgb-listen-center {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 96px;
+}
+
+.kgb-listen-speaker {
+  width: 72px;
+  height: 72px;
+  border: none;
+  border-radius: 50%;
+  background: var(--kgb-color-listen);
+  box-shadow: 0 5px 0 var(--kgb-shadow);
+  font-size: 36px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kgb-listen-speaker:active {
+  transform: translateY(3px);
+}
+
+/* 読み上げ中はゆっくり脈打つ（transformのみ） */
+.kgb-listen-speaker.is-talking {
+  animation: kgbListenPulse 0.7s ease-in-out infinite alternate;
+}
+
+@keyframes kgbListenPulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+.kgb-listen-caption {
+  margin: 0;
+  min-height: 26px;
+  font-size: 19px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--kgb-text);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kgb-listen-caption.is-on {
+  opacity: 1;
+}
+
+.kgb-listen-center-next {
+  display: none;
+  padding: 4px 16px;
+  border-radius: 14px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kgb-listen.is-two.is-done .kgb-listen-center-next {
+  display: inline-block;
+}
+
+.kgb-listen.is-done .kgb-listen-speaker {
+  opacity: 0.5;
+}
+
+/* タイル: 2×2 */
+.kgb-listen-panel {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+  padding: 8px;
+  border-radius: 16px;
+}
+
+.kgb-listen.is-two .kgb-listen-panel.kgb-player-0 { background: var(--kgb-player0-bg); }
+.kgb-listen.is-two .kgb-listen-panel.kgb-player-1 { background: var(--kgb-player1-bg); }
+
+.kgb-listen-panel.is-top {
+  transform: rotate(180deg);
+}
+
+.kgb-listen-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 140px;
+  border: 4px solid transparent;
+  border-radius: 18px;
+  background: var(--kgb-white);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  font-size: 64px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  overflow: hidden;
+}
+
+.kgb-listen.is-two .kgb-listen-tile {
+  height: 72px;
+  font-size: 40px;
+}
+
+/* ふたり同時: 上下2パネル＋中央を iPhone SE の高さ（667px）に収める */
+.kgb-listen.is-two .kgb-listen-stage {
+  gap: 4px;
+}
+
+.kgb-listen.is-two .kgb-listen-panel {
+  gap: 6px;
+  padding: 6px;
+}
+
+.kgb-listen.is-two .kgb-listen-center {
+  min-height: 60px;
+}
+
+.kgb-listen.is-two .kgb-listen-speaker {
+  width: 56px;
+  height: 56px;
+  font-size: 28px;
+}
+
+.kgb-listen.is-two .kgb-listen-caption {
+  min-height: 0;
+  font-size: 16px;
+}
+
+.kgb-listen.is-two .kgb-listen-panel-score {
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.kgb-listen-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.kgb-listen-item .kgb-wordart-svg,
+.kgb-listen-item .kgb-wordart-dot {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+/* 数: 同じ絵文字を並べる（数が多いほど小さく） */
+.kgb-listen-one {
+  font-size: 0.6em;
+}
+
+.kgb-listen-item.is-count-1 .kgb-listen-one { font-size: 1em; }
+.kgb-listen-item.is-count-2 .kgb-listen-one { font-size: 0.7em; }
+.kgb-listen-item.is-count-3 .kgb-listen-one { font-size: 0.6em; }
+.kgb-listen-item.is-count-4 .kgb-listen-one { font-size: 0.55em; }
+.kgb-listen-item.is-count-5 .kgb-listen-one { font-size: 0.5em; }
+
+.kgb-listen-item.is-count-4,
+.kgb-listen-item.is-count-5 {
+  max-width: 2.2em;
+}
+
+/* 大小: 拡大縮小 */
+.kgb-listen-item.is-big { transform: scale(1.35); }
+.kgb-listen-item.is-small { transform: scale(0.55); }
+
+.kgb-listen-tile.is-wrong {
+  background: #e6e2dc;
+  box-shadow: none;
+  opacity: 0.5;
+}
+
+.kgb-listen-tile.is-correct {
+  border-color: var(--kgb-accent);
+  transform: scale(1.06);
+}
+
+.kgb-listen-tile.is-robot,
+.kgb-listen-tile.is-reveal {
+  border-color: var(--kgb-player1-text);
+  animation: kgbEnwordGlowFlat 0.9s ease-in-out infinite alternate;
+}
+
+.kgb-listen-tile.is-reveal {
+  border-color: var(--kgb-accent);
+}
+
+.kgb-listen-tile.is-robot-miss {
+  border-color: var(--kgb-player1-text);
+  opacity: 0.8;
+}
+
+.kgb-listen-panel-score {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kgb-listen-panel.kgb-player-0 .kgb-listen-panel-score { color: var(--kgb-player0-text); }
+.kgb-listen-panel.kgb-player-1 .kgb-listen-panel-score { color: var(--kgb-player1-text); }
+
+.kgb-listen-panel.is-locked .kgb-enword-lock {
+  opacity: 1;
+  pointer-events: auto;
+}

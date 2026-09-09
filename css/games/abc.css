@@ -1,0 +1,156 @@
+/* abc.css — ABCタッチ（v0.15。別冊04§4） */
+/* アニメーションはtransform/opacityのみ（§9） */
+
+.kgb-abc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.kgb-abc-status {
+  margin: 0;
+  min-height: 28px;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--kgb-text);
+}
+
+/* じゅんばんABCの盤: 難易度ごとに列数が変わる固定グリッド（マス単位配置なので重ならない） */
+.kgb-abc-board {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 360px;
+}
+
+.kgb-abc-board.is-cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: 74px;
+}
+
+.kgb-abc-board.is-cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: 60px;
+  gap: 6px;
+}
+
+.kgb-abc-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  border: 3px solid transparent;
+  border-radius: 14px;
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.kgb-abc-card[hidden] {
+  display: none;
+}
+
+.kgb-abc-board.is-cols-5 .kgb-abc-card {
+  font-size: 30px;
+}
+
+/* 押せた文字は色づいて少し小さく（順番が追えるように残す） */
+.kgb-abc-card.is-done {
+  background: var(--kgb-color-abc);
+  color: var(--kgb-white);
+  box-shadow: none;
+  transform: scale(0.88);
+  opacity: 0.75;
+}
+
+.kgb-abc-card.is-wrong {
+  animation: kgbAbcShake 0.45s ease;
+}
+
+@keyframes kgbAbcShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  75% { transform: translateX(-4px); }
+}
+
+/* ---------- はじめのもじ ---------- */
+
+.kgb-abc-picture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 150px;
+  height: 150px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: var(--kgb-white);
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  font-size: 88px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kgb-abc-picture .kgb-wordart {
+  font-size: 88px;
+}
+
+.kgb-abc-picture .kgb-wordart-svg,
+.kgb-abc-picture .kgb-wordart-dot {
+  width: 96px;
+  height: 96px;
+}
+
+.kgb-abc-picture.is-pop {
+  animation: kgbEnwordPop 0.5s ease-out;
+}
+
+.kgb-abc-caption {
+  margin: 0;
+  min-height: 30px;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.kgb-abc-caption.is-on {
+  opacity: 1;
+}
+
+.kgb-abc-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  max-width: 340px;
+}
+
+.kgb-abc-choice {
+  min-height: 96px;
+  font-size: 56px;
+  color: var(--kgb-accent);
+}
+
+.kgb-abc-choice.is-done {
+  transform: scale(1.08);
+  opacity: 1;
+}
+
+.kgb-abc-choice.is-wrong {
+  animation: none;
+  background: #e6e2dc;
+  color: #a39c93;
+  box-shadow: none;
+  opacity: 0.7;
+}

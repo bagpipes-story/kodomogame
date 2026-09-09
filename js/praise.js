@@ -43,6 +43,8 @@ const SKILL_MAP = {
   maze: ['shapeBalance'],                 // 空間認識・ルート探索（別冊03§6）
   korinto: ['numberLetter', 'shapeBalance'], // たしざんの体感・跳ね返りの観察（別冊04§7）
   enword: ['english'],                    // 音と文字と意味を結ぶ（別冊04§3）
+  abc: ['numberLetter', 'english'],       // アルファベット順序・頭文字（別冊04§4）
+  listen: ['english'],                    // 2語・3語の聞き取り（別冊04§5）
 };
 
 let events = new Set();

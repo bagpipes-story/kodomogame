@@ -3,6 +3,7 @@
 // 音声・ロボくんゲージ・演出はui.js側（speech.js / race.js を使う）。
 
 import { WORDS, CATEGORIES } from '../../words.js';
+import { createQuizState, beginQuestion, addListen, answer, robotAnswer } from '../../quiz.js';
 
 export const QUESTIONS_PER_ROUND = 10;
 
@@ -81,18 +82,14 @@ export function buildQuestion(difficulty, { categories, exclude = [], rng = Math
 }
 
 // mode: 'solo'（ひとり）/ 'cpu'（ロボくんと早押し）/ 'two'（ふたり同時）
-// scores[0]=あなた（あか）, scores[1]=ロボくん（あお）
+// 得点・ロック・ロボくんの回答は quiz.js の共通処理（answer / robotAnswer / addListen を再輸出）
 export function createGame({ difficulty = 'easy', mode = 'solo', categories, rng = Math.random } = {}) {
   return {
+    ...createQuizState({ mode, questions: QUESTIONS_PER_ROUND }),
     difficulty,
-    mode,
     categories: normalizeCategories(categories),
     rng,
-    questionIndex: 0,      // 出題済みの数（1問目を出すと1）
     asked: [],             // このラウンドで出た語id（重複出題を避ける）
-    scores: [0, 0],
-    current: null,         // { answer, options, correctIndex, done, locked:[bool,bool], wrong:Set, listens, robotMissed }
-    firstTryCorrect: 0,    // 間違えずに正解した問数（ひとり用の記録）
   };
 }
 
@@ -104,66 +101,8 @@ export function nextQuestion(state) {
   if (!remaining.length) state.asked = [];
   const q = buildQuestion(state.difficulty, { categories: cats, exclude: state.asked, rng: state.rng });
   state.asked.push(q.answer.id);
-  state.questionIndex += 1;
-  state.current = {
-    ...q,
-    done: false,
-    winner: null,          // 正解した側 0/1、だれも取れなければnull
-    locked: [false, false],
-    wrong: new Set(),      // 灰色にした選択肢index
-    listens: 0,
-    robotMissed: false,
-  };
-  return state.current;
+  // simultaneous: ふたりモードは同時押し（まちがえた側をロック）
+  return beginQuestion(state, { ...q, simultaneous: true });
 }
 
-export function addListen(state) {
-  if (state.current) state.current.listens += 1;
-}
-
-// 子ども（ふたりモードでは各プレイヤー）の回答
-export function answer(state, player, optionIndex) {
-  const q = state.current;
-  if (!q || q.done) return { ok: false };
-  if (q.locked[player]) return { ok: false };
-  if (optionIndex === q.correctIndex) {
-    q.done = true;
-    q.winner = player;
-    state.scores[player] += 1;
-    if (q.wrong.size === 0) state.firstTryCorrect += 1;
-    return { ok: true, correct: true, roundOver: roundOverIfDone(state) };
-  }
-  q.wrong.add(optionIndex);
-  if (state.mode === 'two') {
-    // ふたり同時: まちがえた側はこの問だけロック。両方ロックなら正解を見せて次へ
-    q.locked[player] = true;
-    if (q.locked[0] && q.locked[1]) {
-      q.done = true;
-      return { ok: true, correct: false, bothLocked: true, roundOver: roundOverIfDone(state) };
-    }
-  }
-  return { ok: true, correct: false };
-}
-
-// ロボくんの回答（cpuモード）。choiceはrace.jsのrobotChoiceで決めた選択肢
-export function robotAnswer(state, choice) {
-  const q = state.current;
-  if (!q || q.done) return { ok: false };
-  if (choice === q.correctIndex) {
-    q.done = true;
-    q.winner = 1;
-    state.scores[1] += 1;
-    return { ok: true, correct: true, roundOver: roundOverIfDone(state) };
-  }
-  // 外したら次は必ず当てる（「あれれ？」→考え直し。子どもにもう一度チャンス）
-  q.robotMissed = true;
-  return { ok: true, correct: false };
-}
-
-function roundOverIfDone(state) {
-  if (state.questionIndex < QUESTIONS_PER_ROUND) return null;
-  const [a, b] = state.scores;
-  let winner = null;
-  if (state.mode !== 'solo') winner = a === b ? null : a > b ? 0 : 1;
-  return { scores: state.scores.slice(), winner };
-}
+export { addListen, answer, robotAnswer };

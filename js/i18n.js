@@ -211,6 +211,23 @@ export const text = {
   catShape: 'かたち',
   catBody: 'からだ',
 
+  // ABCタッチ（別冊04§4）
+  abcGameLabel: 'あそび',
+  abcOrder: 'じゅんばんABC',
+  abcInitial: 'はじめのもじ',
+  abcStartSuffix: ' から じゅんばんに タップ！',
+  abcNextPrefix: 'つぎは ',
+  abcOops: 'あれ？ つぎは ',
+  abcAllDone: 'ぜんぶ おせた！',
+  abcResultSuffix: 'びょうで ぜんぶ おせた！',
+  abcMissLabel: 'まちがえ',
+  abcMissSuffix: ' かい',
+  abcInitialHint: 'はじめの もじは どれ？',
+
+  // きいてタッチ（別冊04§5）
+  liTitle: 'きいて タップ！',
+  liHint: 'スピーカーを おすと もういちど きけるよ',
+
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',
   praise: {
@@ -246,6 +263,8 @@ export const games = [
   { id: 'tictactoe', name: 'まるばつ', icon: '⭕' },
   { id: 'memory', name: 'しんけいすいじゃく', icon: '🍎' },
   { id: 'enword', name: 'えいごカードあて', icon: '🗣️' },
+  { id: 'abc', name: 'ABCタッチ', icon: '🔤' },
+  { id: 'listen', name: 'きいてタッチ', icon: '👂' },
   { id: 'flash', name: 'すうじフラッシュ', icon: '🔢' },
   { id: 'othello', name: 'オセロ', icon: '⚫' },
   { id: 'sevens', name: 'しちならべ', icon: '7' },

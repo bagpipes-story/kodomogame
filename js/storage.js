@@ -27,6 +27,8 @@ const DEFAULT_STATS = {
   maze: { clears: 0, plays: 0, noFallClears: 0 },
   korinto: { bestBy: {}, plays: 0, exactHits: 0 }, // ベスト合計点を むずかしさ別に
   enword: { wins: 0, plays: 0 },  // ロボくんに勝った数（別冊04§3）
+  abc: { bestBy: {}, plays: 0 },  // じゅんばんABCのベストタイム(ms)を むずかしさ別に（別冊04§4）
+  listen: { wins: 0, plays: 0 },  // きいてタッチ（別冊04§5）
   // 6つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0, english: 0 },
   stamps: 0,
