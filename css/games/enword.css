@@ -135,6 +135,15 @@
   height: 74px;
 }
 
+/* かず（数字＋ドット2段）はスピーカーと重ならないよう上に寄せる */
+.kgb-enword-picture .kgb-wordart-number {
+  margin-bottom: 30px;
+}
+
+.kgb-enword-picture .kgb-wordart-number .kgb-wordart-digit {
+  font-size: 0.7em;
+}
+
 .kgb-enword-picture.is-pop {
   animation: kgbEnwordPop 0.5s ease-out;
 }
@@ -149,7 +158,7 @@
   /* 絵の下ふちに重ねる（円環のカードと重ならない位置） */
   position: absolute;
   left: 50%;
-  top: 84px;
+  top: 88px;
   transform: translateX(-50%);
   width: 44px;
   height: 44px;

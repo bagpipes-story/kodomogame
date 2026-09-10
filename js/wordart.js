@@ -35,9 +35,15 @@ export function createWordVisual(word, { color = '#f28b3b' } = {}) {
     const digit = document.createElement('span');
     digit.className = 'kgb-wordart-digit';
     digit.textContent = String(word.value);
+    // ドットは1個ずつ別要素にして5個で折り返す（文字列だと折り返せず右にはみ出す）
     const dots = document.createElement('span');
     dots.className = 'kgb-wordart-dots';
-    dots.textContent = '●'.repeat(word.value);
+    for (let i = 0; i < word.value; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'kgb-wordart-dotsm';
+      dot.textContent = '●';
+      dots.append(dot);
+    }
     el.append(digit, dots);
   } else if (word.kind === 'shape') {
     const svg = document.createElementNS(SVG_NS, 'svg');
