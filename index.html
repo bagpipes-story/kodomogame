@@ -37,8 +37,33 @@
       <!-- ゲームボタンはapp.jsがi18n.jsの定義から生成する（文言の二重管理を避けるため） -->
     </nav>
     <footer class="kgb-home-footer">
-      <span id="versionLabel" class="kgb-version"></span>
+      <!-- スタンプちょう（こども向け）と おうちのかたへ（保護者向け・小さく） v0.16 -->
+      <button id="stampsButton" class="kgb-stamps-button" type="button">
+        <span aria-hidden="true">📒</span><span data-i18n="stampsTitle"></span>
+      </button>
+      <div class="kgb-home-footer-row">
+        <span id="versionLabel" class="kgb-version"></span>
+        <button id="parentButton" class="kgb-parent-link" type="button" data-i18n="parentButton"></button>
+      </div>
     </footer>
+  </section>
+
+  <!-- スタンプちょう画面 -->
+  <section id="screen-stamps" class="kgb-screen" hidden>
+    <header class="kgb-screen-header">
+      <button id="stampsBackButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 class="kgb-screen-title" data-i18n="stampsTitle"></h2>
+    </header>
+    <div id="stampsBody" class="kgb-stamps-body"></div>
+  </section>
+
+  <!-- 保護者画面（ペアレンタルゲートの先） -->
+  <section id="screen-parent" class="kgb-screen" hidden>
+    <header class="kgb-screen-header">
+      <button id="parentBackButton" class="kgb-back-button" type="button" aria-label="もどる">←</button>
+      <h2 class="kgb-screen-title" data-i18n="parentButton"></h2>
+    </header>
+    <div id="parentBody" class="kgb-parent-body"></div>
   </section>
 
   <!-- あそびかた設定画面（モード・カードのかず・つよさを選んでスタート） -->
@@ -84,6 +109,22 @@
       </div>
     </div>
   </div>
+
+  <!-- ペアレンタルゲート（たし算を数字キーで入力） -->
+  <div id="gateOverlay" class="kgb-overlay" hidden>
+    <div id="gateBody" class="kgb-dialog kgb-gate-dialog"></div>
+  </div>
+
+  <!-- きゅうけいリマインダー（1プレイの区切りに全画面表示。仕様§3.4-4） -->
+  <div id="breakOverlay" class="kgb-break" hidden>
+    <p class="kgb-break-icon" aria-hidden="true">🍵</p>
+    <p class="kgb-break-title" data-i18n="breakTitle"></p>
+    <p class="kgb-break-body" data-i18n="breakBody"></p>
+    <button id="breakOkButton" class="kgb-start-button" type="button" data-i18n="breakOk"></button>
+  </div>
+
+  <!-- スタンプ10個ごとのお祝い（小さなトースト） -->
+  <div id="stampToast" class="kgb-stamp-toast" hidden></div>
 
   <!-- Matter.js（物理エンジン）: オフライン要件のためローカル同梱（仕様§1） -->
   <script src="lib/matter.min.js"></script>

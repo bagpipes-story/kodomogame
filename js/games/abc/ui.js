@@ -17,6 +17,7 @@ import {
   answerInitial,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playMatch, playFlutter } from '../../sound.js';
 import { loadStats, saveStats, loadSettings } from '../../storage.js';
 import { createWordVisual } from '../../wordart.js';
@@ -45,7 +46,7 @@ function mountOrder(root, config, { onExit }) {
   const timers = new Set();
   const isTwoMode = config.mode === 'two';
   const difficulty = ORDER_LEVELS[config.difficulty] ? config.difficulty : 'easy';
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
 
   let state = null;
   let phase = 'idle'; // idle | play | wait
@@ -196,7 +197,7 @@ function mountOrder(root, config, { onExit }) {
     let detail;
     let celebrate = false;
     if (isTwoMode) {
-      title = over.winner === null ? text.draw : over.winner === 0 ? text.winRed : text.winBlue;
+      title = over.winner === null ? text.draw : winOf(names[over.winner]);
       detail = `${names[0]} ${formatSec(a.scoreMs)}${text.rcSecSuffix} ／ ${names[1]} ${formatSec(b.scoreMs)}${text.rcSecSuffix}`;
       celebrate = true;
     } else {
@@ -271,7 +272,7 @@ function mountInitial(root, config, { onExit }) {
   const categories = config.category && config.category !== 'all'
     ? [config.category]
     : loadSettings().wordCategories;
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
 
   let state = null;
   let phase = 'idle'; // idle | ask | done | result
@@ -423,7 +424,7 @@ function mountInitial(root, config, { onExit }) {
     let detail;
     let celebrate;
     if (isTwoMode) {
-      title = over.winner === null ? text.draw : over.winner === 0 ? text.winRed : text.winBlue;
+      title = over.winner === null ? text.draw : winOf(names[over.winner]);
       detail = `${names[0]} ${a} ／ ${names[1]} ${b}`;
       celebrate = true;
     } else {

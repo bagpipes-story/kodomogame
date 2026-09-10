@@ -14,6 +14,7 @@ import {
 } from './game.js';
 import { createCpu } from './cpu.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playFlip, playMatch, playTurn, playWin, playTap } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
 import { pickWords } from '../../words.js';
@@ -32,8 +33,8 @@ export function mount(root, config, { onExit }) {
 
   const playerCount = config.mode === 'solo' ? 1 : 2;
   const isCpuMode = config.mode === 'cpu';
-  const playerNames = isCpuMode ? [text.you, text.cpuName] : [text.redName, text.blueName];
-  const turnTexts = isCpuMode ? [text.turnYou, text.turnCpu] : [text.turnRed, text.turnBlue];
+  const playerNames = getNames(config.mode, isCpuMode ? [text.you, text.cpuName] : [text.redName, text.blueName]);
+  const turnTexts = playerNames.map(turnOf);
 
   let state = null;
   let cpu = null;
@@ -311,11 +312,11 @@ export function mount(root, config, { onExit }) {
       celebrate = true;
     } else if (isCpuMode) {
       const humanWon = winners[0] === 0;
-      title = humanWon ? text.winYou : text.winCpu;
+      title = winOf(playerNames[humanWon ? 0 : 1]);
       if (!humanWon) detail = text.playAgainTone; // ネガティブ演出禁止
       celebrate = humanWon;
     } else {
-      title = winners[0] === 0 ? text.winRed : text.winBlue;
+      title = winOf(playerNames[winners[0]]);
       celebrate = true;
     }
     return { title, detail, celebrate };

@@ -641,3 +641,356 @@ html, body {
   width: 0.95em;
   height: 0.95em;
 }
+
+/* ==========================================================
+   v0.16 知育まとめ: スタンプちょう・保護者画面・きゅうけい・なまえ
+   ========================================================== */
+
+/* ---------- ホーム下部 ---------- */
+
+.kgb-home-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.kgb-stamps-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 22px;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 20px;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+}
+
+.kgb-home-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 4px;
+}
+
+/* 保護者向け入口は小さく目立たせない（子どもの誤タップ防止。ゲートもある） */
+.kgb-parent-link {
+  border: none;
+  background: transparent;
+  color: var(--kgb-text);
+  font-size: 13px;
+  opacity: 0.55;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- スタンプちょう ---------- */
+
+.kgb-stamps-body {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 12px;
+}
+
+.kgb-stamps-count {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.kgb-stamps-empty {
+  text-align: center;
+  font-size: 20px;
+}
+
+.kgb-stamps-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.kgb-stamp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--kgb-white);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+  font-size: 30px;
+}
+
+/* 10個ごとの節目はふちを金色に */
+.kgb-stamp.is-milestone {
+  box-shadow: 0 0 0 3px #f2a93b, 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-stamp-toast {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  padding: 14px 24px;
+  border-radius: 20px;
+  background: var(--kgb-white);
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  white-space: nowrap;
+  animation: kgbToastPop 0.4s ease-out;
+}
+
+.kgb-stamp-toast[hidden] {
+  display: none;
+}
+
+@keyframes kgbToastPop {
+  from { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ---------- きゅうけいリマインダー（全画面） ---------- */
+
+.kgb-break {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--kgb-bg);
+}
+
+.kgb-break[hidden] {
+  display: none;
+}
+
+.kgb-break-icon {
+  margin: 0;
+  font-size: 72px;
+  line-height: 1;
+}
+
+.kgb-break-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  text-align: center;
+  white-space: pre-line; /* 文言側の改行で2行にする */
+}
+
+.kgb-break-body {
+  margin: 0 0 12px;
+  font-size: 20px;
+  text-align: center;
+}
+
+/* ---------- あそびかた: だれがあそぶ ---------- */
+
+.kgb-player-pick {
+  display: flex;
+  gap: 8px;
+}
+
+.kgb-player-pick-button {
+  flex: 1 1 0;
+  min-height: var(--kgb-tap-min);
+  border: 3px solid transparent;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 20px;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  cursor: pointer;
+}
+
+.kgb-player-pick-button.kgb-player-0 { background: var(--kgb-player0-bg); color: var(--kgb-player0-text); }
+.kgb-player-pick-button.kgb-player-1 { background: var(--kgb-player1-bg); color: var(--kgb-player1-text); }
+
+/* ---------- ペアレンタルゲート ---------- */
+
+.kgb-gate-title {
+  margin: 0 0 6px;
+  font-size: 18px;
+  opacity: 0.7;
+}
+
+.kgb-gate-question {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+}
+
+.kgb-gate-prompt {
+  margin: 4px 0;
+  font-size: 15px;
+  opacity: 0.7;
+}
+
+.kgb-gate-display {
+  margin: 0 0 10px;
+  min-height: 36px;
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--kgb-accent);
+}
+
+.kgb-gate-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.kgb-gate-key {
+  min-height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: #efe8da;
+  color: var(--kgb-text);
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* ---------- 保護者画面（大人向け: 文字は小さめでよい） ---------- */
+
+.kgb-parent-body {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 1.6;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.kgb-parent-section {
+  margin: 0 0 18px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--kgb-white);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-parent-heading {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.kgb-parent-note {
+  margin: 6px 0;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.kgb-parent-label {
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.kgb-parent-body .kgb-option-button {
+  min-height: 44px;
+  font-size: 16px;
+  padding: 6px 0;
+}
+
+.kgb-skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kgb-skill-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name count' 'desc count' 'stars count';
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(74, 63, 53, 0.1);
+}
+
+.kgb-skill-name { grid-area: name; font-weight: 700; }
+.kgb-skill-desc { grid-area: desc; font-size: 12px; opacity: 0.7; }
+.kgb-skill-stars { grid-area: stars; color: #f2a93b; letter-spacing: 1px; min-height: 1em; }
+.kgb-skill-count { grid-area: count; font-size: 18px; font-weight: 800; padding-left: 12px; }
+
+.kgb-hint-list {
+  margin: 0;
+}
+
+.kgb-hint-list dt {
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.kgb-hint-list dd {
+  margin: 2px 0 0;
+}
+
+.kgb-parent-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.kgb-parent-list li {
+  margin-bottom: 6px;
+}
+
+.kgb-name-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.kgb-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kgb-name-num {
+  width: 22px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.kgb-name-input {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 2px solid rgba(74, 63, 53, 0.2);
+  border-radius: 12px;
+  font-size: 18px;
+  font-family: inherit;
+  color: var(--kgb-text);
+  background: var(--kgb-bg);
+}
+
+.kgb-parent-button {
+  min-height: 44px;
+  padding: 6px 18px;
+  border: none;
+  border-radius: 14px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.kgb-parent-button.is-danger {
+  background: #c0554a;
+}

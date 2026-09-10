@@ -11,6 +11,7 @@ import {
   tapNumber,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playMatch, playFlutter, playWin } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
@@ -24,7 +25,7 @@ export function mount(root, config, { onExit }) {
   const timers = new Set();
 
   const isTwoMode = config.mode === 'two';
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
 
   let state = null;
   let phase = 'idle'; // idle | show | recall | wait（演出中のタップ無効）
@@ -259,8 +260,8 @@ export function mount(root, config, { onExit }) {
     let celebrate;
     if (isTwoMode) {
       const [a, b] = state.results;
-      title = over.winner === null ? text.draw : over.winner === 0 ? text.winRed : text.winBlue;
-      detail = `${text.redName} ${a}${text.flashCountSuffix} ／ ${text.blueName} ${b}${text.flashCountSuffix}`;
+      title = over.winner === null ? text.draw : winOf(names[over.winner]);
+      detail = `${names[0]} ${a}${text.flashCountSuffix} ／ ${names[1]} ${b}${text.flashCountSuffix}`;
       celebrate = true;
     } else {
       title = text.flashResultPrefix + over.reached + text.flashResultSuffix;

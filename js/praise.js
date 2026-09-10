@@ -80,6 +80,13 @@ export function recordPlay(gameId, { won = false, extraSkills = [] } = {}) {
   }
   stats.skills.heartPower = (stats.skills.heartPower ?? 0) + 1;
 
-  stats.stamps = (stats.stamps ?? 0) + 1; // スタンプちょうのUIはv0.9。データだけ先に貯める
+  stats.stamps = (stats.stamps ?? 0) + 1;
+  // スタンプちょうの絵柄用にゲームidを押した順で残す（直近200個。古いものは数だけ残る）
+  stats.stampList = [...(stats.stampList ?? []), gameId].slice(-200);
   saveStats(stats);
+
+  // 「1プレイの区切り」をアプリ本体に知らせる（きゅうけいリマインダー・スタンプのお祝い。仕様§3.4）
+  globalThis.document?.dispatchEvent(
+    new CustomEvent('kgb:playdone', { detail: { gameId, stamps: stats.stamps } }),
+  );
 }

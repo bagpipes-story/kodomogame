@@ -15,6 +15,7 @@ import {
   finishRound,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playPop, playBonk, playFlutter, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
@@ -27,7 +28,7 @@ export function mount(root, config, { onExit }) {
   const intervals = new Set();  // setInterval（スケジューラ・秒カウント）
 
   const isTwoMode = config.mode === 'two';
-  const playerNames = [text.redName, text.blueName];
+  const playerNames = getNames(config.mode, [text.redName, text.blueName]);
   const holeCount = DIFFICULTY[config.difficulty].holeCount;
 
   let state = null;
@@ -259,8 +260,8 @@ export function mount(root, config, { onExit }) {
     let detail = '';
     if (isTwoMode) {
       const [a, b] = scores;
-      title = a === b ? text.draw : (a > b ? text.winRed : text.winBlue);
-      detail = `${text.redName} ${a}${text.moleCountSuffix} ／ ${text.blueName} ${b}${text.moleCountSuffix}`;
+      title = a === b ? text.draw : winOf(playerNames[a > b ? 0 : 1]);
+      detail = `${playerNames[0]} ${a}${text.moleCountSuffix} ／ ${playerNames[1]} ${b}${text.moleCountSuffix}`;
     } else {
       title = text.moleResultPrefix + state.score + text.moleResultSuffix;
       detail = `${text.bestLabel}: ${bestForDifficulty}${text.moleCountSuffix}`;

@@ -20,6 +20,7 @@ import {
 } from './game.js';
 import { buildWorld } from './physics.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import {
   playTap, playPop, playClick, playBell, playGoal, playFlutter, playWin, playBoing, playWarp,
 } from '../../sound.js';
@@ -43,7 +44,7 @@ export function mount(root, config, { onExit }) {
   const intervals = new Set();
 
   const isTwoMode = config.mode === 'two';
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
   const settings = DIFFICULTY[config.difficulty];
   const debugMode = new URLSearchParams(window.location.search).has('debug');
 
@@ -348,8 +349,8 @@ export function mount(root, config, { onExit }) {
     let detail;
     let celebrate;
     if (isTwoMode) {
-      title = over.winner === null ? text.draw : over.winner === 0 ? text.winRed : text.winBlue;
-      detail = `${text.redName} ${state.results[0]}${text.koPointsSuffix} ／ ${text.blueName} ${state.results[1]}${text.koPointsSuffix}`;
+      title = over.winner === null ? text.draw : winOf(names[over.winner]);
+      detail = `${names[0]} ${state.results[0]}${text.koPointsSuffix} ／ ${names[1]} ${state.results[1]}${text.koPointsSuffix}`;
       celebrate = true;
     } else {
       title = over.exact ? text.koExactTitle : `${state.total}${text.koResultSuffix}`;

@@ -4,7 +4,10 @@
 
 import { text, games } from './i18n.js';
 import { playTap, isMuted, toggleMute } from './sound.js';
-import { loadStats } from './storage.js';
+import { loadStats, saveStats, loadSettings } from './storage.js';
+import { registeredNames, getPlayers, assignPlayer } from './players.js';
+import { renderStamps, isMilestone } from './stamps.js';
+import { renderGate, renderParent } from './parent.js';
 import { mount as mountMemory } from './games/memory/ui.js';
 import { mount as mountOthello } from './games/othello/ui.js';
 import { mount as mountSevens } from './games/sevens/ui.js';
@@ -20,7 +23,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.15.1';
+const APP_VERSION = 'v0.16';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -45,6 +48,8 @@ const screens = {
   setup: document.getElementById('screen-setup'),
   play: document.getElementById('screen-play'),
   dummy: document.getElementById('screen-dummy'),
+  stamps: document.getElementById('screen-stamps'),
+  parent: document.getElementById('screen-parent'),
 };
 
 const muteButton = document.getElementById('muteButton');
@@ -265,9 +270,59 @@ function buildGameList() {
 
 // ---------- あそびかた設定画面（ゲーム別定義から都度組み立てる） ----------
 
+// 「だれが あそぶ？」: 保護者画面で名前が登録されているときだけ出す（v0.16）
+function buildPlayerPicker() {
+  const names = registeredNames();
+  if (!names.length) return null;
+  const section = document.createElement('div');
+  section.className = 'kgb-setup-group';
+  section.dataset.groupKey = 'players';
+  const label = document.createElement('p');
+  label.className = 'kgb-setup-label';
+  label.textContent = text.whoPlays;
+  const row = document.createElement('div');
+  row.className = 'kgb-player-pick';
+  for (const which of [0, 1]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `kgb-player-pick-button kgb-player-${which}`;
+    button.dataset.which = which;
+    row.append(button);
+  }
+  section.append(label, row);
+  return section;
+}
+
+function updatePlayerPicker() {
+  const { slots, p1, p2 } = getPlayers();
+  const selection = currentSelection();
+  for (const button of document.querySelectorAll('.kgb-player-pick-button')) {
+    const which = Number(button.dataset.which);
+    const index = which === 0 ? p1 : p2;
+    button.textContent = text.playerSlotPrefix[which] + (index >= 0 ? slots[index] : text.noName);
+    // プレイヤー2は ふたりモードのときだけ意味がある
+    button.hidden = which === 1 && selection.mode !== 'two';
+  }
+}
+
+// タップで「なし → 登録名1 → 登録名2 …」と順に切り替える（一覧を出さずに済ませる）
+function cyclePlayer(which) {
+  const { p1, p2 } = getPlayers();
+  const names = registeredNames();
+  const current = which === 0 ? p1 : p2;
+  const other = which === 0 ? p2 : p1;
+  // 相手側に入っている子は候補から外す（同じ子を両方に入れない）
+  const order = [-1, ...names.map((n) => n.index).filter((i) => i !== other)];
+  const next = order[(order.indexOf(current) + 1) % order.length];
+  assignPlayer(which, next);
+  updatePlayerPicker();
+}
+
 function buildSetupScreen(gameId) {
   const body = document.getElementById('setupBody');
   const fragment = document.createDocumentFragment();
+  const picker = buildPlayerPicker();
+  if (picker) fragment.append(picker);
   for (const group of setupConfigs[gameId].groups) {
     const section = document.createElement('div');
     section.className = 'kgb-setup-group';
@@ -316,6 +371,7 @@ function updateSetupScreen() {
     const visible = (group.cpuOnly ? selection.mode === 'cpu' : true) && (group.when ? group.when(selection) : true);
     el.hidden = !visible;
   }
+  updatePlayerPicker();
 }
 
 // ---------- ゲーム起動 ----------
@@ -365,11 +421,117 @@ renderMuteButton();
 
 // 設定画面の選択肢は都度作り直すため、リスナーは親に1回だけ登録しておく
 document.getElementById('setupBody').addEventListener('click', (event) => {
+  const pick = event.target.closest('.kgb-player-pick-button');
+  if (pick) {
+    playTap();
+    cyclePlayer(Number(pick.dataset.which));
+    return;
+  }
   const button = event.target.closest('.kgb-option-button');
   if (!button) return;
   playTap();
   currentSelection()[button.dataset.key] = button.dataset.value;
   updateSetupScreen();
+});
+
+// ---------- スタンプちょう・保護者画面（v0.16） ----------
+
+document.getElementById('stampsButton').addEventListener('click', () => {
+  playTap();
+  renderStamps(document.getElementById('stampsBody'));
+  showScreen('stamps');
+});
+
+document.getElementById('stampsBackButton').addEventListener('click', () => {
+  playTap();
+  showScreen('home');
+});
+
+const gateOverlay = document.getElementById('gateOverlay');
+let parentAbort = null;
+
+function closeParent() {
+  parentAbort?.abort();
+  parentAbort = null;
+  document.getElementById('parentBody').replaceChildren();
+  showScreen('home');
+}
+
+document.getElementById('parentButton').addEventListener('click', () => {
+  playTap();
+  parentAbort?.abort();
+  parentAbort = new AbortController();
+  renderGate(document.getElementById('gateBody'), {
+    signal: parentAbort.signal,
+    onPass: () => {
+      gateOverlay.hidden = true;
+      renderParent(document.getElementById('parentBody'), { signal: parentAbort.signal });
+      showScreen('parent');
+    },
+    onFail: () => {
+      // 不正解は静かに閉じる（仕様§3.4-3）
+      gateOverlay.hidden = true;
+      parentAbort.abort();
+      parentAbort = null;
+    },
+  });
+  gateOverlay.hidden = false;
+});
+
+// ゲートの外側タップで閉じる
+gateOverlay.addEventListener('click', (event) => {
+  if (event.target !== gateOverlay) return;
+  gateOverlay.hidden = true;
+  parentAbort?.abort();
+  parentAbort = null;
+});
+
+document.getElementById('parentBackButton').addEventListener('click', () => {
+  playTap();
+  closeParent();
+});
+
+// ---------- きゅうけいリマインダー・スタンプのお祝い（1プレイの区切りで判定。仕様§3.4） ----------
+
+const breakOverlay = document.getElementById('breakOverlay');
+const stampToast = document.getElementById('stampToast');
+let sessionStartedAt = Date.now(); // 連続で遊びはじめた時刻（きゅうけい後・長い離席後にリセット）
+let hiddenAt = 0;
+let toastTimer = null;
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    hiddenAt = Date.now();
+  } else if (hiddenAt && Date.now() - hiddenAt >= 10 * 60 * 1000) {
+    sessionStartedAt = Date.now(); // 10分以上はなれていたら「連続」を仕切り直す
+  }
+});
+
+document.addEventListener('kgb:playdone', (event) => {
+  const breakMinutes = loadSettings().breakMinutes ?? 30;
+  if (breakMinutes > 0 && Date.now() - sessionStartedAt >= breakMinutes * 60 * 1000) {
+    breakOverlay.hidden = false; // 結果画面の上に全画面で出す（途中には割り込まない）
+  }
+  const stamps = event.detail?.stamps ?? 0;
+  if (isMilestone(stamps)) {
+    const stats = loadStats();
+    if ((stats.stampCelebrated ?? 0) < stamps) {
+      stats.stampCelebrated = stamps;
+      saveStats(stats); // お祝いを二度出さないための記録（イベント区切りの書き込み）
+      stampToast.textContent = `${text.stampsMilestonePrefix}${stamps}${text.stampsMilestoneSuffix}`;
+      stampToast.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        stampToast.hidden = true;
+      }, 2600);
+    }
+  }
+});
+
+document.getElementById('breakOkButton').addEventListener('click', () => {
+  playTap();
+  breakOverlay.hidden = true;
+  sessionStartedAt = Date.now();
 });
 
 document.getElementById('setupBackButton').addEventListener('click', () => {

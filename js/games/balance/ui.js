@@ -12,6 +12,7 @@ import {
   collapse,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playFall, playCrash, playWin } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
@@ -35,7 +36,7 @@ export function mount(root, config, { onExit }) {
   const timers = new Set();
 
   const isTwoMode = config.mode === 'two';
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
   const debugMode = new URLSearchParams(window.location.search).has('debug');
 
   let state = null;

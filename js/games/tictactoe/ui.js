@@ -5,6 +5,7 @@
 import { createGame, place, getReachCells } from './game.js';
 import { chooseMove } from './cpu.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playTurn, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 
@@ -17,7 +18,7 @@ export function mount(root, config, { onExit }) {
 
   const isCpuMode = config.mode === 'cpu';
   // player0=◯（ロボット戦では人間）、player1=×。先手だけが交代する
-  const names = isCpuMode ? [text.you, text.cpuName] : [text.tttCircle, text.tttCross];
+  const names = getNames(config.mode, isCpuMode ? [text.you, text.cpuName] : [text.tttCircle, text.tttCross]);
 
   let state = null;
   let inputLocked = false;
@@ -170,9 +171,9 @@ export function mount(root, config, { onExit }) {
     if (state.winner === null) {
       title = text.drawStrong; // 引き分けをポジティブに扱う（仕様§4.6）
     } else if (isCpuMode) {
-      title = state.winner === 0 ? text.winYou : text.winCpu;
+      title = winOf(names[state.winner]);
     } else {
-      title = names[state.winner] + text.winSuffix;
+      title = winOf(names[state.winner]);
     }
 
     const dialog = document.createElement('div');

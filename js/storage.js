@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
   breakMinutes: 30, // きゅうけいリマインダー（v0.9でUI実装）
   assist: { othelloCount: true, oldmaidPairHint: true, oldmaidAutoSort: true },
   wordCategories: ['animal', 'fruit', 'color', 'number', 'shape', 'body'], // えいごの出題カテゴリ（別冊04）
+  players: { slots: ['', '', '', '', ''], p1: -1, p2: -1 }, // こどもの名前スロット（v0.16）
   version: 1,
 };
 
@@ -32,6 +33,8 @@ const DEFAULT_STATS = {
   // 6つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0, english: 0 },
   stamps: 0,
+  stampList: [],       // 押した順のゲームid（スタンプちょうの絵柄。直近200個だけ保持）
+  stampCelebrated: 0,  // 10個ごとのお祝いを出した最後のスタンプ数
   lossStreak: {}, // 難易度アシスト用の連敗カウント（ゲームごと）
   version: 1,
 };
@@ -77,4 +80,9 @@ export function loadStats() {
 
 export function saveStats(stats) {
   return write(STATS_KEY, stats);
+}
+
+// 保護者画面の「きろくをリセット」用。設定（音・名前など）は消さない
+export function resetStats() {
+  return write(STATS_KEY, structuredClone(DEFAULT_STATS));
 }

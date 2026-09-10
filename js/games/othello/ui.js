@@ -13,6 +13,7 @@ import {
 } from './game.js';
 import { chooseMove } from './cpu.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playFlip, playTurn, playWin, playTap, playBuzzer } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
 
@@ -27,14 +28,9 @@ export function mount(root, config, { onExit }) {
 
   const isCpuMode = config.mode === 'cpu';
   // ロボット対戦では人間が黒（先手）。ふたりモードはくろ／しろ表記
-  const nameOf = (color) =>
-    isCpuMode
-      ? (color === BLACK ? text.you : text.cpuName)
-      : (color === BLACK ? text.blackName : text.whiteName);
-  const turnTextOf = (color) =>
-    isCpuMode
-      ? (color === BLACK ? text.turnYou : text.turnCpu)
-      : (color === BLACK ? text.turnBlack : text.turnWhite);
+  const names = getNames(config.mode, isCpuMode ? [text.you, text.cpuName] : [text.blackName, text.whiteName]);
+  const nameOf = (color) => names[color === BLACK ? 0 : 1];
+  const turnTextOf = (color) => turnOf(nameOf(color));
 
   let state = null;
   let inputLocked = false;
@@ -307,14 +303,14 @@ export function mount(root, config, { onExit }) {
           celebrate = true;
         } else if (isCpuMode) {
           const humanWon = winnerColor === BLACK;
-          title = humanWon ? text.winYou : text.winCpu;
+          title = winOf(nameOf(winnerColor));
           celebrate = humanWon;
           if (!humanWon) {
             detailEl.textContent = text.playAgainTone; // ネガティブ演出禁止
             detailEl.hidden = false;
           }
         } else {
-          title = winnerColor === BLACK ? text.winBlack : text.winWhite;
+          title = winOf(nameOf(winnerColor));
           celebrate = true;
         }
         titleEl.textContent = title;

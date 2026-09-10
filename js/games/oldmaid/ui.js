@@ -14,6 +14,7 @@ import {
   shuffleSourceHand,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playFlip, playMatch, playPlace, playTurn, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 
@@ -39,8 +40,8 @@ export function mount(root, config, { onExit }) {
   const smallDeck = config.size === 'easy';
 
   const names = isCpuMode
-    ? [text.you, ...text.omFriends.slice(0, robotCount)]
-    : [text.redName, text.blueName];
+    ? [getNames('cpu')[0], ...text.omFriends.slice(0, robotCount)]
+    : getNames('two', [text.redName, text.blueName]);
   const faces = isCpuMode
     ? ['😊', ...FRIEND_FACES.slice(0, robotCount)]
     : ['🔴', '🔵'];
@@ -568,9 +569,9 @@ export function mount(root, config, { onExit }) {
     let title;
     if (isCpuMode) {
       if (state.loser === 0) {
-        title = text.omLoserPrefix + text.you + text.omLoserBang;
+        title = text.omLoserPrefix + names[0] + text.omLoserBang;
       } else {
-        title = state.finishedOrder[0] === 0 ? text.winYou : text.omEscaped;
+        title = state.finishedOrder[0] === 0 ? winOf(names[0]) : text.omEscaped;
       }
     } else {
       title = text.omLoserPrefix + names[state.loser] + text.omLoserBang;

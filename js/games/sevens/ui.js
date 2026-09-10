@@ -17,6 +17,7 @@ import {
 } from './game.js';
 import { chooseAction } from './cpu.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playTurn, playWin, playTap, playBuzzer } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
 
@@ -37,9 +38,9 @@ export function mount(root, config, { onExit }) {
   const playerCount = isCpuMode ? robotCount + 1 : 2;
 
   const names = isCpuMode
-    ? [text.you, ...Array.from({ length: robotCount }, (_, i) =>
+    ? [getNames('cpu')[0], ...Array.from({ length: robotCount }, (_, i) =>
         robotCount === 1 ? text.cpuName : `${text.cpuName}${i + 1}`)]
-    : [text.redName, text.blueName];
+    : getNames('two', [text.redName, text.blueName]);
 
   let state = null;
   let inputLocked = false;
@@ -357,9 +358,9 @@ export function mount(root, config, { onExit }) {
     const humanWon = !isCpuMode || state.winner === 0;
     let title;
     if (isCpuMode) {
-      title = state.winner === 0 ? text.winYou : names[state.winner] + text.winSuffix;
+      title = winOf(names[state.winner]);
     } else {
-      title = state.winner === 0 ? text.winRed : text.winBlue;
+      title = winOf(names[state.winner]);
     }
     let detail = state.endReason === 'empty' ? text.reasonEmpty : text.reasonPassOver;
     if (!humanWon) detail += `\n${text.playAgainTone}`; // ネガティブ演出禁止

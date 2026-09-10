@@ -14,6 +14,7 @@ import {
   robotAnswer,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playMatch, playFlutter, playTurn } from '../../sound.js';
 import { loadStats, saveStats, loadSettings } from '../../storage.js';
 import { createWordVisual } from '../../wordart.js';
@@ -64,7 +65,7 @@ export function mount(root, config, { onExit }) {
     ? [config.category]
     : loadSettings().wordCategories;
   const voiceOk = hasEnglishVoice();
-  const names = isCpu ? [text.you, text.robotName] : [text.redName, text.blueName];
+  const names = getNames(mode, isCpu ? [text.you, text.robotName] : [text.redName, text.blueName]);
 
   let state = null;
   let phase = 'idle'; // idle | ask | done | result
@@ -395,8 +396,7 @@ export function mount(root, config, { onExit }) {
     } else {
       const winner = over.winner;
       if (winner === null) title = text.draw;
-      else if (isCpu) title = winner === 0 ? text.winYou : text.winRobot;
-      else title = winner === 0 ? text.winRed : text.winBlue;
+      else title = winOf(names[winner]);
       detail = `${names[0]} ${a} ／ ${names[1]} ${b}`;
       celebrate = isCpu ? winner === 0 : true;
     }

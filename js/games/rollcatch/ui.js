@@ -13,6 +13,7 @@ import {
   finishRun,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playGoal, playWin } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
@@ -30,7 +31,7 @@ export function mount(root, config, { onExit }) {
   const intervals = new Set();
 
   const isTwoMode = config.mode === 'two';
-  const names = [text.redName, text.blueName];
+  const names = getNames(config.mode, [text.redName, text.blueName]);
   const debugMode = new URLSearchParams(window.location.search).has('debug');
 
   let state = null;
@@ -279,8 +280,8 @@ export function mount(root, config, { onExit }) {
     let detail;
     let celebrate;
     if (isTwoMode) {
-      title = result.winner === null ? text.draw : result.winner === 0 ? text.winRed : text.winBlue;
-      detail = `${text.redName} ${formatSec(state.results[0])}${text.rcSecSuffix} ／ ${text.blueName} ${formatSec(state.results[1])}${text.rcSecSuffix}`;
+      title = result.winner === null ? text.draw : winOf(names[result.winner]);
+      detail = `${names[0]} ${formatSec(state.results[0])}${text.rcSecSuffix} ／ ${names[1]} ${formatSec(state.results[1])}${text.rcSecSuffix}`;
       celebrate = true;
     } else {
       title = `${formatSec(result.elapsedMs)}${text.rcGoalSuffix}`;
