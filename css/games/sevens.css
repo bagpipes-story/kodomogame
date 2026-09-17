@@ -189,3 +189,58 @@
 .kgb-hand-card.is-shake {
   animation: kgbShake 0.3s ease;
 }
+
+/* ---------- v0.16.2 知育: 数直線演出 ---------- */
+
+/* となりの数字が一瞬光る（opacityのみ） */
+.kgb-sevens-cell.is-neighbor {
+  animation: kgbNeighborFlash 0.8s ease-out;
+}
+
+@keyframes kgbNeighborFlash {
+  0% { box-shadow: 0 0 0 3px var(--kgb-accent); opacity: 1; }
+  100% { box-shadow: 0 0 0 0 transparent; opacity: 1; }
+}
+
+/* 出したカードの数字を中央に大きく（transform/opacityだけ。触れない） */
+.kgb-sevens-big {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 22px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 0 var(--kgb-shadow);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kgb-sevens-big.is-pop {
+  animation: kgbSevensBig 0.8s ease-out;
+}
+
+@keyframes kgbSevensBig {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  20% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+}
+
+.kgb-sevens-big-num {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--kgb-text);
+}
+
+.kgb-sevens-big-sub {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--kgb-accent);
+}

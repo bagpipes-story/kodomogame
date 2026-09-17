@@ -149,3 +149,65 @@
   min-width: 48px;
   text-align: left;
 }
+
+/* ---------- v0.16.2 知育: かずのせんせい・ワンポイント・数唱 ---------- */
+
+/* かずのせんせい: ヒントの丸の中に「返せる枚数」を出す */
+.kgb-board.is-count .kgb-cell.is-hint::after {
+  content: attr(data-flips);
+  inset: 22%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(12px, 3.6vw, 16px);
+  font-weight: 800;
+  color: var(--kgb-text);
+}
+
+.kgb-othello-tip-title {
+  margin: 0;
+  padding: 4px 18px;
+  border-radius: 14px;
+  background: var(--kgb-color-othello);
+  color: var(--kgb-white);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.kgb-othello-tip .kgb-handover-title {
+  max-width: 320px;
+  text-align: center;
+  line-height: 1.5;
+  font-size: 26px;
+  word-break: keep-all; /* 文節の空白でだけ折り返す */
+}
+
+/* 数唱の大きな数字（transformだけでポップ） */
+.kgb-othello-big-count {
+  margin: 0 0 4px;
+  min-height: 56px;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--kgb-accent);
+}
+
+.kgb-othello-big-count.is-pop {
+  animation: kgbOthelloPop 0.25s ease;
+}
+
+@keyframes kgbOthelloPop {
+  0% { transform: scale(0.7); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+.kgb-othello-skip-hint {
+  margin: -8px 0 10px;
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.kgb-othello-skip-hint[hidden] {
+  display: none;
+}

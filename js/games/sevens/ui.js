@@ -27,6 +27,10 @@ const SUIT_CHARS = ['♠', '♥', '♦', '♣'];
 
 const CPU_THINK_MS = [600, 1200];
 const CPU_FAST_MS = [250, 450]; // 人間がリタイアした後はロボット同士を早回しする
+const BIG_NUMBER_MS = 800;      // 出したカードの数字を中央に大きく出す時間（数直線演出。仕様§4.2）
+const THOUGHT_LONG_MS = 5000;   // これ以上考えてから出したら「じっくり かんがえられたね」
+// 絵札と数の対応（記号と数の対応づけ）
+const RANK_LABELS = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K' };
 const PASS_TOAST_MS = 1100;
 const LOSE_PLACE_STEP_MS = 60; // リタイア時に手札が場に開いていく間隔
 
@@ -46,6 +50,8 @@ export function mount(root, config, { onExit }) {
   let state = null;
   let inputLocked = false;
   let cpuLevel = config.level; // 難易度アシスト適用後のレベル（ラウンド開始時に決める）
+  let turnStartedAt = 0;       // 人間の手番が始まった時刻（じっくり考えたほめ用）
+  let neighborCell = null;     // 光らせている「となりの数字」のマス
   let shownPlayer = 0;   // 手札を表示しているプレイヤー（ふたりモードで交代する）
   let needCells = [];    // ガイド表示中のマス（差分更新のため覚えておく）
 
@@ -141,12 +147,22 @@ export function mount(root, config, { onExit }) {
   toast.className = 'kgb-toast';
   toast.hidden = true;
 
+  // 数直線演出: 出したカードの数字を中央に大きく（A/J/Q/Kは数を併記）＋「7の となり！」
+  const bigWrap = document.createElement('div');
+  bigWrap.className = 'kgb-sevens-big';
+  bigWrap.setAttribute('aria-hidden', 'true');
+  const bigNum = document.createElement('span');
+  bigNum.className = 'kgb-sevens-big-num';
+  const bigSub = document.createElement('span');
+  bigSub.className = 'kgb-sevens-big-sub';
+  bigWrap.append(bigNum, bigSub);
+
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
   container.append(banner, oppArea, board, controls, handEls[0], handEls[1]);
-  root.append(container, handover, toast, resultOverlay);
+  root.append(container, bigWrap, handover, toast, resultOverlay);
 
   // ---------- 表示の差分更新 ----------
 
@@ -252,12 +268,39 @@ export function mount(root, config, { onExit }) {
 
   // ---------- 行動（人間・ロボット共通の入口） ----------
 
+  // 出した瞬間: 隣の数字（7側）を一瞬光らせ、中央に数字を大きく出す（数の順序の可視化。仕様§4.2）
+  function showNumberLine(id) {
+    const rank = rankOf(id);
+    const suit = suitOf(id);
+    const neighborRank = rank > 7 ? rank - 1 : rank < 7 ? rank + 1 : null;
+    if (neighborCell) neighborCell.classList.remove('is-neighbor');
+    neighborCell = null;
+    if (neighborRank !== null) {
+      neighborCell = cellEls[suit * RANKS + neighborRank - 1];
+      neighborCell.classList.add('is-neighbor');
+    }
+    const label = RANK_LABELS[rank];
+    bigNum.textContent = label ? `${label}（${rank}）` : `${rank}！`;
+    bigSub.textContent = neighborRank !== null ? `${neighborRank}${text.sevensNeighborSuffix}` : '';
+    bigWrap.classList.remove('is-pop');
+    void bigWrap.offsetWidth;
+    bigWrap.classList.add('is-pop');
+    later(() => {
+      if (neighborCell) neighborCell.classList.remove('is-neighbor');
+      neighborCell = null;
+    }, BIG_NUMBER_MS);
+  }
+
   function doPlay(id) {
     const player = state.current;
+    // じっくり考えて出した（人間のみ）
+    if (!isCpuTurn() && turnStartedAt && performance.now() - turnStartedAt >= THOUGHT_LONG_MS) emitPraise('thought_long');
+    turnStartedAt = 0;
     const result = playCard(state, id);
     if (!result.ok) return;
     playPlace();
     placeChip(id);
+    showNumberLine(id);
     // 手札からカードのノードを取り除く（差分更新。ロボットの手札はDOMを持たない）
     handEls[player]?.querySelector?.(`[data-card-id="${id}"]`)?.remove();
     if (result.type === 'win') {
@@ -310,6 +353,7 @@ export function mount(root, config, { onExit }) {
     inputLocked = false;
     refreshAll();
     if (isCpuTurn()) scheduleCpu();
+    else turnStartedAt = performance.now();
   }
 
   function showHandover() {
@@ -326,6 +370,7 @@ export function mount(root, config, { onExit }) {
     updateHandVisibility();
     inputLocked = false;
     refreshAll();
+    turnStartedAt = performance.now();
   }, { signal: abort.signal });
 
   function scheduleCpu() {

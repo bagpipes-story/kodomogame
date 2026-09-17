@@ -23,7 +23,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.16.1';
+const APP_VERSION = 'v0.16.2';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -167,10 +167,12 @@ const setupConfigs = {
     ],
   },
   othello: {
-    defaults: { mode: 'cpu', level: 'weak' },
+    // かずのせんせい: 置けるマスに「返せる枚数」を数字で出す（仕様§4.1）
+    defaults: { mode: 'cpu', level: 'weak', count: 'on' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['cpu', text.modeCpu], ['two', text.modeTwo]] },
       { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
+      { key: 'count', label: text.othelloCountLabel, options: [['on', text.hintOn], ['off', text.hintOff]] },
     ],
   },
   sevens: {

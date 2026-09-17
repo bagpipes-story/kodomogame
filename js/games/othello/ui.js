@@ -21,7 +21,8 @@ import { playPlace, playFlip, playTurn, playWin, playTap, playBuzzer } from '../
 const FLIP_STEP_MS = 80;        // 1枚ずつ順に返す間隔（仕様§4.1）
 const PASS_SHOW_MS = 1500;      // 「パス！」表示時間
 const CPU_THINK_MS = [600, 1200]; // 思考時間演出（即打ちは子どもが混乱するため）
-const COUNT_STEP_MS = 40;       // 終局の数え上げアニメの間隔
+const COUNT_STEP_MS = 320;      // 終局の数え上げ（1こずつ「1、2、3…」と数唱できる速さ。タップでスキップ可）
+const TIP_COUNT = 6;            // ワンポイントカードの種類
 
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
@@ -36,7 +37,10 @@ export function mount(root, config, { onExit }) {
   let state = null;
   let inputLocked = false;
   let cpuLevel = config.level; // 難易度アシスト適用後のレベル（ラウンド開始時に決める）
-  let hintedCells = []; // 前回ヒントを付けたマス（差分更新のため覚えておく）
+  let hintedCells = [];
+  const showCount = config.count !== 'off'; // かずのせんせい
+  let tipIndex = Math.floor(Math.random() * TIP_COUNT); // ワンポイントは6種ローテーション
+  const wasBehind = { [BLACK]: false, [WHITE]: false }; // 逆転ほめ用: 一度でも石数で負けていたか // 前回ヒントを付けたマス（差分更新のため覚えておく）
 
   function later(fn, ms) {
     const id = setTimeout(() => {
@@ -102,6 +106,22 @@ export function mount(root, config, { onExit }) {
   }
 
   // パス表示用トースト
+  if (showCount) board.classList.add('is-count');
+
+  // ワンポイントカード（ゲーム開始前に1枚。作戦という概念の導入。仕様§4.1）
+  const tipOverlay = document.createElement('div');
+  tipOverlay.className = 'kgb-handover kgb-othello-tip';
+  tipOverlay.hidden = true;
+  const tipTitle = document.createElement('p');
+  tipTitle.className = 'kgb-othello-tip-title';
+  tipTitle.textContent = text.othelloTipTitle;
+  const tipText = document.createElement('p');
+  tipText.className = 'kgb-handover-title';
+  const tipSub = document.createElement('p');
+  tipSub.className = 'kgb-handover-sub';
+  tipSub.textContent = text.handoverTap;
+  tipOverlay.append(tipTitle, tipText, tipSub);
+
   const toast = document.createElement('div');
   toast.className = 'kgb-toast';
   toast.hidden = true;
@@ -111,7 +131,7 @@ export function mount(root, config, { onExit }) {
   resultOverlay.hidden = true;
 
   container.append(banner, scoreRow, board);
-  root.append(container, toast, resultOverlay);
+  root.append(container, tipOverlay, toast, resultOverlay);
 
   // ---------- 表示の差分更新 ----------
 
@@ -154,15 +174,24 @@ export function mount(root, config, { onExit }) {
     if (state.finished || inputLocked || isCpuTurn()) return;
     for (const move of getLegalMoves(state.board, state.current)) {
       cellEls[move.index].classList.add('is-hint');
+      if (showCount) cellEls[move.index].dataset.flips = String(move.flips.length); // 返せる枚数（数量比較）
       hintedCells.push(move.index);
     }
   }
 
   // ---------- 着手（人間・ロボット共通の入口） ----------
 
+  const CORNERS = [0, 7, 56, 63];
+
   function playAt(index) {
+    const mover = state.current;
     const result = applyMove(state, index);
     if (!result.ok) return;
+    // ほめイベント: 角を取った（ロボット戦は人間=くろのみ。ふたりはどちらも子ども）
+    if (CORNERS.includes(index) && (!isCpuMode || mover === BLACK)) emitPraise('took_corner');
+    const c = countStones(state.board);
+    if (c.black < c.white) wasBehind[BLACK] = true;
+    if (c.white < c.black) wasBehind[WHITE] = true;
     inputLocked = true;
     updateHints(); // ロック中はヒントを消す
     playPlace();
@@ -244,10 +273,19 @@ export function mount(root, config, { onExit }) {
     const counts = countStones(state.board);
     const winnerColor =
       counts.black > counts.white ? BLACK : counts.white > counts.black ? WHITE : null;
+    if (winnerColor !== null && wasBehind[winnerColor] && (!isCpuMode || winnerColor === BLACK)) emitPraise('comeback');
     updateStatsAtFinish(winnerColor);
 
     const dialog = document.createElement('div');
     dialog.className = 'kgb-dialog';
+
+    // 数唱: いま数えている数を大きく出す（1、2、3…）。タップでスキップ
+    const bigCount = document.createElement('p');
+    bigCount.className = 'kgb-othello-big-count';
+    bigCount.textContent = '';
+    const skipHint = document.createElement('p');
+    skipHint.className = 'kgb-othello-skip-hint';
+    skipHint.textContent = text.othelloCountHint;
 
     // 数え上げ表示（くろ・しろの石数が増えていく）
     const countRow = document.createElement('div');
@@ -286,7 +324,7 @@ export function mount(root, config, { onExit }) {
     homeButton.textContent = text.goHome;
     buttons.append(replayButton, homeButton);
 
-    dialog.append(countRow, titleEl, detailEl, buildPraiseBox(), buttons);
+    dialog.append(bigCount, countRow, skipHint, titleEl, detailEl, buildPraiseBox(), buttons);
     resultOverlay.replaceChildren(dialog);
     resultOverlay.hidden = false;
 
@@ -299,17 +337,40 @@ export function mount(root, config, { onExit }) {
       onExit();
     }, { signal: abort.signal });
 
-    // 数え上げアニメ: 大きい方の石数まで1ずつ増やす
+    // 数え上げアニメ: 大きい方の石数まで1ずつ増やす（数唱）。オーバーレイをタップすると最後まで飛ばす
     const maxCount = Math.max(counts.black, counts.white);
+    const countTimers = [];
+    let revealed = false;
     for (let step = 1; step <= maxCount; step++) {
-      later(() => {
+      const id = setTimeout(() => {
+        timers.delete(id);
+        bigCount.textContent = String(step);
+        bigCount.classList.remove('is-pop');
+        void bigCount.offsetWidth;
+        bigCount.classList.add('is-pop');
         if (step <= counts.black) countEls[BLACK].textContent = String(step);
         if (step <= counts.white) countEls[WHITE].textContent = String(step);
         if (step === maxCount) revealWinner();
       }, step * COUNT_STEP_MS);
+      timers.add(id);
+      countTimers.push(id);
     }
+    resultOverlay.addEventListener('click', () => {
+      if (revealed) return;
+      for (const id of countTimers) {
+        clearTimeout(id);
+        timers.delete(id);
+      }
+      countEls[BLACK].textContent = String(counts.black);
+      countEls[WHITE].textContent = String(counts.white);
+      bigCount.textContent = String(maxCount);
+      revealWinner();
+    }, { signal: abort.signal });
 
     function revealWinner() {
+      if (revealed) return;
+      revealed = true;
+      skipHint.hidden = true;
       later(() => {
         let title;
         let celebrate;
@@ -369,11 +430,26 @@ export function mount(root, config, { onExit }) {
     state = createGame();
     cpuLevel = isCpuMode ? effectiveLevel('othello', config.level) : config.level;
     resetPraise();
+    wasBehind[BLACK] = false;
+    wasBehind[WHITE] = false;
     for (let i = 0; i < 64; i++) renderStone(i);
     updateScores();
     updateBanner();
+    // ワンポイントカードを見せてからスタート（くろ=人間が先手なので、閉じるまでロボットは動かない）
+    inputLocked = true;
     updateHints();
+    tipText.textContent = text.othelloTips[tipIndex % TIP_COUNT];
+    tipIndex += 1;
+    tipOverlay.hidden = false;
   }
+
+  tipOverlay.addEventListener('click', () => {
+    if (tipOverlay.hidden) return;
+    playTap();
+    tipOverlay.hidden = true;
+    inputLocked = false;
+    updateHints();
+  }, { signal: abort.signal });
 
   // ---------- 入力（リスナーは盤に1つだけ。abortで一括解除） ----------
 
