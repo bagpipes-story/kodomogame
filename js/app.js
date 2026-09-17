@@ -23,7 +23,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.16';
+const APP_VERSION = 'v0.16.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -161,7 +161,7 @@ const setupConfigs = {
     defaults: { mode: 'cpu', size: 'easy', level: 'weak', theme: 'animal' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['cpu', text.modeCpu], ['two', text.modeTwo]] },
-      { key: 'theme', label: text.memoryThemeLabel, options: [['animal', text.themeAnimal], ['fruit', text.themeFruit], ['english', text.themeEnglish], ['abc', text.themeAbc]] },
+      { key: 'theme', label: text.memoryThemeLabel, options: [['animal', text.themeAnimal], ['fruit', text.themeFruit], ['number', text.themeNumber], ['hiragana', text.themeHiragana], ['english', text.themeEnglish], ['abc', text.themeAbc]] },
       { key: 'size', label: text.sizeLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
       { key: 'level', label: text.levelLabel, options: LEVEL_OPTIONS, cpuOnly: true },
     ],

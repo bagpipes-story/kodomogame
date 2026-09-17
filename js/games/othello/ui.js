@@ -12,10 +12,11 @@ import {
   countStones,
 } from './game.js';
 import { chooseMove } from './cpu.js';
+import { effectiveLevel } from '../../assist.js';
+import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playFlip, playTurn, playWin, playTap, playBuzzer } from '../../sound.js';
-import { loadStats, saveStats } from '../../storage.js';
 
 const FLIP_STEP_MS = 80;        // 1枚ずつ順に返す間隔（仕様§4.1）
 const PASS_SHOW_MS = 1500;      // 「パス！」表示時間
@@ -34,6 +35,7 @@ export function mount(root, config, { onExit }) {
 
   let state = null;
   let inputLocked = false;
+  let cpuLevel = config.level; // 難易度アシスト適用後のレベル（ラウンド開始時に決める）
   let hintedCells = []; // 前回ヒントを付けたマス（差分更新のため覚えておく）
 
   function later(fn, ms) {
@@ -208,7 +210,7 @@ export function mount(root, config, { onExit }) {
 
   function scheduleCpu() {
     later(() => {
-      const move = chooseMove(state, config.level);
+      const move = chooseMove(state, cpuLevel);
       if (move !== null) playAt(move);
     }, randomBetween(CPU_THINK_MS));
   }
@@ -216,12 +218,25 @@ export function mount(root, config, { onExit }) {
   // ---------- 終局（数え上げ→勝敗表示） ----------
 
   // 戦績の保存はゲーム終了時のこの1回だけ（§9 localStorage規定）
+
+  // 「きょうのすごいところ」（具体ほめ。仕様§3.4-1）
+  function buildPraiseBox() {
+    const praiseBox = document.createElement('div');
+    praiseBox.className = 'kgb-praise-box';
+    const praiseLabel = document.createElement('p');
+    praiseLabel.className = 'kgb-praise-label';
+    praiseLabel.textContent = text.praiseTitle;
+    const praiseText = document.createElement('p');
+    praiseText.className = 'kgb-praise-text';
+    praiseText.textContent = pickPraise();
+    praiseBox.append(praiseLabel, praiseText);
+    return praiseBox;
+  }
+
   function updateStatsAtFinish(winnerColor) {
-    if (!isCpuMode || winnerColor !== BLACK) return;
-    const stats = loadStats();
-    stats.othello ??= { wins: 0 };
-    stats.othello.wins++;
-    saveStats(stats);
+    // plays・勝ち数・6つの力・スタンプ・連敗（アシスト用）を praise.js にまとめて記録（v0.16.1で統一）
+    emitPraise('finished_game');
+    recordPlay('othello', { won: isCpuMode && winnerColor === BLACK, lost: isCpuMode && winnerColor === WHITE });
   }
 
   function finishGame() {
@@ -271,7 +286,7 @@ export function mount(root, config, { onExit }) {
     homeButton.textContent = text.goHome;
     buttons.append(replayButton, homeButton);
 
-    dialog.append(countRow, titleEl, detailEl, buttons);
+    dialog.append(countRow, titleEl, detailEl, buildPraiseBox(), buttons);
     resultOverlay.replaceChildren(dialog);
     resultOverlay.hidden = false;
 
@@ -352,6 +367,8 @@ export function mount(root, config, { onExit }) {
     resultOverlay.hidden = true;
     resultOverlay.replaceChildren();
     state = createGame();
+    cpuLevel = isCpuMode ? effectiveLevel('othello', config.level) : config.level;
+    resetPraise();
     for (let i = 0; i < 64; i++) renderStone(i);
     updateScores();
     updateBanner();

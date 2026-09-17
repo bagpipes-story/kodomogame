@@ -78,6 +78,17 @@ export function pickLetters(count, rng = Math.random) {
   return letters.slice(0, count);
 }
 
+// すうじテーマ用: 1〜12から重複なくcount個（数字カード↔ドットカードのペア。仕様§4.3）
+export const MAX_NUMBER = 12;
+export function pickNumbers(count, rng = Math.random) {
+  const numbers = Array.from({ length: MAX_NUMBER }, (_, i) => i + 1);
+  for (let i = numbers.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [numbers[i], numbers[j]] = [numbers[j], numbers[i]];
+  }
+  return numbers.slice(0, count);
+}
+
 // 最多スコアのプレイヤーindex一覧（同点なら複数=ひきわけ）
 export function getWinners(state) {
   const max = Math.max(...state.scores);

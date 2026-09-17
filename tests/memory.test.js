@@ -11,7 +11,7 @@ import {
   getWinners,
 } from '../js/games/memory/game.js';
 import { createCpu } from '../js/games/memory/cpu.js';
-import { pickLetters } from '../js/games/memory/game.js';
+import { pickLetters, pickNumbers, MAX_NUMBER } from '../js/games/memory/game.js';
 
 // ---------- ペアの片割れ(variant)とABCの文字えらび（v0.13テーマ機構） ----------
 {
@@ -211,3 +211,16 @@ function findPair(state, face) {
 }
 
 console.log('memory.test.js: すべてのテストに合格');
+
+// ---------- すうじテーマ: 1〜12から重複なく（v0.16.1） ----------
+{
+  let s = 7;
+  const rng = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  assert.strictEqual(MAX_NUMBER, 12);
+  const nums = pickNumbers(12, rng);
+  assert.deepStrictEqual([...nums].sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+  const four = pickNumbers(4, rng);
+  assert.strictEqual(new Set(four).size, 4);
+  for (const n of four) assert.ok(n >= 1 && n <= 12);
+}
+console.log('memory.test.js: number theme ok');

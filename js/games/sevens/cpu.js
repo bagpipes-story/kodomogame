@@ -18,6 +18,12 @@ export function chooseAction(state, level, rng = Math.random) {
     return { type: 'play', cardId: randomPick(playable, rng) };
   }
 
+  // アシスト（よわいで2連敗後）: 出せるのに30%でパスしてしまう（パスを使い切ると自分がリタイア）
+  if (level === 'assist') {
+    if (state.passesLeft[state.current] > 0 && rng() < 0.3) return { type: 'pass' };
+    return { type: 'play', cardId: randomPick(playable, rng) };
+  }
+
   if (level === 'normal') {
     // 端に近いほど「その列を早く終わらせられる」ので優先
     const distToEnd = (id) => Math.min(rankOf(id) - 1, RANKS - rankOf(id));

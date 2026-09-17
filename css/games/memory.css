@@ -123,3 +123,29 @@
   font-size: clamp(30px, 11vw, 48px);
   color: var(--kgb-text);
 }
+
+/* すうじテーマ: ドットカード（5個ずつ折り返し。wordart.jsの部品を流用） */
+.kgb-card-face.kgb-card-dots,
+.kgb-grid-hard .kgb-card-face.kgb-card-dots {
+  font-size: 66px; /* ドットは0.22em ≒ 14.5px。5個×14.5+すきま ≒ 76px でむずかしいの横長カードにも収まる */
+  color: var(--kgb-accent);
+}
+
+.kgb-card-dots .kgb-wordart-dots {
+  gap: 2px 2px;
+}
+
+/* ひらがなテーマ: 文字カード */
+/* 3文字までは1行に収まる大きさ、4文字以上は少し小さく（カード幅 約78px） */
+.kgb-card-kana {
+  word-break: keep-all;
+  white-space: nowrap;
+}
+
+.kgb-card-kana.is-short {
+  font-size: clamp(17px, 5.6vw, 21px);
+}
+
+.kgb-card-kana.is-long {
+  font-size: clamp(13px, 4.2vw, 16px);
+}

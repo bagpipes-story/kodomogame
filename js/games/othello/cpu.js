@@ -42,6 +42,7 @@ export function chooseMove(state, level, rng = Math.random) {
   const moves = getLegalMoves(state.board, state.current);
   if (!moves.length) return null;
   if (level === 'weak') return chooseWeak(moves, rng);
+  if (level === 'assist') return chooseAssist(moves, rng);
   if (level === 'normal') return chooseNormal(moves, rng);
   return chooseStrong(state, moves, rng);
 }
@@ -53,6 +54,17 @@ function chooseWeak(moves, rng) {
     return randomPick(nonCorner, rng).index;
   }
   return randomPick(moves, rng).index;
+}
+
+// アシスト（よわいで2連敗後）: 角は必ず見逃し、返せる枚数が少ない手を選びがち
+function chooseAssist(moves, rng) {
+  const nonCorner = moves.filter((m) => !CORNERS.includes(m.index));
+  const pool = nonCorner.length ? nonCorner : moves;
+  if (rng() < 0.6) {
+    const minFlips = Math.min(...pool.map((m) => m.flips.length));
+    return randomPick(pool.filter((m) => m.flips.length === minFlips), rng).index;
+  }
+  return randomPick(pool, rng).index;
 }
 
 function chooseNormal(moves, rng) {

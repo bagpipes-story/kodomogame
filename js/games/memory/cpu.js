@@ -1,5 +1,6 @@
 // cpu.js — 神経衰弱のCPU思考（記憶精度で難易度を表現。仕様§4.3）
 //   よわい: 直近2枚だけ記憶
+//   アシスト（よわいで2連敗後）: 直近1枚だけ、しかも30%は覚えない
 //   ふつう: めくられたカードを70%の確率で記憶
 //   つよい: 全て記憶（既知ペアがあれば必ず取る）
 // 誰かがカードをめくるたびにui.jsがremember()を呼ぶ。
@@ -9,11 +10,12 @@ export function createCpu(level, rng = Math.random) {
   const seen = new Map();
 
   function remember(index, face) {
-    if (level === 'normal' && rng() >= 0.7) return; // 30%は覚えない
+    if ((level === 'normal' || level === 'assist') && rng() >= 0.7) return; // 30%は覚えない
     seen.delete(index); // 同じカードを見直したら「最新の記憶」に更新する
     seen.set(index, face);
-    if (level === 'weak') {
-      while (seen.size > 2) {
+    if (level === 'weak' || level === 'assist') {
+      const keep = level === 'assist' ? 1 : 2;
+      while (seen.size > keep) {
         seen.delete(seen.keys().next().value); // 一番古い記憶を忘れる
       }
     }

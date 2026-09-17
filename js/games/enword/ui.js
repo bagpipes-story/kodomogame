@@ -16,10 +16,11 @@ import {
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playMatch, playFlutter, playWin, playTurn } from '../../sound.js';
-import { loadStats, saveStats, loadSettings } from '../../storage.js';
+import { loadSettings } from '../../storage.js';
 import { createWordVisual } from '../../wordart.js';
 import { say, hasEnglishVoice, cancelSpeech } from '../../speech.js';
 import { createRace, robotChoice, assistExtraMs } from '../../race.js';
+import { lossStreakOf } from '../../assist.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 
 const MAX_OPTIONS = 6;
@@ -410,14 +411,7 @@ export function mount(root, config, { onExit }) {
     if (childWon) emitPraise('beat_robot');
     if (mode === 'solo' && state.firstTryCorrect === QUESTIONS_PER_ROUND) emitPraise('perfect_first_try');
 
-    if (isCpu) {
-      // 難易度アシスト用の連敗カウント（負けたら+1、それ以外は0）
-      const stats = loadStats();
-      stats.lossStreak ??= {};
-      stats.lossStreak.enword = a < b ? (stats.lossStreak.enword ?? 0) + 1 : 0;
-      saveStats(stats);
-    }
-    recordPlay('enword', { won: childWon });
+    recordPlay('enword', { won: childWon, lost: isCpu && a < b });
 
     let title;
     let detail;
@@ -513,7 +507,7 @@ export function mount(root, config, { onExit }) {
     resetPraise();
     state = createGame({ difficulty, mode, categories });
     if (isCpu) {
-      extraMs = assistExtraMs(level, loadStats().lossStreak?.enword ?? 0);
+      extraMs = assistExtraMs(level, lossStreakOf('enword'));
       race = createRace({ level, extraMs, onDone: robotTurn });
     }
     phase = 'idle';

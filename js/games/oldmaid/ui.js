@@ -564,7 +564,7 @@ export function mount(root, config, { onExit }) {
     updateInfo();
 
     const humanLost = isCpuMode ? state.loser === 0 : false;
-    recordPlay('oldmaid', { won: isCpuMode && state.loser !== 0 });
+    recordPlay('oldmaid', { won: isCpuMode && state.loser !== 0, lost: isCpuMode && state.loser === 0 });
 
     let title;
     if (isCpuMode) {

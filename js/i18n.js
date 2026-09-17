@@ -73,6 +73,10 @@ export const text = {
   themeFruit: 'くだもの',
   themeEnglish: 'えいご',
   themeAbc: 'ABC',
+  themeNumber: 'すうじ',
+  themeHiragana: 'ひらがな',
+  // 1〜12のよみがな（すうじテーマの表示）
+  numberReadings: ['いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう', 'じゅう', 'じゅういち', 'じゅうに'],
   noVoiceNote: 'えいごの こえが ない iPhone です（もじで あそぼう）',
 
   // ◯×ゲーム

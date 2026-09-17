@@ -16,6 +16,15 @@ export function chooseMove(state, level, rng = Math.random) {
 
   if (level === 'weak') return randomPick(empty, rng);
 
+  // アシスト（よわいで2連敗後）: 相手のリーチをわざと止めず、自分の勝ち手も半分は見逃す
+  if (level === 'assist') {
+    const humanReach = getReachCells(state, 1 - state.current);
+    const myWin = getReachCells(state, state.current);
+    let pool = empty.filter((i) => !humanReach.includes(i));
+    if (rng() < 0.5) pool = pool.filter((i) => !myWin.includes(i));
+    return randomPick(pool.length ? pool : empty, rng);
+  }
+
   if (level === 'normal') {
     const winCells = getReachCells(state, state.current);
     if (winCells.length) return randomPick(winCells, rng);

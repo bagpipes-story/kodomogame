@@ -68,11 +68,15 @@ export function pickPraise() {
 }
 
 // 1プレイ終了時の記録: plays・勝ち数・5つの力・スタンプ（保存はこの1回のみ。§9）
-export function recordPlay(gameId, { won = false, extraSkills = [] } = {}) {
+// won: ロボット戦で勝った / lost: ロボット戦で負けた（難易度アシストの連敗カウント用。勝てば0に戻る）
+export function recordPlay(gameId, { won = false, lost = false, extraSkills = [] } = {}) {
   const stats = loadStats();
   stats[gameId] ??= {};
   stats[gameId].plays = (stats[gameId].plays ?? 0) + 1;
   if (won) stats[gameId].wins = (stats[gameId].wins ?? 0) + 1;
+  stats.lossStreak ??= {};
+  if (won) stats.lossStreak[gameId] = 0;
+  else if (lost) stats.lossStreak[gameId] = (stats.lossStreak[gameId] ?? 0) + 1;
 
   stats.skills ??= {};
   for (const skill of [...(SKILL_MAP[gameId] ?? []), ...extraSkills]) {

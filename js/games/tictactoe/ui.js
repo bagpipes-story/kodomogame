@@ -4,6 +4,7 @@
 
 import { createGame, place, getReachCells } from './game.js';
 import { chooseMove } from './cpu.js';
+import { effectiveLevel } from '../../assist.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playTurn, playWin, playTap } from '../../sound.js';
@@ -22,6 +23,7 @@ export function mount(root, config, { onExit }) {
 
   let state = null;
   let inputLocked = false;
+  let cpuLevel = config.level; // 難易度アシスト適用後のレベル（ラウンド開始時に決める）
   let firstPlayer = 0; // 次のラウンドの先手（ラウンドごとに交代）
   let reachCells = [];
 
@@ -154,7 +156,7 @@ export function mount(root, config, { onExit }) {
     inputLocked = true;
     later(() => {
       inputLocked = false;
-      const move = chooseMove(state, config.level);
+      const move = chooseMove(state, cpuLevel);
       if (move !== null) placeAt(move);
     }, randomBetween(CPU_THINK_MS));
   }
@@ -165,7 +167,7 @@ export function mount(root, config, { onExit }) {
     emitPraise('finished_game');
     banner.className = 'kgb-turn-banner';
     const humanWon = isCpuMode ? state.winner === 0 : state.winner !== null;
-    recordPlay('tictactoe', { won: isCpuMode && state.winner === 0 });
+    recordPlay('tictactoe', { won: isCpuMode && state.winner === 0, lost: isCpuMode && state.winner === 1 });
 
     let title;
     if (state.winner === null) {
@@ -262,6 +264,7 @@ export function mount(root, config, { onExit }) {
     resetPraise();
 
     state = createGame({ firstPlayer });
+    cpuLevel = isCpuMode ? effectiveLevel('tictactoe', config.level) : config.level;
     firstPlayer = 1 - firstPlayer; // 次のラウンドは先手交代（仕様§4.6）
     for (let i = 0; i < 9; i++) {
       renderMark(i);

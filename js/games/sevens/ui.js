@@ -16,10 +16,11 @@ import {
   passTurn,
 } from './game.js';
 import { chooseAction } from './cpu.js';
+import { effectiveLevel } from '../../assist.js';
+import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playPlace, playTurn, playWin, playTap, playBuzzer } from '../../sound.js';
-import { loadStats, saveStats } from '../../storage.js';
 
 // マークは色＋形の両方で見分けられる（分類あそびの知育方針。仕様§11）
 const SUIT_CHARS = ['♠', '♥', '♦', '♣'];
@@ -44,6 +45,7 @@ export function mount(root, config, { onExit }) {
 
   let state = null;
   let inputLocked = false;
+  let cpuLevel = config.level; // 難易度アシスト適用後のレベル（ラウンド開始時に決める）
   let shownPlayer = 0;   // 手札を表示しているプレイヤー（ふたりモードで交代する）
   let needCells = [];    // ガイド表示中のマス（差分更新のため覚えておく）
 
@@ -332,7 +334,7 @@ export function mount(root, config, { onExit }) {
     // 人間がリタイアした後の「ロボットだけの続き」は早回しで見せる
     const delay = isCpuMode && state.retired[0] ? CPU_FAST_MS : CPU_THINK_MS;
     later(() => {
-      const action = chooseAction(state, config.level);
+      const action = chooseAction(state, cpuLevel);
       inputLocked = false;
       if (action.type === 'play') doPlay(action.cardId);
       else doPass();
@@ -342,12 +344,25 @@ export function mount(root, config, { onExit }) {
   // ---------- 終了処理 ----------
 
   // 戦績の保存はゲーム終了時のこの1回だけ（§9 localStorage規定）
+
+  // 「きょうのすごいところ」（具体ほめ。仕様§3.4-1）
+  function buildPraiseBox() {
+    const praiseBox = document.createElement('div');
+    praiseBox.className = 'kgb-praise-box';
+    const praiseLabel = document.createElement('p');
+    praiseLabel.className = 'kgb-praise-label';
+    praiseLabel.textContent = text.praiseTitle;
+    const praiseText = document.createElement('p');
+    praiseText.className = 'kgb-praise-text';
+    praiseText.textContent = pickPraise();
+    praiseBox.append(praiseLabel, praiseText);
+    return praiseBox;
+  }
+
   function updateStatsAtFinish() {
-    if (!isCpuMode || state.winner !== 0) return;
-    const stats = loadStats();
-    stats.sevens ??= { wins: 0 };
-    stats.sevens.wins++;
-    saveStats(stats);
+    // plays・勝ち数・6つの力・スタンプ・連敗（アシスト用）を praise.js にまとめて記録（v0.16.1で統一）
+    emitPraise('finished_game');
+    recordPlay('sevens', { won: isCpuMode && state.winner === 0, lost: isCpuMode && state.winner !== 0 });
   }
 
   function finishGame() {
@@ -384,7 +399,7 @@ export function mount(root, config, { onExit }) {
     homeButton.className = 'kgb-dialog-button';
     homeButton.textContent = text.goHome;
     buttons.append(replayButton, homeButton);
-    dialog.append(titleEl, detailEl, buttons);
+    dialog.append(titleEl, detailEl, buildPraiseBox(), buttons);
 
     resultOverlay.replaceChildren(dialog);
     if (humanWon) {
@@ -435,6 +450,8 @@ export function mount(root, config, { onExit }) {
     needCells = [];
 
     state = createGame({ playerCount });
+    cpuLevel = isCpuMode ? effectiveLevel('sevens', config.level) : config.level;
+    resetPraise();
     // 場のマスを初期状態に戻し、7だけ置く
     cellEls.forEach((cell, id) => {
       cell.textContent = '';

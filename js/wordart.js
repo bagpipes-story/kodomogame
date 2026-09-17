@@ -21,6 +21,19 @@ function shapePath(name) {
   }
 }
 
+// ドットだけ（すうじテーマの「●●●」カード用）。5個ずつ折り返す
+export function createDots(count) {
+  const dots = document.createElement('span');
+  dots.className = 'kgb-wordart-dots';
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'kgb-wordart-dotsm';
+    dot.textContent = '●';
+    dots.append(dot);
+  }
+  return dots;
+}
+
 export function createWordVisual(word, { color = '#f28b3b' } = {}) {
   const el = document.createElement('span');
   el.className = `kgb-wordart kgb-wordart-${word.kind}`;
@@ -36,15 +49,7 @@ export function createWordVisual(word, { color = '#f28b3b' } = {}) {
     digit.className = 'kgb-wordart-digit';
     digit.textContent = String(word.value);
     // ドットは1個ずつ別要素にして5個で折り返す（文字列だと折り返せず右にはみ出す）
-    const dots = document.createElement('span');
-    dots.className = 'kgb-wordart-dots';
-    for (let i = 0; i < word.value; i++) {
-      const dot = document.createElement('span');
-      dot.className = 'kgb-wordart-dotsm';
-      dot.textContent = '●';
-      dots.append(dot);
-    }
-    el.append(digit, dots);
+    el.append(digit, createDots(word.value));
   } else if (word.kind === 'shape') {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', '0 0 100 100');

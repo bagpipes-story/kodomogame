@@ -11,14 +11,16 @@ import {
   resolveMismatch,
   getWinners,
   pickLetters,
+  pickNumbers,
 } from './game.js';
 import { createCpu } from './cpu.js';
+import { effectiveLevel } from '../../assist.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playFlip, playMatch, playTurn, playWin, playTap } from '../../sound.js';
 import { loadStats, saveStats } from '../../storage.js';
 import { pickWords } from '../../words.js';
-import { createWordVisual } from '../../wordart.js';
+import { createWordVisual, createDots } from '../../wordart.js';
 import { say, hasEnglishVoice, cancelSpeech } from '../../speech.js';
 import { recordPlay } from '../../praise.js';
 
@@ -42,12 +44,13 @@ export function mount(root, config, { onExit }) {
 
   const theme = config.theme ?? 'animal';
   const usesSpeech = theme === 'english' || theme === 'abc';
-  let faceItems = []; // face番号 → { word } または { letter }
+  let faceItems = []; // face番号 → { word } / { letter } / { number }
 
   // テーマごとのペアの中身をえらぶ。むずかしい(12ペア)は1カテゴリ8種では足りないので
   // どうぶつ＋くだもの混合（仕様§4.3）
   function buildFaceItems(pairCount) {
     if (theme === 'abc') return pickLetters(pairCount).map((letter) => ({ letter }));
+    if (theme === 'number') return pickNumbers(pairCount).map((number) => ({ number }));
     let categories = ['animal', 'fruit'];
     if (pairCount <= 8 && theme === 'animal') categories = ['animal'];
     if (pairCount <= 8 && theme === 'fruit') categories = ['fruit'];
@@ -62,9 +65,26 @@ export function mount(root, config, { onExit }) {
       front.classList.add('kgb-card-letter');
       return;
     }
+    if (item.number) {
+      // すうじ: 数字カード ↔ ドットカード（数字と数量の対応。仕様§4.3）
+      if (card.variant === 0) {
+        front.textContent = String(item.number);
+        front.classList.add('kgb-card-letter');
+      } else {
+        front.append(createDots(item.number));
+        front.classList.add('kgb-card-dots');
+      }
+      return;
+    }
     if (theme === 'english' && card.variant === 1) {
       front.textContent = item.word.en;
       front.classList.add('kgb-card-word', item.word.en.length >= 8 ? 'is-long' : 'is-short');
+      return;
+    }
+    if (theme === 'hiragana' && card.variant === 1) {
+      // ひらがな: 絵カード ↔ 文字カード（文字への興味。仕様§4.3）
+      front.textContent = item.word.ja;
+      front.classList.add('kgb-card-word', 'kgb-card-kana', item.word.ja.length >= 4 ? 'is-long' : 'is-short');
       return;
     }
     front.append(createWordVisual(item.word));
@@ -77,6 +97,10 @@ export function mount(root, config, { onExit }) {
       statusEl.textContent = card.variant === 0 ? item.letter : item.letter.toLowerCase();
       // 大文字1文字はiOSが「capital D」と読んでしまうため、小文字で読ませる（文字名だけが鳴る）
       say(item.letter.toLowerCase());
+      return;
+    }
+    if (item.number) {
+      statusEl.textContent = `${item.number}　${text.numberReadings[item.number - 1]}`;
       return;
     }
     if (theme === 'english') {
@@ -326,7 +350,9 @@ export function mount(root, config, { onExit }) {
     banner.className = 'kgb-turn-banner kgb-banner-solo';
     const { title, detail, celebrate } = buildResult();
     // 6つの力: おぼえる・かず（SKILL_MAP）＋えいご/ABCテーマなら えいご も。勝ち数はupdateStatsAtFinishで済み
-    recordPlay('memory', { won: false, extraSkills: usesSpeech ? ['english'] : [] });
+    // 勝ち数はupdateStatsAtFinishで加算済みなので won は渡さない。連敗（アシスト用）だけ知らせる
+    const cpuWinners = isCpuMode ? getWinners(state) : [];
+    recordPlay('memory', { lost: isCpuMode && cpuWinners.length === 1 && cpuWinners[0] === 1, extraSkills: usesSpeech ? ['english'] : [] });
 
     const dialog = document.createElement('div');
     dialog.className = 'kgb-dialog';
@@ -404,7 +430,7 @@ export function mount(root, config, { onExit }) {
     const pairCount = PAIR_COUNTS[config.size];
     faceItems = buildFaceItems(pairCount);
     state = createGame({ pairCount, playerCount });
-    cpu = isCpuMode ? createCpu(config.level) : null;
+    cpu = isCpuMode ? createCpu(effectiveLevel('memory', config.level)) : null;
     buildGrid();
     updateBanner();
     updateScores();
