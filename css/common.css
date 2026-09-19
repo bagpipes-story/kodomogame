@@ -994,3 +994,27 @@ html, body {
 .kgb-parent-button.is-danger {
   background: #c0554a;
 }
+
+/* ---------- あたらしいバージョンのお知らせ（v0.17） ---------- */
+
+.kgb-update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 35;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  border: none;
+  border-radius: 16px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 5px 0 rgba(74, 63, 53, 0.25);
+  cursor: pointer;
+}
+
+.kgb-update-toast[hidden] {
+  display: none;
+}

@@ -260,6 +260,7 @@ export const text = {
   breakBody: 'おみずを のんで、めを やすめよう',
   breakOk: 'わかった！',
   parentButton: 'おうちのかたへ',
+  updateReady: 'あたらしい バージョンが あるよ！ タップで こうしん',
 
   // 具体ほめシステム（仕様§3.4: 行動をほめる具体文。「てんさい！」の乱発はしない）
   praiseTitle: 'きょうの すごいところ',

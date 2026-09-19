@@ -1,0 +1,17 @@
+{
+  "name": "こどもゲームボックス",
+  "short_name": "ゲームボックス",
+  "description": "4〜8さい むけの ゲームしゅう。オフラインで あそべます。",
+  "lang": "ja",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8e7",
+  "theme_color": "#fff8e7",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

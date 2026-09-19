@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- こどもゲームボックスのアイコン: クリーム地に4つの「あそびのかたち」（まる・しかく・さんかく・ほし） -->
+  <rect width="512" height="512" fill="#fff3d6"/>
+  <rect x="40" y="40" width="432" height="432" rx="72" fill="#ffffff" opacity="0.6"/>
+  <circle cx="166" cy="166" r="76" fill="#7fc8a9"/>
+  <rect x="270" y="90" width="152" height="152" rx="28" fill="#f4a261"/>
+  <polygon points="166,262 250,414 82,414" fill="#f6a6b2"/>
+  <polygon points="346,262 369,322 432,322 381,360 400,420 346,384 292,420 311,360 260,322 323,322" fill="#6ec6e6"/>
+</svg>

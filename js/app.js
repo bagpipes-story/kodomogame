@@ -23,7 +23,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.16.2';
+const APP_VERSION = 'v0.17';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -572,3 +572,43 @@ muteButton.addEventListener('click', () => {
   renderMuteButton();
   playTap(); // ミュート解除時に「音が出るようになった」ことが分かるよう、切替後に鳴らす
 });
+
+// ---------- Service Worker（v0.17 PWA化。仕様§6） ----------
+// 新しいバージョンが見つかったらトーストで知らせ、タップしたときだけ入れ替えて再読み込みする
+// （ゲーム途中に勝手に入れ替わらない）。登録に失敗しても（file:// や古いSafari）アプリはそのまま動く。
+
+const updateToast = document.getElementById('updateToast');
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+  navigator.serviceWorker.register('./sw.js').then((registration) => {
+    const showUpdate = (worker) => {
+      updateToast.textContent = text.updateReady;
+      updateToast.hidden = false;
+      updateToast.onclick = () => {
+        updateToast.hidden = true;
+        worker.postMessage('SKIP_WAITING');
+      };
+    };
+    // すでに待機中の新バージョンがある（前回タップしなかった）場合
+    if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
+    registration.addEventListener('updatefound', () => {
+      const worker = registration.installing;
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        // controller が無い＝初回インストール（お知らせ不要）
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdate(worker);
+      });
+    });
+  }).catch(() => {
+    // 登録できなくてもオンラインなら普通に動く
+  });
+}
+
+registerServiceWorker();

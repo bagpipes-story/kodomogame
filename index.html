@@ -7,8 +7,12 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>こどもゲームボックス</title>
-  <!-- 仮のfavicon（404防止）。正式なアイコンはv0.7で追加する -->
-  <link rel="icon" href="data:,">
+  <!-- PWA（v0.17）: ホーム画面追加用のmanifestとアイコン。theme-colorは背景のクリーム色 -->
+  <meta name="theme-color" content="#fff8e7">
+  <meta name="apple-mobile-web-app-title" content="ゲームボックス">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/icon-180.png">
   <link rel="stylesheet" href="css/common.css">
   <link rel="stylesheet" href="css/games/memory.css">
   <link rel="stylesheet" href="css/games/othello.css">
@@ -125,6 +129,9 @@
 
   <!-- スタンプ10個ごとのお祝い（小さなトースト） -->
   <div id="stampToast" class="kgb-stamp-toast" hidden></div>
+
+  <!-- あたらしいバージョンのお知らせ（Service Workerの更新。タップで入れ替えて再読み込み） -->
+  <button id="updateToast" class="kgb-update-toast" type="button" hidden></button>
 
   <!-- Matter.js（物理エンジン）: オフライン要件のためローカル同梱（仕様§1） -->
   <script src="lib/matter.min.js"></script>

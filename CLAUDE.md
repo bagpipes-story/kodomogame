@@ -52,7 +52,7 @@
 - 実機確認: iPhone SE2でフリップアニメ確認済み
 ```
 
-- Service Workerのキャッシュ名（`kgb-v○○`）もバージョンアップ時に必ず更新する（更新しないと古い画面が出続ける）。
+- Service Workerのキャッシュ名（`kgb-v○○`）もバージョンアップ時に必ず更新する（更新しないと古い画面が出続ける）。具体的には `sw.js` の `VERSION` を `js/app.js` の `APP_VERSION` と同じ値にする。js/css/assets を追加したら `sw.js` の `PRECACHE` にも足す（どちらも `node tests/sw.test.js` が検査する）。
 
 ## 知育まわりの作法
 
