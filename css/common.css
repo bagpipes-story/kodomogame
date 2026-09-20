@@ -1018,3 +1018,65 @@ html, body {
 .kgb-update-toast[hidden] {
   display: none;
 }
+
+/* ---------- v0.17.1: 自前SVG絵素材・ホームの並び ---------- */
+
+/* 自前SVGの基本サイズ: 文字サイズに合わせて拡大縮小（絵文字より少し大きめの1.4em。絵文字はグリフが1.2em程度あるため） */
+.kgb-art {
+  width: 1.4em;
+  height: 1.4em;
+  display: block;
+}
+
+/* ホームのゲームアイコン: テーマ色の四角いっぱいに */
+.kgb-game-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.kgb-game-icon .kgb-art {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.kgb-stamp .kgb-art {
+  width: 72%;
+  height: 72%;
+  display: block;
+}
+
+/* あそびの種類の見出し（2列グリッドの中で1行ぶん使う） */
+.kgb-home-group {
+  grid-column: 1 / -1;
+  margin: 10px 0 -4px;
+  padding-left: 4px;
+  font-size: 15px;
+  font-weight: 700;
+  opacity: 0.6;
+}
+
+.kgb-home-group:first-child {
+  margin-top: 0;
+}
+
+.kgb-stamps-button {
+  margin-top: 4px;
+}
+
+.kgb-stamps-button-count {
+  padding: 2px 10px;
+  border-radius: 12px;
+  background: var(--kgb-color-korinto);
+  color: var(--kgb-white);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* 長いゲーム名（8文字以上）は1行に収まる大きさに */
+.kgb-game-text .is-long {
+  font-size: 16px;
+  letter-spacing: -0.5px;
+}

@@ -2,7 +2,8 @@
 // 画面構成: ホーム → あそびかた設定 → ゲーム → (結果はゲーム内オーバーレイ)
 // 未実装ゲームはダミー画面へ。ゲーム本体はgames/<id>/ui.jsのmountに任せる。
 
-import { text, games } from './i18n.js';
+import { text, games, homeGroups } from './i18n.js';
+import { createArt } from './art.js';
 import { playTap, isMuted, toggleMute } from './sound.js';
 import { loadStats, saveStats, loadSettings } from './storage.js';
 import { registeredNames, getPlayers, assignPlayer } from './players.js';
@@ -23,7 +24,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.17';
+const APP_VERSION = 'v0.17.1';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -198,8 +199,16 @@ function showScreen(name) {
   for (const [key, el] of Object.entries(screens)) {
     el.hidden = key !== name;
   }
-  // ホームに戻るたびに勝ち星を最新にする（がんばりの見える化。仕様§12）
-  if (name === 'home') updateHomeStars();
+  // ホームに戻るたびに勝ち星とスタンプ数を最新にする（がんばりの見える化。仕様§12）
+  if (name === 'home') {
+    updateHomeStars();
+    updateHomeStamps();
+  }
+}
+
+function updateHomeStamps() {
+  const el = document.getElementById('stampsCount');
+  if (el) el.textContent = `${loadStats().stamps ?? 0}${text.stampsCountSuffix}`;
 }
 
 function updateHomeStars() {
@@ -233,31 +242,53 @@ function applyStaticText() {
   document.getElementById('versionLabel').textContent = APP_VERSION;
 }
 
+function buildGameButton(game) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'kgb-game-button';
+  button.dataset.gameId = game.id;
+
+  const icon = document.createElement('span');
+  icon.className = `kgb-game-icon kgb-theme-${game.id}`;
+  icon.setAttribute('aria-hidden', 'true');
+  const art = createArt(game.id); // 自前SVG。無ければ絵文字
+  if (art) icon.append(art);
+  else icon.textContent = game.icon;
+
+  const textWrap = document.createElement('span');
+  textWrap.className = 'kgb-game-text';
+  const label = document.createElement('span');
+  label.textContent = game.name;
+  if (game.name.length >= 8) label.className = 'is-long'; // 8文字以上は少し小さくして1行に
+  const stars = document.createElement('span');
+  stars.className = 'kgb-game-stars';
+  textWrap.append(label, stars);
+
+  button.append(icon, textWrap);
+  return button;
+}
+
 function buildGameList() {
-  // ボタン5個の一度きりの生成なのでDocumentFragmentでまとめて追加
+  // 一度きりの生成なのでDocumentFragmentでまとめて追加。あそびの種類ごとに見出し（v0.17.1）
   const list = document.getElementById('gameList');
   const fragment = document.createDocumentFragment();
+  const placed = new Set();
+  for (const group of homeGroups) {
+    const heading = document.createElement('h2');
+    heading.className = 'kgb-home-group';
+    heading.textContent = group.label;
+    fragment.append(heading);
+    for (const id of group.ids) {
+      const game = games.find((g) => g.id === id);
+      if (!game) continue;
+      placed.add(id);
+      fragment.append(buildGameButton(game));
+    }
+  }
+  // 見出しに入っていないゲームがあっても消えないように最後に並べる
   for (const game of games) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'kgb-game-button';
-    button.dataset.gameId = game.id;
-
-    const icon = document.createElement('span');
-    icon.className = `kgb-game-icon kgb-theme-${game.id}`;
-    icon.textContent = game.icon;
-    icon.setAttribute('aria-hidden', 'true');
-
-    const textWrap = document.createElement('span');
-    textWrap.className = 'kgb-game-text';
-    const label = document.createElement('span');
-    label.textContent = game.name;
-    const stars = document.createElement('span');
-    stars.className = 'kgb-game-stars';
-    textWrap.append(label, stars);
-
-    button.append(icon, textWrap);
-    fragment.append(button);
+    if (placed.has(game.id)) continue;
+    fragment.append(buildGameButton(game));
   }
   list.append(fragment);
 
@@ -419,6 +450,7 @@ function renderMuteButton() {
 applyStaticText();
 buildGameList();
 updateHomeStars();
+updateHomeStamps();
 renderMuteButton();
 
 // 設定画面の選択肢は都度作り直すため、リスナーは親に1回だけ登録しておく
@@ -582,7 +614,14 @@ const updateToast = document.getElementById('updateToast');
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   let refreshing = false;
+  // 初回インストール時の clients.claim() でも controllerchange は起きる。そのときは再読み込みしない
+  // （初回訪問で勝手にリロードして操作を取りこぼさないため）。「こうしん」タップ後の入れ替えだけ再読み込みする
+  let hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
     if (refreshing) return;
     refreshing = true;
     window.location.reload();

@@ -246,3 +246,9 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+/* 数のタイル: 並べる絵（SVG）は1個ぶんの文字サイズに合わせる */
+.kgb-listen-one .kgb-art {
+  width: 1.1em;
+  height: 1.1em;
+}

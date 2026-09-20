@@ -4,6 +4,7 @@
 
 import { text, games } from './i18n.js';
 import { loadStats } from './storage.js';
+import { createArt } from './art.js';
 
 const MILESTONE = 10;
 
@@ -40,8 +41,12 @@ export function renderStamps(root) {
     list.forEach((gameId, i) => {
       const cell = document.createElement('span');
       const number = offset + i + 1;
-      cell.className = number % MILESTONE === 0 ? 'kgb-stamp is-milestone' : 'kgb-stamp';
-      cell.textContent = iconOf.get(gameId) ?? '⭐';
+      // ゲームのテーマ色を背景に（白い線画のアイコンが白丸で消えないように）
+      cell.className = `kgb-stamp${number % MILESTONE === 0 ? ' is-milestone' : ''}`;
+      cell.style.background = `var(--kgb-color-${gameId})`; // 一覧生成時に1回だけ書く
+      const art = createArt(gameId);
+      if (art) cell.append(art);
+      else cell.textContent = iconOf.get(gameId) ?? '⭐';
       cell.title = String(number);
       fragment.append(cell);
     });

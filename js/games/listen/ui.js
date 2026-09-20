@@ -18,6 +18,7 @@ import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playMatch, playFlutter, playTurn } from '../../sound.js';
 import { loadSettings } from '../../storage.js';
 import { createWordVisual } from '../../wordart.js';
+import { createArt } from '../../art.js';
 import { say, hasEnglishVoice, cancelSpeech } from '../../speech.js';
 import { createRace, robotChoice, assistExtraMs } from '../../race.js';
 import { lossStreakOf } from '../../assist.js';
@@ -41,7 +42,9 @@ function renderItem(item) {
     for (let i = 0; i < item.count; i++) {
       const one = document.createElement('span');
       one.className = 'kgb-listen-one';
-      one.textContent = item.word.value;
+      const art = createArt(item.word.id);
+      if (art) one.append(art);
+      else one.textContent = item.word.value;
       wrap.append(one);
     }
   } else if (item.size) {

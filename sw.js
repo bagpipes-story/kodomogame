@@ -6,7 +6,7 @@
 //   タップで skipWaiting → controllerchange で再読み込み（ゲーム途中に勝手に入れ替わらない）。
 // 外部通信は一切しない（同一オリジンのGETだけ扱う）。
 
-const VERSION = 'v0.17';
+const VERSION = 'v0.17.1';
 const CACHE_NAME = `kgb-${VERSION}`;
 
 // プリキャッシュ一覧（相対パス。tests/sw.test.js が「存在する」「漏れがない」を検査する）
@@ -35,6 +35,7 @@ const PRECACHE = [
   './css/games/sevens.css',
   './css/games/tictactoe.css',
   './js/app.js',
+  './js/art.js',
   './js/assist.js',
   './js/i18n.js',
   './js/motion.js',

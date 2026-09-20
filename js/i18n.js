@@ -354,8 +354,16 @@ export const parentText = {
   back: 'もどる',
 };
 
+// ホームの並び（v0.17.1）: あそびの種類ごとに見出しを付けて並べる
+export const homeGroups = [
+  { label: 'かんがえる', ids: ['tictactoe', 'othello', 'sevens', 'oldmaid'] },
+  { label: 'おぼえる・かず', ids: ['memory', 'flash'] },
+  { label: 'えいご', ids: ['enword', 'abc', 'listen'] },
+  { label: 'うごかす', ids: ['balance', 'rollcatch', 'korinto', 'maze', 'mole'] },
+];
+
 // ゲーム一覧: idはファイル構成（js/games/<id>/）と一致させる。
-// iconは仮表示（絵文字）。v0.10でSVGアイコンに置き換える予定。
+// iconは絵文字のフォールバック（ホーム・スタンプは art.js のSVGを優先して使う。v0.17.1）。
 export const games = [
   { id: 'tictactoe', name: 'まるばつ', icon: '⭕' },
   { id: 'memory', name: 'しんけいすいじゃく', icon: '🍎' },

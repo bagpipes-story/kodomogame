@@ -37,14 +37,15 @@
   <!-- ホーム画面 -->
   <section id="screen-home" class="kgb-screen">
     <h1 class="kgb-home-title" data-i18n="appTitle"></h1>
+    <!-- スタンプちょう（v0.17.1: スクロールしなくても見えるようタイトル直下に。数も表示） -->
+    <button id="stampsButton" class="kgb-stamps-button" type="button">
+      <span aria-hidden="true">📒</span><span data-i18n="stampsTitle"></span><span id="stampsCount" class="kgb-stamps-button-count"></span>
+    </button>
     <nav class="kgb-game-list" id="gameList">
       <!-- ゲームボタンはapp.jsがi18n.jsの定義から生成する（文言の二重管理を避けるため） -->
     </nav>
     <footer class="kgb-home-footer">
-      <!-- スタンプちょう（こども向け）と おうちのかたへ（保護者向け・小さく） v0.16 -->
-      <button id="stampsButton" class="kgb-stamps-button" type="button">
-        <span aria-hidden="true">📒</span><span data-i18n="stampsTitle"></span>
-      </button>
+      <!-- おうちのかたへ（保護者向け・小さく） v0.16 -->
       <div class="kgb-home-footer-row">
         <span id="versionLabel" class="kgb-version"></span>
         <button id="parentButton" class="kgb-parent-link" type="button" data-i18n="parentButton"></button>

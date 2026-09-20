@@ -2,6 +2,8 @@
 // 絵文字はそのまま、いろは色の丸、かずは数字＋ドット、かたちはSVGで描く。
 // ゲーム側は createWordVisual(word) を呼ぶだけ（描き方の違いを知らなくてよい）。
 
+import { createArt } from './art.js';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 function shapePath(name) {
@@ -38,7 +40,10 @@ export function createWordVisual(word, { color = '#f28b3b' } = {}) {
   const el = document.createElement('span');
   el.className = `kgb-wordart kgb-wordart-${word.kind}`;
   if (word.kind === 'emoji') {
-    el.textContent = word.value;
+    // 自前のSVG（art.js）があればそれを使い、無い語だけ絵文字で表示（v0.17.1）
+    const art = createArt(word.id);
+    if (art) el.append(art);
+    else el.textContent = word.value;
   } else if (word.kind === 'color') {
     const dot = document.createElement('span');
     dot.className = 'kgb-wordart-dot';
