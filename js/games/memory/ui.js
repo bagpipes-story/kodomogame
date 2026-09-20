@@ -21,6 +21,7 @@ import { playFlip, playMatch, playTurn, playWin, playTap } from '../../sound.js'
 import { loadStats, saveStats } from '../../storage.js';
 import { pickWords } from '../../words.js';
 import { createWordVisual, createDots } from '../../wordart.js';
+import { createArt } from '../../art.js';
 import { say, hasEnglishVoice, cancelSpeech } from '../../speech.js';
 import { recordPlay } from '../../praise.js';
 
@@ -186,7 +187,7 @@ export function mount(root, config, { onExit }) {
 
       const back = document.createElement('span');
       back.className = 'kgb-card-face kgb-card-back';
-      back.textContent = '⭐';
+      back.append(createArt('star'));
 
       const front = document.createElement('span');
       front.className = 'kgb-card-face kgb-card-front';

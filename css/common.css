@@ -1080,3 +1080,25 @@ html, body {
   font-size: 16px;
   letter-spacing: -0.5px;
 }
+
+/* ミュート・スタンプちょう・きゅうけいの絵（SVG） */
+.kgb-mute-button .kgb-art {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto;
+}
+
+.kgb-stamps-icon .kgb-art {
+  width: 30px;
+  height: 30px;
+}
+
+.kgb-break-icon {
+  display: flex;
+  justify-content: center;
+}
+
+.kgb-break-icon .kgb-art {
+  width: 96px;
+  height: 96px;
+}

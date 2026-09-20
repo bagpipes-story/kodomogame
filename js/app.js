@@ -24,7 +24,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.17.1';
+const APP_VERSION = 'v0.17.2';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -440,14 +440,17 @@ function startGame() {
 // ---------- ミュートボタン ----------
 
 function renderMuteButton() {
-  // 🔊/🔇の絵文字表示。aria-labelも状態に合わせて更新する
-  muteButton.textContent = isMuted() ? '🔇' : '🔊';
+  // おと オン/オフのSVG（art.js）。aria-labelも状態に合わせて更新する
+  muteButton.replaceChildren(createArt(isMuted() ? 'soundOff' : 'soundOn'));
   muteButton.setAttribute('aria-label', isMuted() ? text.soundOff : text.soundOn);
 }
 
 // ---------- 起動 ----------
 
 applyStaticText();
+// 静的な絵文字をSVGに（スタンプちょう・きゅうけい。v0.17.2）
+document.getElementById('stampsIcon')?.replaceChildren(createArt('stampBook'));
+document.querySelector('.kgb-break-icon')?.replaceChildren(createArt('tea'));
 buildGameList();
 updateHomeStars();
 updateHomeStamps();

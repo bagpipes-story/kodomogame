@@ -546,10 +546,19 @@ export function mount(root, config, { onExit }) {
         ctx.beginPath();
         ctx.arc(body.position.x, body.position.y, 11, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = '14px -apple-system, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🔔', body.position.x, body.position.y);
+        // ベルの形を線で描く（絵文字ではなく）
+        const bx = body.position.x;
+        const by = body.position.y;
+        ctx.fillStyle = '#e0862e';
+        ctx.beginPath();
+        ctx.moveTo(bx - 6, by + 4);
+        ctx.quadraticCurveTo(bx - 6, by - 6, bx, by - 7);
+        ctx.quadraticCurveTo(bx + 6, by - 6, bx + 6, by + 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(bx, by + 6, 2, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     // ワープあな: 黒いあな＋むらさきの渦。入ると別のあなから飛び出す（番号は不要）

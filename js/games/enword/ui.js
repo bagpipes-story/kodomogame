@@ -14,6 +14,7 @@ import {
   robotAnswer,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { createArt } from '../../art.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playMatch, playFlutter, playWin, playTurn } from '../../sound.js';
 import { loadSettings } from '../../storage.js';
@@ -84,7 +85,7 @@ export function mount(root, config, { onExit }) {
   robotRow.hidden = !isCpu;
   const robotFace = document.createElement('span');
   robotFace.className = 'kgb-enword-robot-face';
-  robotFace.textContent = '🤖';
+  robotFace.append(createArt('robot'));
   const gauge = document.createElement('div');
   gauge.className = 'kgb-enword-gauge';
   const gaugeFill = document.createElement('div');
@@ -104,7 +105,7 @@ export function mount(root, config, { onExit }) {
   const speaker = document.createElement('button');
   speaker.type = 'button';
   speaker.className = 'kgb-enword-speaker';
-  speaker.textContent = '🔊';
+  speaker.append(createArt('speaker'));
   speaker.setAttribute('aria-label', text.ewListen);
   speaker.hidden = !(def.speaker && voiceOk);
   const nextHint = document.createElement('span');

@@ -39,7 +39,7 @@
     <h1 class="kgb-home-title" data-i18n="appTitle"></h1>
     <!-- スタンプちょう（v0.17.1: スクロールしなくても見えるようタイトル直下に。数も表示） -->
     <button id="stampsButton" class="kgb-stamps-button" type="button">
-      <span aria-hidden="true">📒</span><span data-i18n="stampsTitle"></span><span id="stampsCount" class="kgb-stamps-button-count"></span>
+      <span id="stampsIcon" class="kgb-stamps-icon" aria-hidden="true"></span><span data-i18n="stampsTitle"></span><span id="stampsCount" class="kgb-stamps-button-count"></span>
     </button>
     <nav class="kgb-game-list" id="gameList">
       <!-- ゲームボタンはapp.jsがi18n.jsの定義から生成する（文言の二重管理を避けるため） -->
@@ -122,7 +122,7 @@
 
   <!-- きゅうけいリマインダー（1プレイの区切りに全画面表示。仕様§3.4-4） -->
   <div id="breakOverlay" class="kgb-break" hidden>
-    <p class="kgb-break-icon" aria-hidden="true">🍵</p>
+    <p class="kgb-break-icon" aria-hidden="true"></p>
     <p class="kgb-break-title" data-i18n="breakTitle"></p>
     <p class="kgb-break-body" data-i18n="breakBody"></p>
     <button id="breakOkButton" class="kgb-start-button" type="button" data-i18n="breakOk"></button>

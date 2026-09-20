@@ -15,6 +15,7 @@ import {
   finishRound,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { createArt } from '../../art.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playPop, playBonk, playFlutter, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
@@ -155,7 +156,7 @@ export function mount(root, config, { onExit }) {
 
   function charUp(index, kind) {
     const char = charEls[index];
-    char.textContent = kind === 'mole' ? '🐹' : '🦋';
+    char.replaceChildren(createArt(kind === 'mole' ? 'moleChar' : 'butterfly')); // 絵文字→自前SVG（v0.17.2）
     char.className = `kgb-mole-char is-up ${kind === 'mole' ? 'kgb-char-mole' : 'kgb-char-butterfly'}`;
   }
 

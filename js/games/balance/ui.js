@@ -28,7 +28,7 @@ const SHAPE_COLORS = {
 
 const SETTLE_FRAMES = 25;    // 静止とみなす連続フレーム数
 const SETTLE_TIMEOUT_MS = 5000;
-const CRASH_SHOW_MS = 1200;  // 崩れてから結果画面までの時間（⭐マーカー表示）
+const CRASH_SHOW_MS = 1200;  // 崩れてから結果画面までの時間（星マーカー表示）
 
 export function mount(root, config, { onExit }) {
   const M = window.Matter;
@@ -209,11 +209,24 @@ export function mount(root, config, { onExit }) {
       ctx.globalAlpha = 1;
     }
 
-    // 崩れたときの重心マーカー⭐
+    // 崩れたときの重心マーカー（星）
     if (starPos) {
-      ctx.font = '34px -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('⭐', starPos.x, starPos.y);
+      // 星を線で描く（絵文字ではなく。端末で見た目が変わらない）
+      ctx.fillStyle = '#f0c94a';
+      ctx.strokeStyle = '#5b4a3f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 === 0 ? 17 : 7;
+        const a = -Math.PI / 2 + (i * Math.PI) / 5;
+        const px = starPos.x + Math.cos(a) * r;
+        const py = starPos.y - 12 + Math.sin(a) * r;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
     }
     ctx.restore();
 
@@ -320,7 +333,7 @@ export function mount(root, config, { onExit }) {
     dropping = null;
     collapse(state);
     playCrash();
-    // 重心マーカー: 残っているブロックの平均位置に⭐（バランスの直感を言語化。仕様§4.5）
+    // 重心マーカー: 残っているブロックの平均位置に星（バランスの直感を言語化。仕様§4.5）
     const bodies = M.Composite.allBodies(engine.world).filter((b) => !b.isStatic && b.position.y < KILL_Y);
     if (bodies.length) {
       const avgX = bodies.reduce((sum, b) => sum + b.position.x, 0) / bodies.length;

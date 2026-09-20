@@ -46,7 +46,7 @@ export function renderStamps(root) {
       cell.style.background = `var(--kgb-color-${gameId})`; // 一覧生成時に1回だけ書く
       const art = createArt(gameId);
       if (art) cell.append(art);
-      else cell.textContent = iconOf.get(gameId) ?? '⭐';
+      else cell.textContent = iconOf.get(gameId) ?? '★';
       cell.title = String(number);
       fragment.append(cell);
     });

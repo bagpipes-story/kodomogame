@@ -443,3 +443,17 @@
 .kgb-enword-robot[hidden] {
   display: none;
 }
+
+/* ロボくん・スピーカーはSVG（絵文字の置き換え） */
+.kgb-enword-robot-face .kgb-art {
+  width: 1.3em;
+  height: 1.3em;
+}
+
+.kgb-enword-speaker .kgb-art,
+.kgb-listen-speaker .kgb-art {
+  width: 100%;
+  height: 100%;
+  padding: 12%;
+  box-sizing: border-box;
+}

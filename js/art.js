@@ -174,7 +174,81 @@ const games = {
     <ellipse cx="50" cy="68" rx="6" ry="4" fill="#e07a7a"/>`,
 };
 
-export const ART = { ...animal, ...fruit, ...body, ...games };
+// ---------- ゲーム内のキャラクター・UI部品（絵文字の置き換え。v0.17.2） ----------
+const parts = {
+  // もぐらたたきのもぐら（穴から顔を出す。下は平らにして穴に隠れる）
+  moleChar: `
+    <path d="M18 96 L18 52 Q18 18 50 18 Q82 18 82 52 L82 96 Z" fill="#a8713f" ${S}/>
+    <path d="M36 62 Q50 50 64 62 Q64 78 50 80 Q36 78 36 62 Z" fill="#e8c9a0"/>
+    <circle cx="38" cy="46" r="4" fill="${LINE}"/><circle cx="62" cy="46" r="4" fill="${LINE}"/>
+    <ellipse cx="50" cy="60" rx="7" ry="5" fill="#e07a7a" ${S}/>
+    <path d="M44 70 Q50 74 56 70" fill="none" ${S}/>
+    <path d="M10 60 L30 66 M10 72 L30 70 M90 60 L70 66 M90 72 L70 70" fill="none" ${S}/>`,
+  butterfly: `
+    <path d="M50 50 Q20 10 12 34 Q10 52 44 54 Z" fill="#f6a6b2" ${S}/><path d="M50 50 Q80 10 88 34 Q90 52 56 54 Z" fill="#f6a6b2" ${S}/>
+    <path d="M50 54 Q22 60 20 78 Q28 92 46 62 Z" fill="#c9a7eb" ${S}/><path d="M50 54 Q78 60 80 78 Q72 92 54 62 Z" fill="#c9a7eb" ${S}/>
+    <ellipse cx="50" cy="56" rx="5" ry="18" fill="${LINE}"/>
+    <path d="M46 40 Q40 26 34 24 M54 40 Q60 26 66 24" fill="none" ${S}/>
+    <circle cx="30" cy="34" r="4" fill="#fff3d6"/><circle cx="70" cy="34" r="4" fill="#fff3d6"/>`,
+  robot: `
+    <rect x="22" y="30" width="56" height="50" rx="12" fill="#a5b8f3" ${S}/>
+    <path d="M50 30 L50 16" fill="none" ${S}/><circle cx="50" cy="12" r="5" fill="#f28b3b" ${S}/>
+    <rect x="32" y="42" width="14" height="14" rx="4" fill="#ffffff" ${S}/><rect x="54" y="42" width="14" height="14" rx="4" fill="#ffffff" ${S}/>
+    <circle cx="39" cy="49" r="3" fill="${LINE}"/><circle cx="61" cy="49" r="3" fill="${LINE}"/>
+    <path d="M38 66 Q50 74 62 66" fill="none" ${S}/>
+    <rect x="12" y="46" width="10" height="16" rx="3" fill="#a5b8f3" ${S}/><rect x="78" y="46" width="10" height="16" rx="3" fill="#a5b8f3" ${S}/>`,
+  speaker: `
+    <path d="M18 40 H34 L54 24 V76 L34 60 H18 Z" fill="#ffffff" ${S}/>
+    <path d="M64 38 Q74 50 64 62 M74 28 Q90 50 74 72" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>`,
+  soundOn: `
+    <path d="M18 40 H34 L54 24 V76 L34 60 H18 Z" fill="#f28b3b" ${S}/>
+    <path d="M64 38 Q74 50 64 62 M74 28 Q90 50 74 72" fill="none" ${S}/>`,
+  soundOff: `
+    <path d="M18 40 H34 L54 24 V76 L34 60 H18 Z" fill="#c9c3ba" ${S}/>
+    <path d="M66 40 L86 60 M86 40 L66 60" fill="none" ${S}/>`,
+  stampBook: `
+    <rect x="20" y="14" width="60" height="72" rx="8" fill="#f4a261" ${S}/>
+    <rect x="20" y="14" width="14" height="72" rx="6" fill="#e0862e" ${S}/>
+    <circle cx="58" cy="40" r="10" fill="#ffffff" ${S}/><circle cx="58" cy="66" r="10" fill="#ffffff" ${S}/>
+    <circle cx="58" cy="40" r="4" fill="#e63946"/><circle cx="58" cy="66" r="4" fill="#2dc653"/>`,
+  tea: `
+    <path d="M22 44 H74 L70 84 Q68 92 60 92 H36 Q28 92 26 84 Z" fill="#7fc8a9" ${S}/>
+    <path d="M74 52 Q92 50 90 64 Q88 76 72 76" fill="none" ${S}/>
+    <path d="M22 44 Q48 36 74 44 Q48 52 22 44 Z" fill="#b8e6cf" ${S}/>
+    <path d="M40 28 Q36 20 42 12 M56 28 Q52 20 58 12" fill="none" stroke="#c9c3ba" stroke-width="3" stroke-linecap="round"/>`,
+  star: `<polygon points="50,8 61,38 94,38 67,58 78,90 50,71 22,90 33,58 6,38 39,38" fill="#fff3d6" ${S}/>`,
+  joker: `
+    <path d="M50 88 Q30 88 26 66 L22 34 L40 46 L50 22 L60 46 L78 34 L74 66 Q70 88 50 88 Z" fill="#c9a7eb" ${S}/>
+    <circle cx="22" cy="34" r="5" fill="#e63946" ${S}/><circle cx="50" cy="22" r="5" fill="#f0c94a" ${S}/><circle cx="78" cy="34" r="5" fill="#3a86ff" ${S}/>
+    <circle cx="50" cy="66" r="14" fill="#f7dcc0" ${S}/>
+    <circle cx="45" cy="64" r="2.5" fill="${LINE}"/><circle cx="55" cy="64" r="2.5" fill="${LINE}"/>
+    <path d="M44 71 Q50 76 56 71" fill="none" ${S}/>`,
+  smile: `
+    <circle cx="50" cy="52" r="34" fill="#f7dcc0" ${S}/>
+    <circle cx="38" cy="46" r="3.5" fill="${LINE}"/><circle cx="62" cy="46" r="3.5" fill="${LINE}"/>
+    <path d="M36 62 Q50 74 64 62" fill="none" ${S}/>`,
+  bear: `
+    <circle cx="26" cy="30" r="12" fill="#a06b3e" ${S}/><circle cx="74" cy="30" r="12" fill="#a06b3e" ${S}/>
+    <circle cx="50" cy="54" r="32" fill="#b98652" ${S}/>
+    <ellipse cx="50" cy="66" rx="14" ry="10" fill="#e8c9a0"/>
+    <circle cx="40" cy="48" r="3.5" fill="${LINE}"/><circle cx="60" cy="48" r="3.5" fill="${LINE}"/>
+    <ellipse cx="50" cy="62" rx="5" ry="3.5" fill="${LINE}"/>`,
+  rabbit: `
+    <ellipse cx="38" cy="22" rx="9" ry="20" fill="#ffffff" ${S}/><ellipse cx="62" cy="22" rx="9" ry="20" fill="#ffffff" ${S}/>
+    <ellipse cx="38" cy="22" rx="4" ry="13" fill="#f6a6b2"/><ellipse cx="62" cy="22" rx="4" ry="13" fill="#f6a6b2"/>
+    <circle cx="50" cy="60" r="28" fill="#ffffff" ${S}/>
+    <circle cx="40" cy="56" r="3.5" fill="${LINE}"/><circle cx="60" cy="56" r="3.5" fill="${LINE}"/>
+    <path d="M47 66 L53 66 L50 70 Z" fill="#f6a6b2" ${S}/><path d="M50 70 L50 74 M44 76 Q50 80 56 76" fill="none" ${S}/>`,
+  chick: `
+    <circle cx="50" cy="54" r="32" fill="#f8d64e" ${S}/>
+    <path d="M42 18 Q50 6 58 18" fill="none" ${S}/>
+    <circle cx="40" cy="50" r="3.5" fill="${LINE}"/><circle cx="60" cy="50" r="3.5" fill="${LINE}"/>
+    <path d="M44 60 L56 60 L50 68 Z" fill="#f28b3b" ${S}/>`,
+  redDot: `<circle cx="50" cy="50" r="30" fill="#e63946" ${S}/>`,
+  blueDot: `<circle cx="50" cy="50" r="30" fill="#3a86ff" ${S}/>`,
+};
+
+export const ART = { ...animal, ...fruit, ...body, ...games, ...parts };
 
 export function hasArt(id) {
   return Object.hasOwn(ART, id);

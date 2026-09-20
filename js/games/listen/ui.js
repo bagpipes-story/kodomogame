@@ -103,7 +103,7 @@ export function mount(root, config, { onExit }) {
   robotRow.hidden = !isCpu;
   const robotFace = document.createElement('span');
   robotFace.className = 'kgb-enword-robot-face';
-  robotFace.textContent = '🤖';
+  robotFace.append(createArt('robot'));
   const gauge = document.createElement('div');
   gauge.className = 'kgb-enword-gauge';
   const gaugeFill = document.createElement('div');
@@ -119,7 +119,7 @@ export function mount(root, config, { onExit }) {
   const speaker = document.createElement('button');
   speaker.type = 'button';
   speaker.className = 'kgb-listen-speaker';
-  speaker.textContent = '🔊';
+  speaker.append(createArt('speaker'));
   speaker.setAttribute('aria-label', text.ewListen);
   const caption = document.createElement('p');
   caption.className = 'kgb-listen-caption';

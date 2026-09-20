@@ -386,3 +386,22 @@
   margin: 8px 0 0;
   white-space: nowrap;
 }
+
+/* 顔・ばば・持ち主ラベルはSVG（絵文字の置き換え。文字サイズに合わせる） */
+.kgb-om-face .kgb-art {
+  width: 1.2em;
+  height: 1.2em;
+  margin: 0 auto;
+}
+
+.kgb-om-joker .kgb-art {
+  width: 1.4em;
+  height: 1.4em;
+}
+
+.kgb-om-fan-owner .kgb-art {
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: middle;
+}

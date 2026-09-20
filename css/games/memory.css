@@ -149,3 +149,8 @@
 .kgb-card-kana.is-long {
   font-size: clamp(13px, 4.2vw, 16px);
 }
+
+.kgb-card-back .kgb-art {
+  width: 1.3em;
+  height: 1.3em;
+}

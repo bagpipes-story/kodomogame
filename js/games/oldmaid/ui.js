@@ -14,12 +14,13 @@ import {
   shuffleSourceHand,
 } from './game.js';
 import { text } from '../../i18n.js';
+import { createArt } from '../../art.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playFlip, playMatch, playPlace, playTurn, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 
 const SUIT_CHARS = ['♠', '♥', '♦', '♣'];
-const FRIEND_FACES = ['🐻', '🐰', '🐱', '🐼', '🐥'];
+const FRIEND_FACES = ['bear', 'rabbit', 'cat', 'panda', 'chick']; // art.js のid（i18nのomFriendsと同じ順）
 
 const ROBOT_THINK_MS = [800, 1200]; // 「◯◯から ひくよ…」を見せる時間
 const FLIGHT_MS = 450;              // カードが飛ぶ時間
@@ -43,8 +44,8 @@ export function mount(root, config, { onExit }) {
     ? [getNames('cpu')[0], ...text.omFriends.slice(0, robotCount)]
     : getNames('two', [text.redName, text.blueName]);
   const faces = isCpuMode
-    ? ['😊', ...FRIEND_FACES.slice(0, robotCount)]
-    : ['🔴', '🔵'];
+    ? ['smile', ...FRIEND_FACES.slice(0, robotCount)]
+    : ['redDot', 'blueDot'];
 
   let state = null;
   let inputLocked = true;
@@ -77,7 +78,7 @@ export function mount(root, config, { onExit }) {
     seat.className = 'kgb-om-seat';
     const face = document.createElement('div');
     face.className = 'kgb-om-face';
-    face.textContent = faces[p];
+    face.append(createArt(faces[p]));
     const nameEl = document.createElement('div');
     nameEl.className = 'kgb-om-name';
     nameEl.textContent = names[p];
@@ -213,7 +214,7 @@ export function mount(root, config, { onExit }) {
     }
     if (id === JOKER) {
       el.className = 'kgb-om-card kgb-om-joker';
-      el.textContent = '🃏';
+      el.append(createArt('joker'));
       return el;
     }
     el.className = `kgb-om-card kgb-suit-${suitOf(id)}`;
@@ -276,7 +277,7 @@ export function mount(root, config, { onExit }) {
   // 引き元の子を前にせり出させて「だれの てふだ か」を見せる
   function highlightSource(source) {
     playerEls[source].seat.classList.add('is-source');
-    fanOwner.textContent = `${faces[source]} ${names[source]}${text.omFanOwnerSuffix}`;
+    fanOwner.replaceChildren(createArt(faces[source]), document.createTextNode(` ${names[source]}${text.omFanOwnerSuffix}`));
     fanOwner.hidden = false;
   }
 
@@ -580,7 +581,7 @@ export function mount(root, config, { onExit }) {
     const lines = state.finishedOrder.map(
       (player, i) => `${i + 1}${text.omRankSuffix}: ${names[player]}`,
     );
-    lines.push(`🃏: ${names[state.loser]}`);
+    lines.push(`${text.omJokerLabel}: ${names[state.loser]}`);
     let detail = lines.join('\n');
     if (humanLost) detail += `\n${text.playAgainTone}`; // ネガティブ演出禁止
 

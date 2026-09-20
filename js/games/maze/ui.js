@@ -285,7 +285,7 @@ export function mount(root, config, { onExit }) {
     saveStats(stats);
     recordPlay('maze', { won: false });
 
-    const title = `${text.mazeClear} ${'⭐'.repeat(result.stars)}`;
+    const title = `${text.mazeClear} ${'★'.repeat(result.stars)}`; // ★は文字（絵文字ではない）
     let detail = `${text.mazeFallsLabel}: ${result.falls}${text.mazeFallCountSuffix}`;
     if (showTime) {
       detail += `\n${text.rcTimeLabel}: ${(result.elapsedMs / 1000).toFixed(1)}${text.rcSecSuffix}`;
@@ -435,10 +435,22 @@ export function mount(root, config, { onExit }) {
     ctx.beginPath();
     ctx.arc(goal.x, goal.y, cell * 0.38, 0, Math.PI * 2);
     ctx.fill();
-    ctx.font = `${Math.round(cell * 0.7)}px -apple-system, sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🚩', goal.x, goal.y - cell * 0.45);
+    // ゴールの旗（絵文字ではなく線で描く。端末で見た目が変わらない）
+    const fx = goal.x - cell * 0.18;
+    const fy = goal.y - cell * 0.95;
+    ctx.strokeStyle = '#5b4a3f';
+    ctx.lineWidth = Math.max(2, cell * 0.08);
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx, goal.y - cell * 0.2);
+    ctx.stroke();
+    ctx.fillStyle = '#e63946';
+    ctx.beginPath();
+    ctx.moveTo(fx, fy);
+    ctx.lineTo(fx + cell * 0.5, fy + cell * 0.18);
+    ctx.lineTo(fx, fy + cell * 0.36);
+    ctx.closePath();
+    ctx.fill();
 
     // ルートヒント: おすすめルートがうっすら光る（2秒。別冊03§3）
     if (phase === 'hint' && state.path) {

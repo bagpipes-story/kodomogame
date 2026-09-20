@@ -160,3 +160,10 @@
   transform: translateY(30%) scaleY(0.5);
   transition: transform 0.1s ease-in;
 }
+
+/* キャラクターはSVG（文字サイズに合わせる。穴の幅いっぱい） */
+.kgb-mole-char .kgb-art {
+  width: 1.3em;
+  height: 1.3em;
+  margin: 0 auto;
+}
