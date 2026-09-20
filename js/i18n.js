@@ -109,6 +109,7 @@ export const text = {
   moleResultSuffix: ' ひき たたけたね！',
   comboSuffix: 'こ つづけて！',
   butterflyOops: 'あっ、ちょうちょさん！',
+  moleBuzz: 'ブブー！',
   secondsSuffix: ' びょう',
 
   // ばばぬき

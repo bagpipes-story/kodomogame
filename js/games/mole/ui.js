@@ -17,11 +17,12 @@ import {
 import { text } from '../../i18n.js';
 import { createArt } from '../../art.js';
 import { getNames, turnOf, winOf } from '../../players.js';
-import { playPop, playBonk, playFlutter, playWin, playTap } from '../../sound.js';
+import { playPop, playBonk, playBuzzer, playWin, playTap } from '../../sound.js';
 import { resetPraise, emitPraise, pickPraise, recordPlay } from '../../praise.js';
 import { loadStats, saveStats } from '../../storage.js';
 
 const OOPS_SHOW_MS = 900; // 「あっ、ちょうちょさん！」の表示時間
+const OOPS_FLASH_MS = 600; // 盤の赤フラッシュ＋ゆれ＋「ブブー！」の時間
 
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
@@ -98,7 +99,14 @@ export function mount(root, config, { onExit }) {
   const field = document.createElement('div');
   // おとなモードは6×6=36この穴を並べる
   field.className = holeCount > 9 ? 'kgb-mole-field is-wide' : 'kgb-mole-field';
+
+  // ちょうちょを叩いたときの「ブブー！」（画面中央に大きく。transform/opacityだけで出す）
+  const oopsBig = document.createElement('div');
+  oopsBig.className = 'kgb-mole-oops-big';
+  oopsBig.setAttribute('aria-hidden', 'true');
+  oopsBig.textContent = text.moleBuzz;
   const charEls = [];
+  const holeEls = [];
   {
     const fragment = document.createDocumentFragment();
     for (let i = 0; i < holeCount; i++) {
@@ -112,6 +120,7 @@ export function mount(root, config, { onExit }) {
       hole.append(char, pit);
       fragment.append(hole);
       charEls.push(char);
+      holeEls.push(hole);
     }
     field.append(fragment);
   }
@@ -130,7 +139,7 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(scoreRow, timeRow, statusEl, field);
+  container.append(scoreRow, timeRow, statusEl, field, oopsBig);
   root.append(container, startOverlay, resultOverlay);
 
   // ---------- 表示の差分更新 ----------
@@ -371,9 +380,22 @@ export function mount(root, config, { onExit }) {
     if (result.type === 'butterfly') {
       holeTokens[index]++;
       charDown(index);
-      playFlutter();
+      // 分かりやすい「ブブー！」: ぶぶー音＋盤が赤くフラッシュしてゆれる＋中央に大きく表示（v0.17.3）
+      playBuzzer();
+      const hole = holeEls[index];
+      field.classList.remove('is-oops');
+      hole.classList.remove('is-oops');
+      oopsBig.classList.remove('is-pop');
+      void field.offsetWidth; // アニメーションを再トリガー
+      field.classList.add('is-oops');
+      hole.classList.add('is-oops');
+      oopsBig.classList.add('is-pop');
       statusEl.textContent = text.butterflyOops;
       statusEl.classList.add('is-oops');
+      later(() => {
+        field.classList.remove('is-oops');
+        hole.classList.remove('is-oops');
+      }, OOPS_FLASH_MS);
       later(() => showCombo(), OOPS_SHOW_MS);
       return;
     }

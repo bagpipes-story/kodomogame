@@ -35,7 +35,7 @@ const STUCK_LOST_TICKS = 720;  // 12秒止まったままなら0点で次へ
 const MAX_FLIGHT_TICKS = 2400; // 40秒たっても入らない球（跳ね続け等）は0点で次へ（ワープで戻る分を見込む）
 const POCKET_REST_MS = 600;    // ポケットの底に接地して見せてから消えるまで（何点に入ったか分かるように）
 const COUNT_TICK_MS = 110;     // たしざんの数え上げ間隔
-const CAMERA_LERP = 0.1;
+// CAMERA_LERP は v0.17.3 で不要になった（画角固定）
 
 export function mount(root, config, { onExit }) {
   const M = window.Matter;
@@ -607,32 +607,25 @@ export function mount(root, config, { onExit }) {
     const ball = world.getBall();
     if (!ball) return;
     const { x, y } = ball.position;
-    const grad = ctx.createRadialGradient(x - 3, y - 3, 2, x, y, BALL_R);
+    // 縮小表示（おとな）でも球が見えるよう、画面上で最低7pxの半径で描く（当たり判定は変えない）
+    const drawR = Math.max(BALL_R, 7 / cam.zoom);
+    const grad = ctx.createRadialGradient(x - 3, y - 3, 2, x, y, drawR);
     grad.addColorStop(0, '#ffffff');
     grad.addColorStop(1, '#b7bfc9');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
+    ctx.arc(x, y, drawR, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = 'rgba(74, 63, 53, 0.35)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
   }
 
-  // カメラ: 球が動いている間は等倍で追いかけ、それ以外は盤全体を俯瞰（おとなで意味を持つ）
+  // カメラ: 盤全体が写る画角で固定（おとなも他のモードと同じ。v0.17.3で追いかけカメラを廃止）
   function updateCamera() {
-    const ball = world.getBall();
-    let targetZoom = overviewZoom;
-    let targetX = boardW / 2;
-    let targetY = boardH / 2;
-    if (ball && state.ballActive && settings.boardScale > 1) {
-      targetZoom = 1;
-      targetX = Math.max(W / 2, Math.min(boardW - W / 2, ball.position.x));
-      targetY = Math.max(H / 2, Math.min(boardH - H / 2, ball.position.y));
-    }
-    cam.zoom += (targetZoom - cam.zoom) * CAMERA_LERP;
-    cam.x += (targetX - cam.x) * CAMERA_LERP;
-    cam.y += (targetY - cam.y) * CAMERA_LERP;
+    cam.zoom = overviewZoom;
+    cam.x = boardW / 2;
+    cam.y = boardH / 2;
   }
 
   function canvasToBoard(clientX, clientY) {
