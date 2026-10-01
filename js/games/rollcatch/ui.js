@@ -1,13 +1,16 @@
-// ui.js — ころころキャッチの描画・入力（v0.17.4: 両手スライダー操作に作り直し）
+// ui.js — ころころキャッチの描画・入力（v0.17.4: 両手スライダー操作に作り直し。v0.17.5: むずかしいのしかけ）
 // 画面の左右にある縦スライダーを両手の親指で上下すると、その高さの差で盤ぜんたいが傾く
 // （実物のシーソー盤を両手で持って傾ける感覚）。互い違いの段をボールがジグザグに転がり下りる。
 // ふつう・むずかしいは左右の壁が無いので、傾けすぎると盤の横から落ちる→上からやり直し（タイムは続く）。
 // 物理の工夫: 盤を回す代わりに重力の向きを傾ける（幾何は固定のまま）。見た目はCanvas全体を回転。
 // 性能規定: 動的ボディはボール1個のみ。段は固定の静的セグメント（生成は開始時だけ）。
+//   むずかしいのゲート（上下する棒）とシーソー板は静的ボディの位置・角度を毎フレーム書き換えるだけ（物理計算は増えない）。
 //   スライダーのつまみは入力があったときだけ transform を書く。タイム表示は100msごとだけDOMを触る。
 
 import {
   buildShelves,
+  gateOpenRatio,
+  seesawTargetAngle,
   tiltFromSliders,
   createGame,
   startRun,
@@ -34,6 +37,7 @@ const VIEW_SCALE = 0.78;       // 回転しても四隅が収まる縮小率
 const SLIDER_W = 52;           // 左右の親指ゾーンの幅
 const STUCK_FRAMES = 30;       // 傾いているのに止まったままなら少し押す（板のつなぎ目に引っかかったとき）
 const STUCK_TILT_RAD = (6 * Math.PI) / 180;
+const SEESAW_LERP = 0.12;      // シーソー板が目標の角度へ倒れる速さ
 
 export function mount(root, config, { onExit }) {
   const M = window.Matter;
@@ -49,6 +53,9 @@ export function mount(root, config, { onExit }) {
   let engine = null;
   let rafId = null;
   let shelves = [];
+  let gate = null;       // むずかしいのゲート { feature, body, closedY }
+  let seesaw = null;     // むずかしいのシーソー板 { feature, body, angle }
+  let roundStartedAt = 0; // ゲートの周期の基準（ラウンド開始時刻）
   let ballBody = null;
   let collisionHandler = null;
   let tilt = 0;          // 現在の盤の傾き(rad)
@@ -224,6 +231,26 @@ export function mount(root, config, { onExit }) {
       if (shelf.stopper) bodies.push(M.Bodies.circle(shelf.stopper.x, shelf.stopper.y, shelf.stopper.r, { ...staticOpts, friction: 0, frictionStatic: 0 }));
     }
 
+    // むずかしいのしかけ: ゲート（段から出たり引っこんだりする棒）とシーソー板。どちらも静的ボディを動かす
+    gate = null;
+    seesaw = null;
+    for (const shelf of shelves) {
+      const f = shelf.feature;
+      if (!f) continue;
+      if (f.type === 'gate') {
+        const closedY = f.y - 6 - f.height / 2; // 出ているときの中心（段の面の上に立つ）
+        const body = M.Bodies.rectangle(f.x, closedY, f.width, f.height, { ...staticOpts, friction: 0, frictionStatic: 0 });
+        bodies.push(body);
+        gate = { feature: f, body, closedY };
+      } else if (f.type === 'seesaw') {
+        const body = M.Bodies.rectangle(f.x, f.y, f.halfLength * 2, 12, { ...staticOpts });
+        const angle = seesawTargetAngle(f, null, null);
+        M.Body.setAngle(body, angle);
+        bodies.push(body);
+        seesaw = { feature: f, body, angle };
+      }
+    }
+
     // 天井はつねに。左右の壁は かんたん だけ（ふつう・むずかしいは横から落ちる）
     bodies.push(M.Bodies.rectangle(BOARD_W / 2, -30, BOARD_W * 2, 20, staticOpts));
     if (state.settings.walls) {
@@ -270,7 +297,8 @@ export function mount(root, config, { onExit }) {
 
   function spawnBall() {
     placeBall();
-    startRun(state, performance.now());
+    roundStartedAt = performance.now();
+    startRun(state, roundStartedAt);
     setStatus(text.rcHint);
     updateBanner(0);
     // タイム表示はこの間隔でだけDOMを触る（§9: rAF内でのDOM更新禁止）
@@ -443,13 +471,45 @@ export function mount(root, config, { onExit }) {
         ctx.arc(shelf.stopper.x, shelf.stopper.y, shelf.stopper.r, 0, Math.PI * 2);
         ctx.fill();
       }
-      // 穴: くらい色で「ここは落ちる」と分かるように
-      if (shelf.pit) {
-        ctx.fillStyle = '#4a3f35';
-        ctx.beginPath();
-        ctx.ellipse(shelf.pit.x, shelf.pit.y + 2, shelf.pit.width / 2 + 2, 9, 0, 0, Math.PI * 2);
-        ctx.fill();
+    }
+  }
+
+  // むずかしいのしかけ（ゲート・シーソー板）。位置・角度は物理ボディの値をそのまま使う
+  function drawFeatures() {
+    if (gate) {
+      const f = gate.feature;
+      const top = gate.body.position.y - f.height / 2;
+      const visible = f.y - 6 - top; // 段の面より上に出ている高さだけ描く（引っこんだ部分は段に隠れている）
+      // 土台（段の面の上の小さな枠）
+      ctx.fillStyle = '#a8713f';
+      ctx.fillRect(f.x - f.width / 2 - 4, f.y - 10, f.width + 8, 5);
+      if (visible > 0) {
+        ctx.fillStyle = '#e06a4f';
+        ctx.fillRect(f.x - f.width / 2, top, f.width, visible);
+        // しましま（ふみきりの棒のように「止まれ」が分かる）
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+        for (let y = top + 4; y < top + visible - 2; y += 10) ctx.fillRect(f.x - f.width / 2, y, f.width, 4);
       }
+    }
+    if (seesaw) {
+      const f = seesaw.feature;
+      // 支点（三角）
+      ctx.fillStyle = '#8a6a4e';
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y - 2);
+      ctx.lineTo(f.x - 9, f.y + 12);
+      ctx.lineTo(f.x + 9, f.y + 12);
+      ctx.closePath();
+      ctx.fill();
+      // 板（傾く）
+      ctx.save();
+      ctx.translate(seesaw.body.position.x, seesaw.body.position.y);
+      ctx.rotate(seesaw.body.angle);
+      ctx.fillStyle = '#e3a955';
+      ctx.fillRect(-f.halfLength, -6, f.halfLength * 2, 12);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.fillRect(-f.halfLength + 2, -6, f.halfLength * 2 - 4, 3);
+      ctx.restore();
     }
   }
 
@@ -490,6 +550,7 @@ export function mount(root, config, { onExit }) {
     ctx.translate(-BOARD_W / 2, -BOARD_H / 2);
     drawBoard();
     drawShelves();
+    drawFeatures();
     drawTray();
     drawBall();
     ctx.restore();
@@ -510,9 +571,23 @@ export function mount(root, config, { onExit }) {
     engine.gravity.x = GRAVITY * Math.sin(tilt);
     engine.gravity.y = GRAVITY * Math.cos(tilt);
 
+    // むずかしいのしかけを動かす（静的ボディの位置・角度だけ書き換える）
+    if (gate) {
+      const open = state.running ? gateOpenRatio(now - roundStartedAt) : 0;
+      M.Body.setPosition(gate.body, { x: gate.feature.x, y: gate.closedY + open * (gate.feature.height + 2) });
+    }
+    if (seesaw) {
+      const ball = ballBody && ballPhase === 'rolling' ? ballBody.position : null;
+      const target = seesawTargetAngle(seesaw.feature, ball ? ball.x : null, ball ? ball.y : null);
+      if (Math.abs(target - seesaw.angle) > 1e-4) {
+        seesaw.angle += (target - seesaw.angle) * SEESAW_LERP;
+        M.Body.setAngle(seesaw.body, seesaw.angle);
+      }
+    }
+
     M.Engine.update(engine, 1000 / 60);
 
-    // 盤の外に出た（横から落ちた・穴から落ちた）
+    // 盤の外に出た（横から落ちた）
     if (ballBody && ballPhase === 'rolling') {
       const { x, y } = ballBody.position;
       if (x < -BALL_R * 2 || x > BOARD_W + BALL_R * 2 || y > BOARD_H + 40) onFall();
@@ -578,6 +653,9 @@ export function mount(root, config, { onExit }) {
       get falls() { return state?.falls; },
       get running() { return state?.running; },
       get phase() { return ballPhase; },
+      get seesaw() { return seesaw ? { angle: seesaw.angle, bodyAngle: seesaw.body.angle, x: seesaw.body.position.x, y: seesaw.body.position.y } : null; },
+      get gate() { return gate ? { y: gate.body.position.y } : null; },
+      get velocity() { return ballBody ? { ...ballBody.velocity } : null; },
       setSlider(i, v) {
         slider[i] = v;
         renderKnob(i);
