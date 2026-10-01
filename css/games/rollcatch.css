@@ -1,4 +1,4 @@
-/* rollcatch.css — ころころキャッチ（v0.10） */
+/* rollcatch.css — ころころキャッチ（v0.17.4: 両手スライダー操作） */
 
 .kgb-rollcatch {
   display: flex;
@@ -22,11 +22,69 @@
   opacity: 1;
 }
 
-.kgb-rc-canvas {
+/* ステージ: 盤（Canvas）の上に左右のスライダーを重ねる */
+.kgb-rc-stage {
+  position: relative;
   width: 100%;
   max-width: 400px;
+}
+
+.kgb-rc-canvas {
+  display: block;
+  width: 100%;
   border-radius: 16px;
   /* そらいろ→しばふの背景。板とボールが映える淡い色 */
   background: linear-gradient(#eaf6fb 0%, #f3fae9 78%, #e2f0d5 100%);
-  touch-action: manipulation; /* 板タップの反応を速くする */
+}
+
+/* 縦スライダー（親指ゾーン）。指の上下だけを受け取る */
+.kgb-rc-slider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 52px;
+  touch-action: none; /* 縦スクロールに取られないように */
+  cursor: pointer;
+}
+
+.kgb-rc-slider.is-left { left: 0; }
+.kgb-rc-slider.is-right { right: 0; }
+
+.kgb-rc-rail {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  bottom: 10px;
+  width: 14px;
+  border-radius: 7px;
+  background: rgba(74, 63, 53, 0.18);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/* つまみ: 大きめ（4歳の親指でもつかめる）。位置は transform だけで動かす */
+.kgb-rc-knob {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 44px;
+  height: 64px;
+  margin-left: -22px;
+  border-radius: 22px;
+  background: var(--kgb-color-rollcatch);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  pointer-events: none;
+  will-change: transform;
+}
+
+.kgb-rc-knob::after {
+  content: '';
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 26px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 0 rgba(255, 255, 255, 0.8), 0 -8px 0 rgba(255, 255, 255, 0.8);
 }
