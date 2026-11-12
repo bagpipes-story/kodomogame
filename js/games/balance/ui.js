@@ -10,6 +10,8 @@ import {
   dropStarted,
   confirmPlaced,
   collapse,
+  SHAPES,
+  fieldOf,
 } from './game.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
@@ -24,7 +26,23 @@ const SHAPE_COLORS = {
   circle: '#f6a6b2',
   triangle: '#c9a7eb',
   lshape: '#a5b8f3',
+  star: '#f0d264',
+  diamond: '#8fd3e8',
+  hexagon: '#b7d98b',
+  trapezoid: '#f2a97e',
+  semicircle: '#e6b3d9',
 };
+
+// かたちの名前を書ける横はば（これより長い名前は文字を小さくして収める）。
+// 今までのかたちは12pxの名前がそのまま入るはばにしてある（見た目を変えないため）
+const LABEL_WIDTH = {
+  square: 48, rect: 66, circle: 42, triangle: 48, lshape: 58,
+  star: 26, diamond: 40, hexagon: 50, trapezoid: 52, semicircle: 52,
+};
+// 長い名前は2行に分ける（1行だと小さすぎて読めない）。数字は1行目の文字数
+const LABEL_BREAK = { hexagon: 4 }; // ろっかく／けい
+const LABEL_FONT = 12;
+const LABEL_FONT_MIN = 8;
 
 const SETTLE_FRAMES = 25;    // 静止とみなす連続フレーム数
 const SETTLE_TIMEOUT_MS = 5000;
@@ -100,17 +118,23 @@ export function mount(root, config, { onExit }) {
   root.append(container, resultOverlay);
 
   // キャンバスの実サイズ（Retina対応）
-  const W = Math.min(root.clientWidth || 375, 400);
-  const H = 430;
+  const SCREEN_W = Math.min(root.clientWidth || 375, 400);
+  const SCREEN_H = 430;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = W * dpr;
-  canvas.height = H * dpr;
-  canvas.style.height = `${H}px`;
+  canvas.width = SCREEN_W * dpr;
+  canvas.height = SCREEN_H * dpr;
+  canvas.style.height = `${SCREEN_H}px`;
   const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
+
+  // 盤の座標（W×H）は画面より広くできる。おとなは床2倍ぶん広げて、viewScaleで縮めて描く
+  const field = fieldOf(config.difficulty);
+  const viewScale = field.viewScale;
+  const W = SCREEN_W / viewScale;
+  const H = SCREEN_H / viewScale;
+  ctx.scale(dpr * viewScale, dpr * viewScale);
 
   const GROUND_Y = H - 26;
-  const PLATFORM_W = Math.round(W * 0.54);
+  const PLATFORM_W = Math.round(SCREEN_W * 0.54 * field.platformRatio);
   const KILL_Y = H + 80; // ここより下に落ちたら「崩れた」
 
   // ---------- 表示の差分更新（DOMはイベント時のみ） ----------
@@ -127,10 +151,96 @@ export function mount(root, config, { onExit }) {
 
   // ---------- Matterボディの生成 ----------
 
+  // 凸の多角形（中心からの相対座標）を1つのボディにする。Matterは頂点の重心をpositionにそろえる
+  function convexBody(x, y, points, options) {
+    return M.Body.create({ ...options, position: { x, y }, vertices: points });
+  }
+
+  // 合体ボディの回りにくさ（慣性モーメント）を正しくする。Matterは部品ごとの値を足すだけで
+  // 「中心から離れた部品ほど回りにくい」ぶん（平行軸の定理）を入れないため、小さすぎて
+  // ほしが とがった先で ゆれながら すべり出していた。setPositionで重心へ動かしたあとに呼ぶ
+  function fixCompoundInertia(body) {
+    let inertia = 0;
+    for (const part of body.parts.slice(1)) {
+      const dx = part.position.x - body.position.x;
+      const dy = part.position.y - body.position.y;
+      inertia += part.inertia + part.mass * (dx * dx + dy * dy);
+    }
+    M.Body.setInertia(body, inertia);
+  }
+
+  function polar(count, radius, startAngle) {
+    const points = [];
+    for (let i = 0; i < count; i++) {
+      const a = startAngle + (i * Math.PI * 2) / count;
+      points.push({ x: Math.cos(a) * radius, y: Math.sin(a) * radius });
+    }
+    return points;
+  }
+
+  // ほし: へこんだ形はMatterの当たり判定にそのまま使えないので、
+  // まんなかの五角形＋とがり5つ（すべて凸）を合体させる。描画は外周の線で1つの形に見せる
+  function makeStar(x, y, options) {
+    const { outer, inner } = SHAPES.star;
+    const top = -Math.PI / 2;
+    const outerPts = polar(5, outer, top);
+    const innerPts = polar(5, inner, top + Math.PI / 5);
+    const parts = [convexBody(x, y, innerPts, options)];
+    for (let i = 0; i < 5; i++) {
+      const tri = [outerPts[i], innerPts[i], innerPts[(i + 4) % 5]];
+      const cx = (tri[0].x + tri[1].x + tri[2].x) / 3;
+      const cy = (tri[0].y + tri[1].y + tri[2].y) / 3;
+      parts.push(convexBody(x + cx, y + cy, tri.map((p) => ({ x: p.x - cx, y: p.y - cy })), options));
+    }
+    const body = M.Body.create({ ...options, parts });
+    M.Body.setPosition(body, { x, y });
+    fixCompoundInertia(body);
+    const outline = [];
+    for (let i = 0; i < 5; i++) outline.push(outerPts[i], innerPts[i]);
+    return { body, outline };
+  }
+
+  // ラベルの文字の大きさは作るときに1回だけ測る（毎フレームmeasureTextしない）
+  function labelLayout(shape, label) {
+    const cut = LABEL_BREAK[shape];
+    const lines = cut ? [label.slice(0, cut), label.slice(cut)] : [label];
+    ctx.font = `bold ${LABEL_FONT}px -apple-system, sans-serif`;
+    const width = Math.max(...lines.map((line) => ctx.measureText(line).width));
+    const room = LABEL_WIDTH[shape] ?? 40;
+    const fontSize = width <= room
+      ? LABEL_FONT
+      : Math.max(LABEL_FONT_MIN, Math.floor((LABEL_FONT * room) / width));
+    return { lines, fontSize };
+  }
+
   function makeBody(shape, x, y) {
     const options = { friction: 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
     let body;
-    if (shape === 'circle') {
+    let outline = null;
+    let labelY = 0;
+    if (shape === 'star') {
+      ({ body, outline } = makeStar(x, y, options));
+    } else if (shape === 'diamond') {
+      const { halfW, halfH } = SHAPES.diamond;
+      body = convexBody(x, y, [{ x: 0, y: -halfH }, { x: halfW, y: 0 }, { x: 0, y: halfH }, { x: -halfW, y: 0 }], options);
+    } else if (shape === 'hexagon') {
+      body = convexBody(x, y, polar(6, SHAPES.hexagon.r, 0), options); // 上下が平ら
+    } else if (shape === 'trapezoid') {
+      const { bottom, top, h } = SHAPES.trapezoid;
+      body = convexBody(x, y, [
+        { x: -top / 2, y: -h / 2 }, { x: top / 2, y: -h / 2 },
+        { x: bottom / 2, y: h / 2 }, { x: -bottom / 2, y: h / 2 },
+      ], options);
+    } else if (shape === 'semicircle') {
+      const { r } = SHAPES.semicircle;
+      const arc = [];
+      for (let i = 0; i <= 10; i++) {
+        const a = Math.PI + (i * Math.PI) / 10; // 左→上→右（平らな面が下）
+        arc.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });
+      }
+      body = convexBody(x, y, arc, { ...options, friction: 0.8 });
+      labelY = 3; // 重心は平らな面寄りなので、文字を少し下げて形のまんなかに見せる
+    } else if (shape === 'circle') {
       body = M.Bodies.circle(x, y, 23, { ...options, friction: 0.7 });
     } else if (shape === 'rect') {
       body = M.Bodies.rectangle(x, y, 72, 30, options);
@@ -141,10 +251,19 @@ export function mount(root, config, { onExit }) {
       const partB = M.Bodies.rectangle(x - 20, y - 12, 24, 32, options);
       body = M.Body.create({ parts: [partA, partB], ...options });
       M.Body.setPosition(body, { x, y });
+      fixCompoundInertia(body);
     } else {
       body = M.Bodies.rectangle(x, y, 46, 46, options);
     }
-    body.plugin.kgb = { shape, color: SHAPE_COLORS[shape], label: text.shapes[shape] };
+    const label = text.shapes[shape];
+    body.plugin.kgb = {
+      shape,
+      color: SHAPE_COLORS[shape],
+      label,
+      ...labelLayout(shape, label),
+      labelY: shape === 'lshape' ? 16 : labelY,
+      outline, // 合体ボディ（ほし）は外周だけを描く
+    };
     return body;
   }
 
@@ -153,7 +272,22 @@ export function mount(root, config, { onExit }) {
   function drawBody(body) {
     const info = body.plugin.kgb;
     ctx.fillStyle = info ? info.color : '#b98d6e';
-    const parts = body.parts.length > 1 ? body.parts.slice(1) : body.parts;
+    if (info?.outline) {
+      ctx.save();
+      ctx.translate(body.position.x, body.position.y);
+      ctx.rotate(body.angle);
+      ctx.beginPath();
+      ctx.moveTo(info.outline[0].x, info.outline[0].y);
+      for (let i = 1; i < info.outline.length; i++) ctx.lineTo(info.outline[i].x, info.outline[i].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(74, 63, 53, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+      ctx.restore();
+    }
+    const parts = info?.outline ? [] : body.parts.length > 1 ? body.parts.slice(1) : body.parts;
     for (const part of parts) {
       ctx.beginPath();
       if (part.circleRadius) {
@@ -170,15 +304,17 @@ export function mount(root, config, { onExit }) {
       ctx.stroke();
     }
     // かたちの名前（図形語彙の知育。仕様§4.5）
-    if (info) {
+    if (info?.lines) { // 土台（platform）には名前がない
       ctx.save();
       ctx.translate(body.position.x, body.position.y);
       ctx.rotate(body.angle);
       ctx.fillStyle = 'rgba(74, 63, 53, 0.75)';
-      ctx.font = 'bold 12px -apple-system, sans-serif';
+      ctx.font = `bold ${info.fontSize}px -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(info.label, 0, info.shape === 'lshape' ? 16 : 0);
+      const lineH = info.fontSize + 1;
+      const firstY = info.labelY - ((info.lines.length - 1) * lineH) / 2;
+      info.lines.forEach((line, i) => ctx.fillText(line, 0, firstY + i * lineH));
       ctx.restore();
     }
   }
@@ -231,10 +367,13 @@ export function mount(root, config, { onExit }) {
     ctx.restore();
 
     if (debugMode) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // fpsは画面の座標で書く
       ctx.fillStyle = '#4a3f35';
       ctx.font = 'bold 14px monospace';
       ctx.textAlign = 'left';
       ctx.fillText(`${fpsValue}fps`, 8, 18);
+      ctx.restore();
     }
   }
 
@@ -506,7 +645,7 @@ export function mount(root, config, { onExit }) {
 
   canvas.addEventListener('pointermove', (event) => {
     if (dragLastX === null || !aiming || state.finished) return;
-    const dx = event.clientX - dragLastX;
+    const dx = (event.clientX - dragLastX) / viewScale; // 画面の指の動き→盤の座標
     dragLastX = event.clientX;
     previewX = ((previewX + dx) % W + W) % W; // 端でループ
   }, { signal: abort.signal });
@@ -525,12 +664,35 @@ export function mount(root, config, { onExit }) {
   startRound();
   rafId = requestAnimationFrame(loop);
 
+  // ?debug のときだけ: ブラウザでの自動確認用（本番の遊びには影響しない）
+  if (debugMode) {
+    window.__kgbBalance = {
+      get placed() { return state.placed; },
+      get finished() { return state.finished; },
+      get preview() { return previewShape; },
+      get aiming() { return aiming; },
+      get world() { return { W, H, platformW: PLATFORM_W, viewScale }; },
+      get bodies() {
+        return M.Composite.allBodies(engine.world)
+          .filter((b) => !b.isStatic)
+          .map((b) => ({ shape: b.plugin.kgb?.shape, x: b.position.x, y: b.position.y, sleeping: b.isSleeping }));
+      },
+      setX(x) { previewX = x; },
+      setShape(shape) {
+        previewShape = shape;
+        previewBody = makeBody(shape, previewX, 52);
+      },
+      drop: () => doDrop(),
+    };
+  }
+
   return {
     destroy() {
       cancelAnimationFrame(rafId); // §9: 画面遷移時にrAFを必ず解除
       for (const id of timers) clearTimeout(id);
       timers.clear();
       abort.abort();
+      if (debugMode) delete window.__kgbBalance;
       if (engine) {
         M.Composite.clear(engine.world, false);
         M.Engine.clear(engine);

@@ -11,7 +11,10 @@ import {
   dropStarted,
   confirmPlaced,
   collapse,
+  FIELD,
+  fieldOf,
 } from '../js/games/balance/game.js';
+import { text } from '../js/i18n.js';
 
 function makeRng(values) {
   let i = 0;
@@ -28,6 +31,33 @@ function makeRng(values) {
     for (const key of keys) assert.ok(SHAPES[key], `かたち${key}の定義がある`);
   }
   assert.strictEqual(BLOCK_LIMIT, 30, '上限30個（性能規定）');
+}
+
+// ---------- おとな: 床2倍・かたち10しゅ（v0.17.10） ----------
+
+{
+  const adult = DIFFICULTY.adult;
+  for (const key of DIFFICULTY.hard) assert.ok(adult.includes(key), `おとなは むずかしいの${key}も出る`);
+  for (const key of ['star', 'diamond', 'hexagon', 'trapezoid', 'semicircle']) {
+    assert.ok(adult.includes(key), `おとなは${key}が出る`);
+  }
+  assert.strictEqual(new Set(adult).size, adult.length, 'かたちの重複なし');
+  assert.strictEqual(fieldOf('adult').platformRatio, 2, 'おとなは床の幅2倍');
+  assert.strictEqual(fieldOf('hard').platformRatio, 1, 'むずかしいまでは今までどおり');
+  assert.strictEqual(fieldOf('unknown'), FIELD.easy, '知らない難易度はかんたん扱い');
+  assert.deepStrictEqual(createGame({ difficulty: 'unknown' }).shapes, DIFFICULTY.easy);
+  // 縮めて描いたとき、床が画面のはば（盤の54%×倍率×縮尺）の9割以内に収まる
+  for (const [key, field] of Object.entries(FIELD)) {
+    const onScreen = 0.54 * field.platformRatio * field.viewScale;
+    assert.ok(onScreen <= 0.9, `${key}: 床が画面に収まる (${onScreen.toFixed(2)})`);
+  }
+  // かたちの名前は全部 i18n にあり、ひらがな・カタカナだけ
+  for (const key of Object.keys(SHAPES)) {
+    const name = text.shapes[key];
+    assert.ok(name && /^[ぁ-んァ-ヶー]+$/.test(name), `${key}の名前「${name}」はかなだけ`);
+  }
+  const state = createGame({ difficulty: 'adult', rng: makeRng([0.99]) });
+  assert.strictEqual(nextShape(state), 'semicircle', 'おとなの末尾のかたちも出る');
 }
 
 // ---------- 次のかたちはrngで決まる ----------

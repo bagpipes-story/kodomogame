@@ -10,6 +10,12 @@ export const SHAPES = {
   circle: { r: 23 },
   triangle: { size: 54 },
   lshape: { w: 64, h: 64 },
+  // おとな用（v0.17.10）。ほしはへこんだ形なので、ui.jsでは凸のパーツ6つ（まんなかの五角形＋とがり5つ）を合体させて作る
+  star: { outer: 31, inner: 14 },
+  diamond: { halfW: 26, halfH: 33 },
+  hexagon: { r: 28 },
+  trapezoid: { bottom: 78, top: 40, h: 30 },
+  semicircle: { r: 32 },
 };
 
 // 難易度はかたちセットで表現（かんたん=四角のみ／ふつう=＋丸／むずかしい=＋三角・L字）
@@ -17,12 +23,26 @@ export const DIFFICULTY = {
   easy: ['square', 'rect'],
   normal: ['square', 'rect', 'circle'],
   hard: ['square', 'rect', 'circle', 'triangle', 'lshape'],
+  adult: ['square', 'rect', 'circle', 'triangle', 'lshape', 'star', 'diamond', 'hexagon', 'trapezoid', 'semicircle'],
 };
+
+// 床（土台）の広さと画面の縮尺。おとなは床の幅を2倍にし、
+// 盤ごと0.7倍に縮めて画面に収める（ブロックの大きさは他の難易度と同じ。広い床にたくさん並べられる）
+export const FIELD = {
+  easy: { platformRatio: 1, viewScale: 1 },
+  normal: { platformRatio: 1, viewScale: 1 },
+  hard: { platformRatio: 1, viewScale: 1 },
+  adult: { platformRatio: 2, viewScale: 0.7 },
+};
+
+export function fieldOf(difficulty) {
+  return FIELD[difficulty] ?? FIELD.easy;
+}
 
 export function createGame({ difficulty = 'easy', mode = 'solo', rng = Math.random } = {}) {
   return {
     mode,
-    shapes: DIFFICULTY[difficulty],
+    shapes: DIFFICULTY[difficulty] ?? DIFFICULTY.easy,
     rng,
     placed: 0,          // 積めた個数（=スコア）
     currentPlayer: 0,   // こうたい対戦の手番（あか=0/あお=1）

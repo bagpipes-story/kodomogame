@@ -24,7 +24,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.17.9';
+const APP_VERSION = 'v0.17.10';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -132,7 +132,7 @@ const setupConfigs = {
     defaults: { mode: 'solo', difficulty: 'easy' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['two', text.modeTwo]] },
-      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard], ['adult', text.sizeAdult]] },
     ],
   },
   oldmaid: {
