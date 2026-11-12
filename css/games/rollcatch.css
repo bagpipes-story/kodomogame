@@ -1,4 +1,4 @@
-/* rollcatch.css — ころころキャッチ（v0.17.4: 両手スライダー操作） */
+/* rollcatch.css — ころころキャッチ（v0.17.6: 画面下の横スライダー1本を親指で操作） */
 
 .kgb-rollcatch {
   display: flex;
@@ -22,7 +22,7 @@
   opacity: 1;
 }
 
-/* ステージ: 盤（Canvas）の上に左右のスライダーを重ねる */
+/* ステージ: 盤（Canvas） */
 .kgb-rc-stage {
   position: relative;
   width: 100%;
@@ -37,54 +37,68 @@
   background: linear-gradient(#eaf6fb 0%, #f3fae9 78%, #e2f0d5 100%);
 }
 
-/* 縦スライダー（親指ゾーン）。指の上下だけを受け取る */
+/* 横スライダー（親指1本で左右に動かす）。盤のすぐ下、画面の下のほうに置く */
 .kgb-rc-slider {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 52px;
-  touch-action: none; /* 縦スクロールに取られないように */
+  position: relative;
+  width: 100%;
+  max-width: 400px;
+  height: 64px;
+  touch-action: none; /* スクロールやズームに取られないように */
   cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
 }
-
-.kgb-rc-slider.is-left { left: 0; }
-.kgb-rc-slider.is-right { right: 0; }
 
 .kgb-rc-rail {
   position: absolute;
-  left: 50%;
-  top: 10px;
-  bottom: 10px;
-  width: 14px;
+  left: 10px;
+  right: 10px;
+  top: 50%;
+  height: 14px;
   border-radius: 7px;
   background: rgba(74, 63, 53, 0.18);
-  transform: translateX(-50%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* まんなかの目印（ここに戻すと盤が水平になる） */
+.kgb-rc-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 30px;
+  margin-left: -2px;
+  border-radius: 2px;
+  background: rgba(74, 63, 53, 0.35);
+  transform: translateY(-50%);
   pointer-events: none;
 }
 
 /* つまみ: 大きめ（4歳の親指でもつかめる）。位置は transform だけで動かす */
 .kgb-rc-knob {
   position: absolute;
-  left: 50%;
-  top: 0;
-  width: 44px;
-  height: 64px;
-  margin-left: -22px;
-  border-radius: 22px;
+  left: 0;
+  top: 50%;
+  width: 72px;
+  height: 52px;
+  margin-top: -26px;
+  border-radius: 26px;
   background: var(--kgb-color-rollcatch);
   box-shadow: 0 4px 0 var(--kgb-shadow);
   pointer-events: none;
   will-change: transform;
 }
 
+/* つまみの縦線3本（つまめそうに見せる） */
 .kgb-rc-knob::after {
   content: '';
   position: absolute;
-  left: 12px;
-  right: 12px;
-  top: 26px;
-  height: 4px;
+  top: 14px;
+  bottom: 14px;
+  left: 34px;
+  width: 4px;
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 8px 0 rgba(255, 255, 255, 0.8), 0 -8px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: 10px 0 0 rgba(255, 255, 255, 0.8), -10px 0 0 rgba(255, 255, 255, 0.8);
 }

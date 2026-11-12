@@ -1,4 +1,4 @@
-// rollcatch.test.js — ころころキャッチ（シーソー型。v0.17.4で両手スライダー操作、v0.17.5でむずかしいにしかけ）の純ロジックのNodeテスト
+// rollcatch.test.js — ころころキャッチ（シーソー型。v0.17.4で両手スライダー操作、v0.17.5でむずかしいにしかけ、v0.17.6で横スライダー1本）の純ロジックのNodeテスト
 // 実行方法: node tests/rollcatch.test.js
 
 import assert from 'node:assert';
@@ -10,7 +10,7 @@ import {
   shelfProfile,
   gateOpenRatio,
   seesawTargetAngle,
-  tiltFromSliders,
+  tiltFromSlider,
   createGame,
   startRun,
   recordFall,
@@ -137,16 +137,19 @@ import {
   }
 }
 
-// ---------- スライダー → 傾き ----------
+// ---------- 横スライダー → 傾き ----------
 
 {
   const max = 24;
-  assert.strictEqual(tiltFromSliders(0.5, 0.5, max), 0, '同じ高さなら水平');
-  assert.ok(tiltFromSliders(1, 0, max) > 0, '左を上げると右さがり（正）');
-  assert.ok(Math.abs(tiltFromSliders(1, 0, max) - (max * Math.PI) / 180) < 1e-9, '最大で maxTiltDeg');
-  assert.ok(Math.abs(tiltFromSliders(0, 1, max) + (max * Math.PI) / 180) < 1e-9, '逆向きも対称');
-  assert.ok(Math.abs(tiltFromSliders(0.75, 0.25, max) - (max * Math.PI) / 360) < 1e-9, '差の半分なら半分の角度');
-  assert.ok(Math.abs(tiltFromSliders(5, -5, max)) <= (max * Math.PI) / 180 + 1e-9, '範囲外の値は丸める');
+  const maxRad = (max * Math.PI) / 180;
+  assert.strictEqual(tiltFromSlider(0.5, max), 0, 'まんなかなら水平');
+  assert.ok(tiltFromSlider(0.8, max) > 0, '右へ動かすと右さがり（正）');
+  assert.ok(tiltFromSlider(0.2, max) < 0, '左へ動かすと左さがり（負）');
+  assert.ok(Math.abs(tiltFromSlider(1, max) - maxRad) < 1e-9, 'いちばん右で maxTiltDeg');
+  assert.ok(Math.abs(tiltFromSlider(0, max) + maxRad) < 1e-9, 'いちばん左で -maxTiltDeg');
+  assert.ok(Math.abs(tiltFromSlider(0.75, max) - maxRad / 2) < 1e-9, '半分なら半分の角度');
+  assert.ok(Math.abs(tiltFromSlider(5, max) - maxRad) < 1e-9, '範囲外の値は丸める');
+  assert.ok(Math.abs(tiltFromSlider(-5, max) + maxRad) < 1e-9, '範囲外の値は丸める（左）');
 }
 
 // ---------- タイム計測・落下・こうたい対戦 ----------

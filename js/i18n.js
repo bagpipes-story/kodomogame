@@ -168,7 +168,7 @@ export const text = {
 
   // ころころキャッチ（v0.10.1: シーソー型。ゆびで盤を傾けてタイムを競う）
   rcGoal: 'ぽとん！ないすキャッチ！',
-  rcHint: 'おやゆびで バーを うごかそう',
+  rcHint: 'バーを よこに うごかそう',
   rcFall: 'おっとっと！ うえから もういちど',
   rcFallPrefix: 'おちた: ',
   rcTimeLabel: 'タイム',

@@ -1,6 +1,7 @@
-// ui.js — ころころキャッチの描画・入力（v0.17.4: 両手スライダー操作に作り直し。v0.17.5: むずかしいのしかけ）
-// 画面の左右にある縦スライダーを両手の親指で上下すると、その高さの差で盤ぜんたいが傾く
-// （実物のシーソー盤を両手で持って傾ける感覚）。互い違いの段をボールがジグザグに転がり下りる。
+// ui.js — ころころキャッチの描画・入力（v0.17.4: スライダー操作に作り直し。v0.17.5: むずかしいのしかけ。
+//   v0.17.6: 両手の縦スライダー2本 → 画面下の横スライダー1本に。子どもには両手の操作が難しかったため）
+// 盤の下にある横スライダーを親指1本で左右に動かすと、その位置で盤ぜんたいが傾く（右へ→右さがり）。
+// 互い違いの段をボールがジグザグに転がり下りる。
 // ふつう・むずかしいは左右の壁が無いので、傾けすぎると盤の横から落ちる→上からやり直し（タイムは続く）。
 // 物理の工夫: 盤を回す代わりに重力の向きを傾ける（幾何は固定のまま）。見た目はCanvas全体を回転。
 // 性能規定: 動的ボディはボール1個のみ。段は固定の静的セグメント（生成は開始時だけ）。
@@ -11,7 +12,7 @@ import {
   buildShelves,
   gateOpenRatio,
   seesawTargetAngle,
-  tiltFromSliders,
+  tiltFromSlider,
   createGame,
   startRun,
   recordFall,
@@ -33,8 +34,8 @@ const NEXT_WAIT_MS = 1200;     // ゴール演出から次へ進むまで
 const FALL_WAIT_MS = 900;      // 落ちてから上に戻すまで
 const BOARD_W = 300;           // 盤の幅（盤座標）
 const BOARD_H = 400;           // 盤の高さ（盤座標。下のうけ皿まで）
-const VIEW_SCALE = 0.78;       // 回転しても四隅が収まる縮小率
-const SLIDER_W = 52;           // 左右の親指ゾーンの幅
+const VIEW_SCALE_MAX = 0.78;   // 盤の縮小率の上限（実際は最大に傾けても四隅が収まる値に自動で下げる）
+const CANVAS_H = 380;          // 盤の表示の高さ。下に横スライダーを置いてもiPhone SEの画面に収まる高さ
 const STUCK_FRAMES = 30;       // 傾いているのに止まったままなら少し押す（板のつなぎ目に引っかかったとき）
 const STUCK_TILT_RAD = (6 * Math.PI) / 180;
 const SEESAW_LERP = 0.12;      // シーソー板が目標の角度へ倒れる速さ
@@ -64,7 +65,8 @@ export function mount(root, config, { onExit }) {
   let ballPhase = 'none'; // none | rolling | falling（落下演出中）
   let stuckFrames = 0;
   let roundsPlayed = 0;
-  const slider = [0.5, 0.5]; // 左・右のつまみの高さ（0=下, 1=上）
+  let slider = 0.5;      // 横スライダーのつまみの位置（0=いちばん左, 0.5=まんなか, 1=いちばん右）
+  let viewScale = VIEW_SCALE_MAX;
 
   let frameCount = 0;
   let fpsValue = 0;
@@ -103,27 +105,23 @@ export function mount(root, config, { onExit }) {
   const statusEl = document.createElement('div');
   statusEl.className = 'kgb-rc-status';
 
-  // ステージ: Canvas（盤）の上に左右のスライダーを重ねる
+  // ステージ: Canvas（盤）。その下に横スライダー1本（親指1本で左右に動かす）
   const stage = document.createElement('div');
   stage.className = 'kgb-rc-stage';
   const canvas = document.createElement('canvas');
   canvas.className = 'kgb-rc-canvas';
+  stage.append(canvas);
 
-  const sliderEls = [];
-  const knobEls = [];
-  for (const side of ['left', 'right']) {
-    const track = document.createElement('div');
-    track.className = `kgb-rc-slider is-${side}`;
-    const rail = document.createElement('div');
-    rail.className = 'kgb-rc-rail';
-    const knob = document.createElement('div');
-    knob.className = 'kgb-rc-knob';
-    track.append(rail, knob);
-    stage.append(track);
-    sliderEls.push(track);
-    knobEls.push(knob);
-  }
-  stage.prepend(canvas);
+  const track = document.createElement('div');
+  track.className = 'kgb-rc-slider';
+  const rail = document.createElement('div');
+  rail.className = 'kgb-rc-rail';
+  // まんなかの目印（ここに戻すと水平）
+  const centerMark = document.createElement('div');
+  centerMark.className = 'kgb-rc-center';
+  const knob = document.createElement('div');
+  knob.className = 'kgb-rc-knob';
+  track.append(rail, centerMark, knob);
 
   const startOverlay = document.createElement('div');
   startOverlay.className = 'kgb-handover';
@@ -139,16 +137,15 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(banner, statusEl, stage);
+  container.append(banner, statusEl, stage, track);
   root.append(container, startOverlay, resultOverlay);
 
   const W = Math.min(root.clientWidth || 375, 400);
-  const H = 440;
+  const H = CANVAS_H;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = W * dpr;
   canvas.height = H * dpr;
   canvas.style.height = `${H}px`;
-  stage.style.height = `${H}px`;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
 
@@ -178,20 +175,31 @@ export function mount(root, config, { onExit }) {
   }
 
   // つまみの位置（入力があったときだけ書く）
-  function renderKnob(i) {
-    const trackH = sliderEls[i].clientHeight || H;
-    const knobH = knobEls[i].offsetHeight || 64;
-    const y = (1 - slider[i]) * (trackH - knobH);
-    knobEls[i].style.transform = `translateY(${Math.round(y)}px)`;
+  function renderKnob() {
+    const trackW = track.clientWidth || W;
+    const knobW = knob.offsetWidth || 72;
+    const x = slider * (trackW - knobW);
+    knob.style.transform = `translateX(${Math.round(x)}px)`;
   }
 
-  function resetSliders() {
-    slider[0] = 0.5;
-    slider[1] = 0.5;
-    renderKnob(0);
-    renderKnob(1);
+  function setSlider(value) {
+    slider = Math.max(0, Math.min(1, value));
+    renderKnob();
+    targetTilt = tiltFromSlider(slider, maxTiltDeg);
+  }
+
+  function resetSlider() {
+    setSlider(0.5);
     targetTilt = 0;
     tilt = 0;
+  }
+
+  // 最大に傾けても盤の四隅が画面に収まる縮小率（盤を回したときの外枠の大きさから計算）
+  function fitViewScale(maxDeg) {
+    const a = (maxDeg * Math.PI) / 180;
+    const boxW = BOARD_W * Math.cos(a) + BOARD_H * Math.sin(a);
+    const boxH = BOARD_W * Math.sin(a) + BOARD_H * Math.cos(a);
+    return Math.min(VIEW_SCALE_MAX, (W - 4) / boxW, (H - 4) / boxH);
   }
 
   // ---------- Matterワールド構築（盤座標: 0..BOARD_W × 0..BOARD_H） ----------
@@ -207,6 +215,7 @@ export function mount(root, config, { onExit }) {
     ballBody = null;
     ballPhase = 'none';
     maxTiltDeg = state.settings.maxTiltDeg;
+    viewScale = fitViewScale(maxTiltDeg);
 
     const staticOpts = { isStatic: true, friction: 0.05, restitution: 0.1 };
 
@@ -341,7 +350,7 @@ export function mount(root, config, { onExit }) {
     if (result.nextPlayer !== undefined) {
       later(() => {
         setupEngine();
-        resetSliders();
+        resetSlider();
         setStatus('');
         updateBanner(0);
         showStartOverlay();
@@ -426,7 +435,7 @@ export function mount(root, config, { onExit }) {
     resetPraise();
     state = createGame({ difficulty: config.difficulty, mode: config.mode });
     setupEngine();
-    resetSliders();
+    resetSlider();
     setStatus('');
     updateBanner(0);
     showStartOverlay();
@@ -542,11 +551,11 @@ export function mount(root, config, { onExit }) {
   function draw() {
     ctx.clearRect(0, 0, W, H);
     ctx.save();
-    // 盤の傾き = 見た目の回転（スライダーの差がそのまま角度になる）。
+    // 盤の傾き = 見た目の回転（スライダーの位置がそのまま角度になる）。
     // 回しても四隅が収まるよう少し縮小し、画面中央を軸に回す
     ctx.translate(W / 2, H / 2);
     ctx.rotate(tilt);
-    ctx.scale(VIEW_SCALE, VIEW_SCALE);
+    ctx.scale(viewScale, viewScale);
     ctx.translate(-BOARD_W / 2, -BOARD_H / 2);
     drawBoard();
     drawShelves();
@@ -611,44 +620,43 @@ export function mount(root, config, { onExit }) {
     draw();
   }
 
-  // ---------- 入力: 左右の縦スライダー（両手の親指。マルチタッチ） ----------
+  // ---------- 入力: 画面下の横スライダー（親指1本） ----------
+  // つまみをつかまなくても、レールのどこを触ってもそこへ動く（4歳でも操作できるように）。
+  // 指を離してもつまみはその位置に残る（離してもボールが転がり続け、落ち着いて見られる）
 
-  function setSliderFromPointer(i, clientY) {
-    const rect = sliderEls[i].getBoundingClientRect();
-    const knobH = knobEls[i].offsetHeight || 64;
-    const usable = rect.height - knobH;
+  function setSliderFromPointer(clientX) {
+    const rect = track.getBoundingClientRect();
+    const knobW = knob.offsetWidth || 72;
+    const usable = rect.width - knobW;
     // つまみの中心が指の位置に来るように
-    const y = clientY - rect.top - knobH / 2;
-    slider[i] = Math.max(0, Math.min(1, 1 - y / usable));
-    renderKnob(i);
-    targetTilt = tiltFromSliders(slider[0], slider[1], maxTiltDeg);
+    setSlider((clientX - rect.left - knobW / 2) / usable);
   }
 
-  sliderEls.forEach((track, i) => {
-    const activePointers = new Set();
-    track.addEventListener('pointerdown', (event) => {
-      activePointers.add(event.pointerId);
-      try {
-        track.setPointerCapture(event.pointerId);
-      } catch {
-        // 合成イベントなどで捕捉できなくても動かす
-      }
-      setSliderFromPointer(i, event.clientY);
-    }, { signal: abort.signal });
-    track.addEventListener('pointermove', (event) => {
-      if (!activePointers.has(event.pointerId)) return;
-      setSliderFromPointer(i, event.clientY);
-    }, { signal: abort.signal });
-    const release = (event) => activePointers.delete(event.pointerId);
-    track.addEventListener('pointerup', release, { signal: abort.signal });
-    track.addEventListener('pointercancel', release, { signal: abort.signal });
-    // 指を離してもつまみはその位置に残る（実物のシーソー盤を持っている感覚）
-  });
+  let activePointer = null; // 2本目の指は無視する（1本の指だけで動かす）
+  track.addEventListener('pointerdown', (event) => {
+    if (activePointer !== null) return;
+    activePointer = event.pointerId;
+    try {
+      track.setPointerCapture(event.pointerId);
+    } catch {
+      // 合成イベントなどで捕捉できなくても動かす
+    }
+    setSliderFromPointer(event.clientX);
+  }, { signal: abort.signal });
+  track.addEventListener('pointermove', (event) => {
+    if (event.pointerId !== activePointer) return;
+    setSliderFromPointer(event.clientX);
+  }, { signal: abort.signal });
+  const release = (event) => {
+    if (event.pointerId === activePointer) activePointer = null;
+  };
+  track.addEventListener('pointerup', release, { signal: abort.signal });
+  track.addEventListener('pointercancel', release, { signal: abort.signal });
 
   if (debugMode) {
     window.__kgbRollcatch = {
       get tilt() { return tilt; },
-      get slider() { return slider.slice(); },
+      get slider() { return slider; },
       get ball() { return ballBody ? { ...ballBody.position } : null; },
       get falls() { return state?.falls; },
       get running() { return state?.running; },
@@ -656,10 +664,8 @@ export function mount(root, config, { onExit }) {
       get seesaw() { return seesaw ? { angle: seesaw.angle, bodyAngle: seesaw.body.angle, x: seesaw.body.position.x, y: seesaw.body.position.y } : null; },
       get gate() { return gate ? { y: gate.body.position.y } : null; },
       get velocity() { return ballBody ? { ...ballBody.velocity } : null; },
-      setSlider(i, v) {
-        slider[i] = v;
-        renderKnob(i);
-        targetTilt = tiltFromSliders(slider[0], slider[1], maxTiltDeg);
+      setSlider(v) {
+        setSlider(v);
       },
     };
   }

@@ -1,6 +1,7 @@
 // game.js — ころころキャッチの純ロジック（DOM・物理非依存）
 // v0.10.1で駄菓子屋の「シーソーゲーム」型に。v0.17.4で操作と難易度を作り直し:
-//   操作: 画面の左右にある縦スライダーを両手の親指で上下して盤を傾ける（実物のシーソー盤を両手で持つ感覚）
+//   操作: 盤を傾けるスライダーで操作（v0.17.6で「画面下の横スライダー1本を親指1本で左右に動かす」に変更。
+//         両手で左右の縦スライダーを動かすのは子どもには難しかったため）
 //   難易度: ふつう・むずかしいは左右の壁が無く、傾けすぎると盤の横からボールが落ちる（落ちたら上からやり直し）。
 // v0.17.5: むずかしいは「段ごとに違うしかけ」のコースに（穴は「落ちるだけ」で面白くなかったので廃止）:
 //   でこぼこ → やま → ゲート（上がり下がりする棒。下がった時だけ通れる）→ シーソー板（まんなかを越えると傾く）
@@ -136,11 +137,12 @@ export function seesawTargetAngle(feature, ballX, ballY) {
   return (past ? 1 : -1) * feature.dir * max;
 }
 
-// 左右のスライダー（0=いちばん下, 1=いちばん上）から盤の傾き(rad)を決める。
-// 左を上げる→盤は右さがり（正の角度=時計回り）。両方同じ高さなら水平
-export function tiltFromSliders(left, right, maxTiltDeg) {
-  const diff = Math.max(-1, Math.min(1, left - right));
-  return (diff * maxTiltDeg * Math.PI) / 180;
+// 横スライダー（0=いちばん左, 0.5=まんなか, 1=いちばん右）から盤の傾き(rad)を決める。
+// つまみを右へ→盤は右さがり（正の角度=時計回り）。まんなかなら水平。
+// 指の動いた向きと、ボールの転がる向きが同じになる（4歳でも直感で分かる）
+export function tiltFromSlider(value, maxTiltDeg) {
+  const v = Math.max(0, Math.min(1, value));
+  return ((v - 0.5) * 2 * maxTiltDeg * Math.PI) / 180;
 }
 
 export function createGame({ difficulty = 'easy', mode = 'solo' } = {}) {
