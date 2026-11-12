@@ -1,4 +1,4 @@
-/* rollcatch.css — ころころキャッチ（v0.17.6: 画面下の横スライダー1本を親指で操作） */
+/* rollcatch.css — ころころキャッチ（v0.17.6: 画面下の横スライダー1本を親指で操作。v0.17.7: バーを8割の長さに） */
 
 .kgb-rollcatch {
   display: flex;
@@ -37,11 +37,12 @@
   background: linear-gradient(#eaf6fb 0%, #f3fae9 78%, #e2f0d5 100%);
 }
 
-/* 横スライダー（親指1本で左右に動かす）。盤のすぐ下、画面の下のほうに置く */
+/* 横スライダー（親指1本で左右に動かす）。盤のすぐ下、画面の下のほうに置く。
+   v0.17.7: 子どもの手は小さく親指が端まで届きにくいので、盤の幅の8割に短くして中央に置く */
 .kgb-rc-slider {
   position: relative;
-  width: 100%;
-  max-width: 400px;
+  width: 80%;
+  max-width: 320px;
   height: 64px;
   touch-action: none; /* スクロールやズームに取られないように */
   cursor: pointer;
