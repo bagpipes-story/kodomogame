@@ -538,7 +538,9 @@ export function mount(root, config, { onExit }) {
 
   function drawShelves() {
     ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    // 角はとがらせる（丸いと だんさ の崖がなだらかな坂に見えてしまう。v0.17.9）
+    ctx.lineJoin = 'miter';
+    ctx.miterLimit = 4;
     for (const shelf of shelves) {
       for (const pts of shelf.segments) {
         ctx.strokeStyle = '#c89058';
@@ -615,7 +617,8 @@ export function mount(root, config, { onExit }) {
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
       ctx.lineWidth = 2;
       const pushDir = -f.dir;
-      const offset = ((now / 25) % 16) * pushDir;
+      // 押す強さが伝わるよう、矢じるしは速めに流す
+      const offset = ((now / 12) % 16) * pushDir;
       for (let x = left - 16; x < left + width + 16; x += 16) {
         const cx = x + offset;
         ctx.beginPath();
@@ -838,6 +841,11 @@ export function mount(root, config, { onExit }) {
       get shelves() { return shelves.map((sh) => ({ baseY: sh.baseY, gapSide: sh.gapSide, type: sh.feature?.type ?? null })); },
       get boardH() { return boardH; },
       get status() { return statusEl.textContent; },
+      // テスト用: ボールを指定の段の入口に置き直す（しかけを1つずつ確かめるため）
+      placeAt(shelfIdx) {
+        if (ballBody) M.Composite.remove(engine.world, ballBody);
+        placeBall(shelfIdx);
+      },
       get velocity() { return ballBody ? { ...ballBody.velocity } : null; },
       setSlider(v) {
         setSlider(v);

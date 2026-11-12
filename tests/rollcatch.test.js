@@ -56,9 +56,18 @@ import {
   }
   assert.ok(shelfProfile('hill', DIFFICULTY.hard, 150, 150, 1) < -FEATURE.hill.height + 1e-9, 'やまの頂上は高い（上が負）');
   assert.ok(shelfProfile('valley', DIFFICULTY.hard, 150, 150, 1) > FEATURE.valley.depth - 1e-9, 'くぼみの底は低い');
-  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 100, 150, 1), -FEATURE.step.height, 'だんさ: 右へ進むなら左半分が高い');
-  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 200, 150, 1), 0);
-  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 200, 150, -1), -FEATURE.step.height, 'だんさ: 左へ進むなら右半分が高い');
+  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 100, 150, 1), -FEATURE.step.up, 'だんさ: 右へ進むなら左半分が高い');
+  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 200, 150, 1), FEATURE.step.down, '右半分は低い');
+  assert.strictEqual(shelfProfile('step', DIFFICULTY.hard, 200, 150, -1), -FEATURE.step.up, 'だんさ: 左へ進むなら右半分が高い');
+  assert.ok(FEATURE.step.up + FEATURE.step.down >= 20, 'だんさは はっきり（高低差20px以上）');
+  let bumpMin = Infinity;
+  let bumpMax = -Infinity;
+  for (let x = 0; x < 300; x++) {
+    const y = shelfProfile('bumps', DIFFICULTY.hard, x, 150, 1);
+    bumpMin = Math.min(bumpMin, y);
+    bumpMax = Math.max(bumpMax, y);
+  }
+  assert.ok(bumpMax - bumpMin >= 8, 'でこぼこは はっきり（高低差8px以上）');
 }
 
 // ---------- ゲートの開閉: 周期の前半は開く・後半は閉じる、なめらかに ----------
@@ -101,7 +110,7 @@ import {
       for (const p of shelf.points) {
         assert.ok(p.x >= 0 && p.x <= W, '点はx範囲内');
         if (!shelf.feature) assert.ok(Math.abs(p.y - shelf.baseY) <= DIFFICULTY[key].wave + 1e-9, '波の振幅内');
-        else assert.ok(Math.abs(p.y - shelf.baseY) <= 14 + 1e-9, 'しかけの高さは14px以内（上の段にぶつからない）');
+        else assert.ok(Math.abs(p.y - shelf.baseY) <= 14 + 1e-9, 'しかけの高さは上下14px以内');
       }
       if (DIFFICULTY[key].stopper > 0) {
         // 返し: 切れ目の反対側の端に丸い返しがある（段の面より上に出ている）
@@ -138,7 +147,7 @@ import {
       if (shelf.feature?.type === 'step') {
         // 境目はほぼ垂直（逆走できない）
         const pts = shelf.points;
-        const cliff = pts.find((p, k) => k > 0 && Math.abs(p.y - pts[k - 1].y) >= FEATURE.step.height - 1e-9);
+        const cliff = pts.find((p, k) => k > 0 && Math.abs(p.y - pts[k - 1].y) >= FEATURE.step.up + FEATURE.step.down - 1e-9);
         assert.ok(cliff, 'だんさの崖がある');
         const prev = pts[pts.indexOf(cliff) - 1];
         assert.ok(Math.abs(cliff.x - prev.x) <= 2, '崖は横幅2px以内');
@@ -191,12 +200,52 @@ import {
   const restY = belt.y - 18; // 段の面の上で休んでいるボールの中心
   const push = conveyorPush(belt, belt.x, restY, 1.7, 12);
   assert.ok(push !== 0 && Math.sign(push) === -belt.dir, 'ベルトは進む向きと逆に押す');
-  assert.ok(Math.abs(push) < 1.7 * Math.sin((a.maxTiltDeg * Math.PI) / 180) * 0.5, '最大の傾きの半分より弱い（傾ければ越えられる）');
+  const sinDeg = (deg) => Math.sin((deg * Math.PI) / 180);
+  assert.ok(Math.abs(push) > 1.7 * sinDeg(a.maxTiltDeg * 0.6), 'ベルトは強い: 6割の傾きでは押し戻される');
+  assert.ok(Math.abs(push) < 1.7 * (sinDeg(a.maxTiltDeg) - sinDeg(6)), 'でも いっぱいに傾ければ越えられる（6°の坂ぶんの余裕）');
   assert.strictEqual(conveyorPush(belt, belt.x + belt.halfWidth + 20, restY, 1.7, 12), 0, 'ベルトの外は押さない');
   assert.strictEqual(conveyorPush(belt, belt.x, belt.y - 70, 1.7, 12), 0, '上の段にいるときは押さない');
   assert.strictEqual(conveyorPush(null, 0, 0, 1.7, 12), 0);
   const beltShelf = shelves.find((sh) => sh.feature?.type === 'conveyor');
   assert.ok(beltShelf.points.every((p) => Math.abs(p.y - beltShelf.baseY) < 1e-9), 'ベルトの段は平ら（波と押し戻しが重なって出られなくならない）');
+}
+
+// ---------- 段と段の間はボール（直径24）が通れる ----------
+// 段の面は点列の上6px、段の下面は下6px（厚さ12）。上下で重なるxで「下の段の面 − 上の段の下面」を調べる。
+// シーソー板は、どちらに倒れても上がった端がいちばん高くなる場合で調べる
+
+{
+  const surfaceAt = (shelf, x) => {
+    const f = shelf.feature;
+    if (f?.type === 'seesaw' && Math.abs(x - f.x) <= f.halfLength) {
+      const a = (f.maxAngleDeg * Math.PI) / 180;
+      return { top: f.pivotY - Math.abs(x - f.x) * Math.sin(a) - 6, bottom: f.pivotY + Math.abs(x - f.x) * Math.sin(a) + 6 };
+    }
+    for (const pts of shelf.segments) {
+      for (let k = 0; k < pts.length - 1; k++) {
+        const p = pts[k];
+        const q = pts[k + 1];
+        if (x >= p.x && x <= q.x) {
+          const y = q.x === p.x ? Math.min(p.y, q.y) : p.y + ((q.y - p.y) * (x - p.x)) / (q.x - p.x);
+          // だんさの崖の上は高いほう（上面）／低いほう（下面）で見る
+          return { top: (q.x - p.x <= 2 ? Math.min(p.y, q.y) : y) - 6, bottom: (q.x - p.x <= 2 ? Math.max(p.y, q.y) : y) + 6 };
+        }
+      }
+    }
+    return null;
+  };
+  for (const key of ['easy', 'normal', 'hard', 'adult']) {
+    const shelves = buildShelves(DIFFICULTY[key], 300);
+    let worst = Infinity;
+    for (let i = 0; i < shelves.length - 1; i++) {
+      for (let x = 0; x <= 300; x += 1) {
+        const upper = surfaceAt(shelves[i], x);
+        const lower = surfaceAt(shelves[i + 1], x);
+        if (upper && lower) worst = Math.min(worst, lower.top - upper.bottom);
+      }
+    }
+    assert.ok(worst >= 24 + 1, `${key}: 段と段のすき間 ${worst.toFixed(1)}px ≥ ボールの直径24px＋1`);
+  }
 }
 
 // ---------- カゴの動き ----------

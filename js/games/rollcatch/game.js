@@ -9,6 +9,8 @@
 // v0.17.8: 「おとな」を追加。盤の高さ2倍（段12本）・切れ目と返しが小さい・11段にしかけ（新しく ベルト＝押し戻す床、
 //   ゲート2つ＝互い違いに開く）。ゴールは床ではなく「左右に動くカゴ」に入れたときだけ。床に落ちたら最後の段からやり直し。
 //   コースが長いので7段目に「はた」（なかま地点）。横から落ちたら はた から再開
+// v0.17.9: ベルトを強く（9°→17°ぶん。6割の傾きでは押し戻される）、でこぼこ・だんさを大きく（実機フィードバック）。
+//   おとなの しかけなしの段は平ら（波波だと でこぼこ と見分けがつかないため）
 
 export const DIFFICULTY = {
   // walls: 左右の壁 / wave: 波の振幅(px) / gapRatio: 切れ目の広さ / maxTiltDeg: 最大の傾き
@@ -22,7 +24,7 @@ export const DIFFICULTY = {
     features: ['bumps', 'hill', 'gate', 'seesaw', 'step', 'valley'], checkpoints: [], basket: null,
   },
   adult: {
-    shelfCount: 12, boardHeight: 800, wave: 1.5, gapRatio: 0.18, maxTiltDeg: 26, walls: false, stopper: 6,
+    shelfCount: 12, boardHeight: 800, wave: 0, gapRatio: 0.18, maxTiltDeg: 26, walls: false, stopper: 6,
     // 最後の段はしかけなし（カゴのタイミングに集中できるように）
     features: ['bumps', 'gate', 'hill', 'conveyor', 'seesaw', 'step', 'gate2', 'valley', 'conveyor', 'seesaw', 'gate2', null],
     checkpoints: [6],
@@ -37,16 +39,19 @@ export const SHELF_BOTTOM_MARGIN = 70; // いちばん下の段から盤の下�
 
 // しかけの寸法（盤座標px）。ボールは半径12・最大の傾き26°なので、坂の最大角度はどれも26°より小さくしてある
 export const FEATURE = {
-  bumps: { amp: 2, length: 50 },          // でこぼこ: 短い波（最大の坂 約14°）
+  bumps: { amp: 4.5, length: 104 },       // でこぼこ: 山と谷（高低差9px。最大の坂 約15.2°＝6割の傾きで登れる）
   hill: { height: 8, halfWidth: 50 },     // やま: まんなかの盛り上がり（最大の坂 約14°）
   valley: { depth: 6, halfWidth: 45 },    // くぼみ: まんなかのへこみ（最大の坂 約12°）
-  step: { height: 14 },                   // だんさ: 入口側の半分が高い。降りたら戻れない
+  // だんさ: 入口側の半分が高く、出口側の半分が低い（高低差22px）。降りたら戻れない。
+  // むずかしいは段の間が50pxしかないので、上だけを高くすると上の段との間をボールが通れなくなる → 上12・下10に分ける
+  step: { up: 12, down: 10 },
   gate: { width: 8, height: 30, periodMs: 3200, rampMs: 350 }, // ゲート: 棒が段から出たり引っこんだり
   gate2: { spacing: 76 },                 // ゲート2つ: 間をあけて2本。互い違い（半周期ずらし）に開くので間で待つ
-  seesaw: { halfLength: 40, maxAngleDeg: 10, clearance: 3 },  // シーソー板: まんなかを支点に傾く
+  // シーソー板: まんなかを支点に傾く。8°: 上がった端と上の段の間をボールが通れる角度（10°だとぎりぎりだった）
+  seesaw: { halfLength: 40, maxAngleDeg: 8, clearance: 3 },
   // ベルト: 段のまんなかの床がボールを押し戻す（進む向きと逆）。pushDeg は「この角度の坂と同じ強さ」。
-  // 最大の傾き(26°)より十分小さいので、しっかり傾ければ越えられる
-  conveyor: { halfWidth: 48, pushDeg: 9 },
+  // 17°: 傾けが6割（約16°）だと押し戻され、8割以上（約21°〜）傾けると越えられる
+  conveyor: { halfWidth: 56, pushDeg: 17 },
 };
 
 // 段の形を作る: 偶数段は右に切れ目（左から右へ転がす）、奇数段は左に切れ目。
@@ -146,8 +151,8 @@ export function shelfProfile(type, settings, px, centerX, dir) {
       // ベルトの段は平ら（波の上り坂と押し戻しが重なると、しっかり傾けても谷から出られなくなるため）
       return 0;
     case 'step':
-      // 入口側（進む向きの手前）が高い
-      return d * dir < 0 ? -FEATURE.step.height : 0;
+      // 入口側（進む向きの手前）が高く、出口側が低い
+      return d * dir < 0 ? -FEATURE.step.up : FEATURE.step.down;
     default:
       return settings.wave * Math.sin((px / WAVE_LENGTH) * Math.PI * 2);
   }
