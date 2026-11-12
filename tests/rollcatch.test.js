@@ -1,4 +1,4 @@
-// rollcatch.test.js — ころころキャッチ（シーソー型。v0.17.4で両手スライダー操作、v0.17.5でむずかしいにしかけ、v0.17.6で横スライダー1本）の純ロジックのNodeテスト
+// rollcatch.test.js — ころころキャッチ（シーソー型。v0.17.4で両手スライダー操作、v0.17.5でむずかしいにしかけ、v0.17.6で横スライダー1本、v0.17.8でおとな）の純ロジックのNodeテスト
 // 実行方法: node tests/rollcatch.test.js
 
 import assert from 'node:assert';
@@ -10,6 +10,10 @@ import {
   shelfProfile,
   gateOpenRatio,
   seesawTargetAngle,
+  conveyorPush,
+  basketX,
+  updateCheckpoint,
+  respawnShelf,
   tiltFromSlider,
   createGame,
   startRun,
@@ -88,7 +92,7 @@ import {
 
 {
   const W = 300;
-  for (const key of ['easy', 'normal', 'hard']) {
+  for (const key of ['easy', 'normal', 'hard', 'adult']) {
     const shelves = buildShelves(DIFFICULTY[key], W);
     assert.strictEqual(shelves.length, DIFFICULTY[key].shelfCount, `${key}: 段数`);
     for (let i = 0; i < shelves.length; i++) {
@@ -109,6 +113,11 @@ import {
         assert.strictEqual(shelf.stopper, null);
       }
       if (i > 0) assert.ok(shelf.baseY > shelves[i - 1].baseY, '上から順に下がる');
+      if (i > 0) assert.ok(shelf.baseY - shelves[i - 1].baseY >= 50, '段の間はボールが通れる高さ（50px以上）');
+      assert.ok(shelf.baseY < DIFFICULTY[key].boardHeight - 60, '最後の段の下にうけ皿・カゴの場所がある');
+      if (shelf.feature?.gates) {
+        for (const g of shelf.feature.gates) assert.ok(g.x > shelf.points[0].x + 30 && g.x < shelf.points.at(-1).x - 30, 'ゲートは段の上');
+      }
       const expected = DIFFICULTY[key].features[i] ?? null;
       assert.strictEqual(shelf.feature?.type ?? null, expected, `${key} ${i}段目: しかけ ${expected}`);
       if (shelf.feature?.type === 'seesaw') {
@@ -119,6 +128,10 @@ import {
         assert.ok(right - left >= FEATURE.seesaw.halfLength * 2 - 1e-9, '板の長さぶん空いている');
         assert.ok(Math.abs((left + right) / 2 - shelf.feature.x) < 1e-6, '板は点列のすき間の中心');
         assert.strictEqual(shelf.feature.dir, shelf.gapSide === 'right' ? 1 : -1, '板の向きは進む向き');
+        // 倒れて下がった端は、となりの段の面と同じ高さ（段差で止まらない）
+        const f = shelf.feature;
+        const lowEndY = f.pivotY + f.halfLength * Math.sin((f.maxAngleDeg * Math.PI) / 180);
+        assert.ok(Math.abs(lowEndY - shelf.baseY) < 1e-9, '下がった板の端は段の面とそろう');
       } else {
         assert.strictEqual(shelf.segments.length, 1);
       }
@@ -135,6 +148,98 @@ import {
       }
     }
   }
+}
+
+// ---------- おとな: 盤2倍・しかけ多め・カゴ ----------
+
+{
+  const a = DIFFICULTY.adult;
+  const h = DIFFICULTY.hard;
+  assert.strictEqual(a.boardHeight, h.boardHeight * 2, 'おとなは盤の高さ2倍');
+  assert.strictEqual(a.shelfCount, h.shelfCount * 2, 'おとなは段も2倍');
+  assert.ok(a.gapRatio < h.gapRatio, 'おとなは切れ目がもっとせまい');
+  assert.ok(a.stopper < h.stopper, 'おとなは返しがもっと小さい');
+  assert.strictEqual(a.walls, false);
+  const featured = a.features.filter(Boolean);
+  assert.ok(featured.length >= 10, 'しかけ多め（10段以上）');
+  assert.ok(new Set(featured).size >= 8, 'しかけの種類は8つ以上');
+  for (const t of ['conveyor', 'gate2']) assert.ok(featured.includes(t), `新しいしかけ ${t}`);
+  assert.strictEqual(a.features.at(-1), null, '最後の段はカゴのタイミングに集中（しかけなし）');
+  assert.ok(a.basket, 'おとなはカゴがゴール');
+  for (const key of ['easy', 'normal', 'hard']) {
+    assert.strictEqual(DIFFICULTY[key].basket, null, `${key}: 床に落ちたらゴール（変更なし）`);
+    assert.strictEqual(DIFFICULTY[key].boardHeight, 400);
+  }
+  assert.ok(a.basket.innerWidth > 24 + 10, 'カゴの内側はボール（直径24）より十分広い');
+  assert.ok(a.basket.innerWidth < 24 * 2.5, 'でもせまめ（ねらわないと入らない）');
+  assert.ok(a.checkpoints.length >= 1 && a.checkpoints.every((i) => i > 0 && i < a.shelfCount - 1), 'はたは途中の段');
+
+  const shelves = buildShelves(a, 300);
+  assert.ok(shelves[a.checkpoints[0]].checkpoint, 'はたの段に印');
+  assert.strictEqual(shelves.filter((sh) => sh.checkpoint).length, a.checkpoints.length);
+  // ゲート2つ: 入口側が先に開き、出口側は半周期おくれる（同時には開かない）
+  const g2 = shelves.find((sh) => sh.feature?.type === 'gate2');
+  const [first, second] = g2.feature.gates;
+  const dir = g2.gapSide === 'right' ? 1 : -1;
+  assert.ok((second.x - first.x) * dir > 24 + 8 * 2, '2本の間でボールが待てる');
+  assert.strictEqual(second.phaseMs - first.phaseMs, FEATURE.gate.periodMs / 2);
+  for (let t = 0; t < FEATURE.gate.periodMs; t += 50) {
+    assert.ok(!(gateOpenRatio(t, first.phaseMs) === 1 && gateOpenRatio(t, second.phaseMs) === 1), '2本同時には全開にならない');
+  }
+  // ベルト: 進む向きと逆に押す。ベルトの外や別の段では押さない
+  const belt = shelves.find((sh) => sh.feature?.type === 'conveyor').feature;
+  const restY = belt.y - 18; // 段の面の上で休んでいるボールの中心
+  const push = conveyorPush(belt, belt.x, restY, 1.7, 12);
+  assert.ok(push !== 0 && Math.sign(push) === -belt.dir, 'ベルトは進む向きと逆に押す');
+  assert.ok(Math.abs(push) < 1.7 * Math.sin((a.maxTiltDeg * Math.PI) / 180) * 0.5, '最大の傾きの半分より弱い（傾ければ越えられる）');
+  assert.strictEqual(conveyorPush(belt, belt.x + belt.halfWidth + 20, restY, 1.7, 12), 0, 'ベルトの外は押さない');
+  assert.strictEqual(conveyorPush(belt, belt.x, belt.y - 70, 1.7, 12), 0, '上の段にいるときは押さない');
+  assert.strictEqual(conveyorPush(null, 0, 0, 1.7, 12), 0);
+  const beltShelf = shelves.find((sh) => sh.feature?.type === 'conveyor');
+  assert.ok(beltShelf.points.every((p) => Math.abs(p.y - beltShelf.baseY) < 1e-9), 'ベルトの段は平ら（波と押し戻しが重なって出られなくならない）');
+}
+
+// ---------- カゴの動き ----------
+
+{
+  const b = DIFFICULTY.adult.basket;
+  const W = 300;
+  let min = Infinity;
+  let max = -Infinity;
+  for (let t = 0; t < b.periodMs; t += 10) {
+    const x = basketX(t, b, W);
+    min = Math.min(min, x);
+    max = Math.max(max, x);
+  }
+  assert.ok(min - b.innerWidth / 2 >= 0 && max + b.innerWidth / 2 <= W, 'カゴは盤の中だけを動く');
+  assert.ok(max - min > W * 0.6, 'カゴは盤のはばの6割以上を往復する（タイミングが要る）');
+  assert.ok(Math.abs(basketX(0, b, W) - basketX(b.periodMs, b, W)) < 1e-9, '周期でくり返す');
+  assert.ok(Math.abs(basketX(0, b, W) - W / 2) < 1e-9, 'はじめはまんなか');
+}
+
+// ---------- はた（なかま地点）とやり直す段 ----------
+
+{
+  const state = createGame({ difficulty: 'adult', mode: 'solo' });
+  const shelves = buildShelves(state.settings, 300);
+  startRun(state, 0);
+  const cp = state.settings.checkpoints[0];
+  assert.strictEqual(respawnShelf(state, 'side'), 0, 'はたの前に横から落ちたら いちばん上から');
+  assert.strictEqual(updateCheckpoint(state, shelves, shelves[cp - 1].baseY - 18), 0, 'はたの手前の段ではまだ');
+  assert.strictEqual(updateCheckpoint(state, shelves, shelves[cp].baseY - 18), cp, 'はたの段に乗ったら通過');
+  assert.strictEqual(updateCheckpoint(state, shelves, shelves[0].baseY), cp, '一度通ったら戻らない');
+  assert.strictEqual(respawnShelf(state, 'side'), cp, '横から落ちたら はた から');
+  assert.strictEqual(respawnShelf(state, 'miss'), state.settings.shelfCount - 1, 'カゴを外したら最後の段から');
+  finishRun(state, 1000);
+  const again = createGame({ difficulty: 'adult', mode: 'two' });
+  startRun(again, 0);
+  updateCheckpoint(again, shelves, 9999);
+  finishRun(again, 1000);
+  startRun(again, 2000);
+  assert.strictEqual(again.checkpoint, 0, '次の人は はた なしから');
+  const normal = createGame({ difficulty: 'normal', mode: 'solo' });
+  startRun(normal, 0);
+  assert.strictEqual(updateCheckpoint(normal, buildShelves(normal.settings, 300), 9999), 0, 'おとな以外は はた なし');
 }
 
 // ---------- 横スライダー → 傾き ----------

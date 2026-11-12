@@ -6,22 +6,34 @@
 // v0.17.5: むずかしいは「段ごとに違うしかけ」のコースに（穴は「落ちるだけ」で面白くなかったので廃止）:
 //   でこぼこ → やま → ゲート（上がり下がりする棒。下がった時だけ通れる）→ シーソー板（まんなかを越えると傾く）
 //   → だんさ（一方通行の段差）→ くぼみ（止まってしまう。傾けて登る）
+// v0.17.8: 「おとな」を追加。盤の高さ2倍（段12本）・切れ目と返しが小さい・11段にしかけ（新しく ベルト＝押し戻す床、
+//   ゲート2つ＝互い違いに開く）。ゴールは床ではなく「左右に動くカゴ」に入れたときだけ。床に落ちたら最後の段からやり直し。
+//   コースが長いので7段目に「はた」（なかま地点）。横から落ちたら はた から再開
 
 export const DIFFICULTY = {
   // walls: 左右の壁 / wave: 波の振幅(px) / gapRatio: 切れ目の広さ / maxTiltDeg: 最大の傾き
   // stopper: 壁がないときの段の外側の端の小さな返し(px)。ゆっくりなら止まるが、勢いがつくと乗り越えて落ちる
   // features: 段ごとのしかけ（上から順）。無い段は平らな段（wave の波波だけ）
-  easy: { shelfCount: 4, wave: 0, gapRatio: 0.26, maxTiltDeg: 20, walls: true, stopper: 0, features: [] },
-  normal: { shelfCount: 5, wave: 1.5, gapRatio: 0.22, maxTiltDeg: 24, walls: false, stopper: 10, features: [] },
+  // boardHeight: 盤の高さ / checkpoints: はた（なかま地点）の段 / basket: ゴールのカゴ（null=床に落ちたらゴール）
+  easy: { shelfCount: 4, boardHeight: 400, wave: 0, gapRatio: 0.26, maxTiltDeg: 20, walls: true, stopper: 0, features: [], checkpoints: [], basket: null },
+  normal: { shelfCount: 5, boardHeight: 400, wave: 1.5, gapRatio: 0.22, maxTiltDeg: 24, walls: false, stopper: 10, features: [], checkpoints: [], basket: null },
   hard: {
-    shelfCount: 6, wave: 0, gapRatio: 0.2, maxTiltDeg: 26, walls: false, stopper: 7,
-    features: ['bumps', 'hill', 'gate', 'seesaw', 'step', 'valley'],
+    shelfCount: 6, boardHeight: 400, wave: 0, gapRatio: 0.2, maxTiltDeg: 26, walls: false, stopper: 7,
+    features: ['bumps', 'hill', 'gate', 'seesaw', 'step', 'valley'], checkpoints: [], basket: null,
+  },
+  adult: {
+    shelfCount: 12, boardHeight: 800, wave: 1.5, gapRatio: 0.18, maxTiltDeg: 26, walls: false, stopper: 6,
+    // 最後の段はしかけなし（カゴのタイミングに集中できるように）
+    features: ['bumps', 'gate', 'hill', 'conveyor', 'seesaw', 'step', 'gate2', 'valley', 'conveyor', 'seesaw', 'gate2', null],
+    checkpoints: [6],
+    // innerWidth: カゴの内側の幅（ボールの直径は24）/ periodMs: 1往復の時間 / wallHeight: カゴのふちの高さ
+    basket: { innerWidth: 50, periodMs: 3000, wallHeight: 34 },
   },
 };
 
 export const WAVE_LENGTH = 70; // 波波の波長(px)
 export const SHELF_TOP = 80;   // いちばん上の段のy（盤座標）
-export const SHELF_BOTTOM = 330;
+export const SHELF_BOTTOM_MARGIN = 70; // いちばん下の段から盤の下までの高さ（うけ皿・カゴの場所）
 
 // しかけの寸法（盤座標px）。ボールは半径12・最大の傾き26°なので、坂の最大角度はどれも26°より小さくしてある
 export const FEATURE = {
@@ -30,7 +42,11 @@ export const FEATURE = {
   valley: { depth: 6, halfWidth: 45 },    // くぼみ: まんなかのへこみ（最大の坂 約12°）
   step: { height: 14 },                   // だんさ: 入口側の半分が高い。降りたら戻れない
   gate: { width: 8, height: 30, periodMs: 3200, rampMs: 350 }, // ゲート: 棒が段から出たり引っこんだり
+  gate2: { spacing: 76 },                 // ゲート2つ: 間をあけて2本。互い違い（半周期ずらし）に開くので間で待つ
   seesaw: { halfLength: 40, maxAngleDeg: 10, clearance: 3 },  // シーソー板: まんなかを支点に傾く
+  // ベルト: 段のまんなかの床がボールを押し戻す（進む向きと逆）。pushDeg は「この角度の坂と同じ強さ」。
+  // 最大の傾き(26°)より十分小さいので、しっかり傾ければ越えられる
+  conveyor: { halfWidth: 48, pushDeg: 9 },
 };
 
 // 段の形を作る: 偶数段は右に切れ目（左から右へ転がす）、奇数段は左に切れ目。
@@ -38,7 +54,8 @@ export const FEATURE = {
 export function buildShelves(settings, width) {
   const shelves = [];
   const step = 12; // 細かく区切るほど板のつなぎ目の段差が小さくなり、ボールが引っかからない
-  const spacing = (SHELF_BOTTOM - SHELF_TOP) / (settings.shelfCount - 1);
+  const shelfBottom = settings.boardHeight - SHELF_BOTTOM_MARGIN;
+  const spacing = (shelfBottom - SHELF_TOP) / (settings.shelfCount - 1);
   for (let i = 0; i < settings.shelfCount; i++) {
     const baseY = SHELF_TOP + spacing * i;
     const gapSide = i % 2 === 0 ? 'right' : 'left';
@@ -83,11 +100,28 @@ export function buildShelves(settings, width) {
     }
 
     let feature = null;
-    if (type === 'gate') feature = { type, x: centerX, y: baseY, ...FEATURE.gate };
-    else if (type === 'seesaw') feature = { type, x: centerX, y: baseY, dir, ...FEATURE.seesaw };
+    if (type === 'gate') feature = { type, x: centerX, y: baseY, ...FEATURE.gate, gates: [{ x: centerX, phaseMs: 0 }] };
+    else if (type === 'gate2') {
+      // 入口側のゲートが先に開き、出口側は半周期おくれて開く
+      const half = FEATURE.gate2.spacing / 2;
+      feature = {
+        type, x: centerX, y: baseY, ...FEATURE.gate,
+        gates: [
+          { x: centerX - dir * half, phaseMs: 0 },
+          { x: centerX + dir * half, phaseMs: FEATURE.gate.periodMs / 2 },
+        ],
+      };
+    } else if (type === 'conveyor') feature = { type, x: centerX, y: baseY, dir, ...FEATURE.conveyor };
+    else if (type === 'seesaw') {
+      // 支点は段の面より少し高い: 倒れて下がった側の端が、となりの段の面とぴったり同じ高さになる
+      // （支点が段と同じ高さだと、下がった端が段より低くなり、ゆっくり来たボールが段差を登れず止まるため。v0.17.8）
+      const pivotY = baseY - FEATURE.seesaw.halfLength * Math.sin((FEATURE.seesaw.maxAngleDeg * Math.PI) / 180);
+      feature = { type, x: centerX, y: baseY, pivotY, dir, ...FEATURE.seesaw };
+    }
     else if (type) feature = { type, x: centerX, y: baseY };
 
-    shelves.push({ points: segments.flat(), segments, gapSide, baseY, stopper, feature });
+    const checkpoint = (settings.checkpoints ?? []).includes(i);
+    shelves.push({ points: segments.flat(), segments, gapSide, baseY, stopper, feature, checkpoint });
   }
   return shelves;
 }
@@ -108,6 +142,9 @@ export function shelfProfile(type, settings, px, centerX, dir) {
       if (Math.abs(d) >= halfWidth) return 0;
       return (depth / 2) * (1 + Math.cos((d / halfWidth) * Math.PI));
     }
+    case 'conveyor':
+      // ベルトの段は平ら（波の上り坂と押し戻しが重なると、しっかり傾けても谷から出られなくなるため）
+      return 0;
     case 'step':
       // 入口側（進む向きの手前）が高い
       return d * dir < 0 ? -FEATURE.step.height : 0;
@@ -117,9 +154,10 @@ export function shelfProfile(type, settings, px, centerX, dir) {
 }
 
 // ゲートの開き具合（0=棒が出ていて通れない, 1=引っこんでいて通れる）。周期の前半で開き、後半で閉じる
-export function gateOpenRatio(tMs) {
+export function gateOpenRatio(tMs, phaseMs = 0) {
   const { periodMs, rampMs } = FEATURE.gate;
-  const p = ((tMs % periodMs) + periodMs) % periodMs;
+  const t = tMs - phaseMs;
+  const p = ((t % periodMs) + periodMs) % periodMs;
   const half = periodMs / 2;
   if (p < rampMs) return p / rampMs;
   if (p < half) return 1;
@@ -137,6 +175,37 @@ export function seesawTargetAngle(feature, ballX, ballY) {
   return (past ? 1 : -1) * feature.dir * max;
 }
 
+// ベルトの上でボールを押し戻す加速度（重力と同じ単位）。ボールがベルトの上にいなければ0。
+// 進む向きと逆に押す。ボールの位置だけで決まる純関数（ui.jsは毎フレームこれを力にして足す）
+export function conveyorPush(feature, ballX, ballY, gravity, ballR) {
+  if (!feature || feature.type !== 'conveyor') return 0;
+  const onBelt = Math.abs(ballX - feature.x) <= feature.halfWidth && ballY > feature.y - 6 - ballR - 6 && ballY < feature.y;
+  if (!onBelt) return 0;
+  return -feature.dir * gravity * Math.sin((feature.pushDeg * Math.PI) / 180);
+}
+
+// カゴの中心のx（盤座標）。左右に sin で往復する（はしで少しゆっくりになるので、ねらう場所を選べる）
+export function basketX(tMs, basket, boardWidth) {
+  const margin = basket.innerWidth / 2 + 10;
+  const center = boardWidth / 2;
+  const amp = center - margin;
+  return center + amp * Math.sin((tMs / basket.periodMs) * Math.PI * 2);
+}
+
+// ボールのyから、はた（なかま地点）を通ったかを更新する。通った はた の段の番号を返す
+export function updateCheckpoint(state, shelves, ballY) {
+  for (const idx of state.settings.checkpoints ?? []) {
+    if (idx > state.checkpoint && shelves[idx] && ballY > shelves[idx].baseY - 40) state.checkpoint = idx;
+  }
+  return state.checkpoint;
+}
+
+// やり直す段: 横から落ちた → はた（なければ いちばん上）、カゴを外して床に落ちた → 最後の段
+export function respawnShelf(state, reason) {
+  if (reason === 'miss') return state.settings.shelfCount - 1;
+  return state.checkpoint;
+}
+
 // 横スライダー（0=いちばん左, 0.5=まんなか, 1=いちばん右）から盤の傾き(rad)を決める。
 // つまみを右へ→盤は右さがり（正の角度=時計回り）。まんなかなら水平。
 // 指の動いた向きと、ボールの転がる向きが同じになる（4歳でも直感で分かる）
@@ -152,7 +221,8 @@ export function createGame({ difficulty = 'easy', mode = 'solo' } = {}) {
     running: false,
     startedAt: null,
     elapsedMs: null,     // 今のラウンドの結果（ゴール時に確定）
-    falls: 0,            // 今のラウンドで落ちた回数
+    falls: 0,            // 今のラウンドで落ちた回数（おとなはカゴを外して床に落ちたのも数える）
+    checkpoint: 0,       // 通った はた の段（おとな）。0=いちばん上
     currentPlayer: 0,
     results: [null, null], // こうたい対戦の各プレイヤーのタイム(ms)
     fallsBy: [0, 0],
@@ -167,6 +237,7 @@ export function startRun(state, now) {
   state.startedAt = now;
   state.elapsedMs = null;
   state.falls = 0;
+  state.checkpoint = 0;
   return true;
 }
 

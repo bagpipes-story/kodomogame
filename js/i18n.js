@@ -171,6 +171,11 @@ export const text = {
   rcHint: 'バーを よこに うごかそう',
   rcFall: 'おっとっと！ うえから もういちど',
   rcFallPrefix: 'おちた: ',
+  // おとな（v0.17.8）: カゴのゴール・はた
+  rcMiss: 'おしい！ カゴを ねらって もういちど',
+  rcFallFlag: 'おっとっと！ はたから もういちど',
+  rcFlag: 'はたを とおったよ！',
+  rcBasketHint: 'うごく カゴに いれよう！',
   rcTimeLabel: 'タイム',
   rcSecSuffix: 'びょう',
   rcGoalSuffix: 'びょうで ゴール！',
