@@ -980,32 +980,43 @@ export const ANIMAL_PIECES = {
     },
   },
 
-  // ハムスター: まんまる・ほおぶくろ・ひまわりの たね（ころがる）
+  // ハムスター: おすわりした ぜんしん（v0.17.22で かおだけ→からだつきに）。ほおぶくろ・しろい おなか・
+  // りょうてで ひまわりの たね・ピンクの あし。おしりの下は平らで すわれるが、あたまは まるいので上に積みにくい
   hamster: {
     color: '#f5c28a',
     line: '#c98a4e',
     friction: 0.8,
-    parts: [{ circle: [0, 0, 20] }],
+    parts: [
+      { points: flatBottom(ellipse(23, 18, { cy: 4, n: 28 }), 20) }, // からだ（ずんぐり）
+      { points: ellipse(19, 14, { cy: -13, n: 26 }) },               // あたま
+    ],
     draw(ctx, piece) {
-      ovalLine(ctx, -12, -16, 5, 5, '#f5c28a', '#c98a4e', 1.6); // みみ
-      ovalLine(ctx, 12, -16, 5, 5, '#f5c28a', '#c98a4e', 1.6);
-      dot(ctx, -12, -16, 2.6, '#ffc4cf');
-      dot(ctx, 12, -16, 2.6, '#ffc4cf');
+      ovalLine(ctx, -12, -24, 5.5, 5, '#f5c28a', '#c98a4e', 1.6); // みみ
+      ovalLine(ctx, 12, -24, 5.5, 5, '#f5c28a', '#c98a4e', 1.6);
+      dot(ctx, -12, -24, 3, '#ffc4cf');
+      dot(ctx, 12, -24, 3, '#ffc4cf');
       drawSilhouette(ctx, piece);
-      clipPart(ctx, piece.parts[0], () => oval(ctx, 0, 9, 15, 12, '#fff8ee'));
-      oval(ctx, -11, 2, 6, 5, '#ffe6cc'); // ほおぶくろ
-      oval(ctx, 11, 2, 6, 5, '#ffe6cc');
-      eye(ctx, -7, -5, 2.6);
-      eye(ctx, 7, -5, 2.6);
-      dot(ctx, 0, -1, 1.4, '#ff8fa0');
-      mouthW(ctx, 0, 0.6, 1.3);
-      cheek(ctx, -11, 2, 2.6, 1.7);
-      cheek(ctx, 11, 2, 2.6, 1.7);
-      oval(ctx, 0, 9, 3, 5, '#4a3b33'); // ひまわりの たね
-      line(ctx, [[0, 5.5], [0, 12.5]], '#ffffff', 1);
-      dot(ctx, -3.6, 9, 2, '#ffb3c0'); // て
-      dot(ctx, 3.6, 9, 2, '#ffb3c0');
-      shine(ctx, -6, -14, 5, 2.4);
+      clipPart(ctx, piece.parts[0], () => oval(ctx, 0, 12, 15, 13, '#fff8ee')); // しろい おなか
+      clipPart(ctx, piece.parts[1], () => oval(ctx, 0, -3, 14, 7.5, '#fff8ee')); // くちの まわり
+      oval(ctx, -12, -6, 7, 5.5, '#ffe6cc'); // ほおぶくろ（ぷっくり）
+      oval(ctx, 12, -6, 7, 5.5, '#ffe6cc');
+      eye(ctx, -7.5, -14, 2.8);
+      eye(ctx, 7.5, -14, 2.8);
+      oval(ctx, 0, -9.5, 1.8, 1.3, '#ff8fa0'); // はな
+      mouthW(ctx, 0, -7.6, 1.4);
+      cheek(ctx, -12.5, -7, 3, 2);
+      cheek(ctx, 12.5, -7, 3, 2);
+      ovalLine(ctx, -10.5, 4, 5.5, 3.4, '#f5c28a', '#c98a4e', 1.4, 0.55); // うで
+      ovalLine(ctx, 10.5, 4, 5.5, 3.4, '#f5c28a', '#c98a4e', 1.4, -0.55);
+      ovalLine(ctx, 0, 6, 3.4, 5.6, '#4a3b33', '#2f2520', 1); // ひまわりの たね
+      line(ctx, [[0, 2], [0, 10]], '#ffffff', 1);
+      ovalLine(ctx, -4.6, 6.5, 2.6, 2.3, '#ffb3c0', '#d98c99', 1.2); // て
+      ovalLine(ctx, 4.6, 6.5, 2.6, 2.3, '#ffb3c0', '#d98c99', 1.2);
+      for (const s of [-1, 1]) { // あし（あしうらと ゆび）
+        ovalLine(ctx, s * 11, 17.5, 5.5, 2.8, '#ffb3c0', '#d98c99', 1.3);
+        for (const dx of [-2.6, 0, 2.6]) dot(ctx, s * 11 + dx, 16.2, 0.9, '#ff8fa0');
+      }
+      shine(ctx, -8, -21, 5, 2.4);
     },
   },
 
