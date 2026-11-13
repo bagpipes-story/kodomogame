@@ -16,7 +16,12 @@ import {
   collapse,
   FIELD,
   fieldOf,
+  BLOCK_SETS,
+  shapesFor,
 } from '../js/games/balance/game.js';
+import { SEA_PIECES } from '../js/games/balance/sea.js';
+import { isConvex, boundsOf, buildPieceBody } from '../js/games/balance/kit.js';
+import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
 
 function makeRng(values) {
@@ -163,6 +168,100 @@ function makeRng(values) {
   confirmPlaced(state2); // あお→あか
   dropStarted(state2);
   assert.strictEqual(collapse(state2).loser, 0, '崩したあかの負け');
+}
+
+// ---------- うみの いきもの つみき（v0.17.12） ----------
+
+{
+  // 「かたち」はいままでどおり（つみき未指定・知らない値もかたち）
+  assert.deepStrictEqual(createGame({ difficulty: 'hard' }).shapes, DIFFICULTY.hard);
+  assert.deepStrictEqual(shapesFor('shape', 'adult'), DIFFICULTY.adult);
+  assert.deepStrictEqual(shapesFor('???', 'easy'), DIFFICULTY.easy);
+  assert.deepStrictEqual(shapesFor('sea', '???'), BLOCK_SETS.sea.easy, '知らない難易度は かんたん');
+
+  const sea = BLOCK_SETS.sea;
+  assert.deepStrictEqual(createGame({ difficulty: 'normal', blocks: 'sea' }).shapes, sea.normal);
+  assert.strictEqual(sea.adult.length, 14, 'おとなは14しゅ ぜんぶ');
+  assert.strictEqual(Object.keys(SEA_PIECES).length, 14);
+  // 難易度が上がるほど顔ぶれが増える（前の難易度の子はぜんぶ残る）
+  const order = ['easy', 'normal', 'hard', 'adult'];
+  for (let i = 1; i < order.length; i++) {
+    const prev = sea[order[i - 1]];
+    const cur = sea[order[i]];
+    assert.ok(cur.length > prev.length, `${order[i]} は ${order[i - 1]} より多い`);
+    for (const id of prev) assert.ok(cur.includes(id), `${order[i]} にも ${id}`);
+  }
+
+  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる
+  const kana = /^[ぁ-んァ-ヶー]+$/;
+  for (const [id, piece] of Object.entries(SEA_PIECES)) {
+    assert.ok(sea.adult.includes(id), `${id} がどこかの難易度で出る`);
+    assert.ok(kana.test(text.sea[id]), `${id} の名前はひらがな・カタカナのみ: ${text.sea[id]}`);
+    assert.ok(piece.color && piece.line && typeof piece.draw === 'function');
+    for (const part of piece.parts) {
+      if (part.circle) {
+        assert.ok(part.circle[2] > 0);
+        continue;
+      }
+      // 当たり判定は凸の部品だけ（へこんだ部品はMatterで正しくぶつからない）
+      assert.ok(isConvex(part.points), `${id} の部品が凸: ${JSON.stringify(part.points)}`);
+      for (let i = 0; i < part.points.length; i++) {
+        const a = part.points[i];
+        const b = part.points[(i + 1) % part.points.length];
+        assert.ok(Math.hypot(a.x - b.x, a.y - b.y) > 0.4, `${id} に長さ0の辺がない`);
+      }
+    }
+    // 大きさ: いままでの かたち（46〜78px）と同じくらい。落とす前の表示（上から52px）に収まる
+    const box = boundsOf(piece);
+    assert.ok(box.w >= 36 && box.w <= 100, `${id} の横はば ${box.w}`);
+    assert.ok(box.h >= 30 && box.h <= 80, `${id} の高さ ${box.h}`);
+    assert.ok(-box.minY <= 45, `${id} が上にはみ出さない`);
+
+    // 絵を描いても止まらない（ctxのにせもので全部の命令を受けとめる）
+    const calls = [];
+    const fakeCtx = new Proxy({}, {
+      get: (_, key) => (...args) => calls.push([key, args]),
+      set: () => true,
+    });
+    piece.draw(fakeCtx, piece);
+    assert.ok(calls.length > 10, `${id} の絵が描かれる`);
+    for (const [, args] of calls) {
+      for (const v of args) if (typeof v === 'number') assert.ok(Number.isFinite(v), `${id} の絵の数字がこわれていない`);
+    }
+  }
+  // 「かたち」の名前と いきものの名前が i18n にある（メニュー文言も）
+  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea']) {
+    assert.ok(kana.test(text[key].replace(/ /g, '')), `${key} はひらがな・カタカナのみ`);
+  }
+}
+
+// ---------- 物理: どの いきものも、まんなかに落とせば 床の上で止まる（v0.17.12） ----------
+// （ui.js と同じ重力・反復回数・床の大きさ。ころがり続けて勝手に落ちる子がいないこと）
+
+{
+  const code = readFileSync(new URL('../lib/matter.min.js', import.meta.url), 'utf8');
+  const holder = { exports: {} };
+  new Function('module', 'exports', code)(holder, holder.exports);
+  const M = holder.exports;
+
+  for (const [id, piece] of Object.entries(SEA_PIECES)) {
+    const engine = M.Engine.create({ enableSleeping: true });
+    engine.gravity.y = 0.75;
+    engine.positionIterations = 12;
+    engine.velocityIterations = 8;
+    const W = 343;
+    const H = 430;
+    const groundY = H - 26;
+    const platform = M.Bodies.rectangle(W / 2, groundY, Math.round(W * 0.54), 18, { isStatic: true, friction: 1 });
+    const { body, offset } = buildPieceBody(M, piece, W / 2, 52);
+    assert.ok(Number.isFinite(offset.x) && Number.isFinite(offset.y));
+    M.Composite.add(engine.world, [platform, body]);
+    for (let f = 0; f < 600; f++) M.Engine.update(engine, 1000 / 60);
+    const drift = Math.abs(body.position.x - W / 2);
+    assert.ok(body.position.y < groundY, `${id} が床の上にいる（y=${body.position.y.toFixed(0)}）`);
+    assert.ok(drift < 30, `${id} が ころがって行かない（ずれ ${drift.toFixed(0)}px）`);
+    assert.ok(body.isSleeping, `${id} が10びょう以内に止まる`);
+  }
 }
 
 console.log('balance.test.js: すべてのテストに合格');

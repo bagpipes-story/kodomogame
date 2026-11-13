@@ -30,6 +30,25 @@ export const DIFFICULTY = {
   adult: ['square', 'rect', 'circle', 'triangle', 'lshape', 'star', 'diamond', 'hexagon', 'trapezoid', 'semicircle'],
 };
 
+// つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
+// うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
+// 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
+// 形と絵は sea.js（うみ）にある
+export const BLOCK_SETS = {
+  shape: DIFFICULTY,
+  sea: {
+    easy: ['whale', 'turtle', 'crab', 'seal'],
+    normal: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin'],
+    hard: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin', 'octopus', 'jellyfish', 'starfish', 'squid'],
+    adult: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin', 'octopus', 'jellyfish', 'starfish', 'squid', 'shell', 'sunfish'],
+  },
+};
+
+export function shapesFor(blocks, difficulty) {
+  const set = BLOCK_SETS[blocks] ?? BLOCK_SETS.shape;
+  return set[difficulty] ?? set.easy;
+}
+
 // 床（土台）の広さと画面の縮尺。おとなは床の幅を2倍にし、
 // 盤ごと0.7倍に縮めて画面に収める（ブロックの大きさは他の難易度と同じ。広い床にたくさん並べられる）
 export const FIELD = {
@@ -43,10 +62,10 @@ export function fieldOf(difficulty) {
   return FIELD[difficulty] ?? FIELD.easy;
 }
 
-export function createGame({ difficulty = 'easy', mode = 'solo', rng = Math.random } = {}) {
+export function createGame({ difficulty = 'easy', mode = 'solo', blocks = 'shape', rng = Math.random } = {}) {
   return {
     mode,
-    shapes: DIFFICULTY[difficulty] ?? DIFFICULTY.easy,
+    shapes: shapesFor(blocks, difficulty),
     rng,
     placed: 0,          // 積めた個数（=スコア）
     currentPlayer: 0,   // こうたい対戦の手番（あか=0/あお=1）

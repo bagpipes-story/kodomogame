@@ -1,0 +1,288 @@
+// kit.js — いきもの つみき（うみ・どうぶつ）の共通部品（v0.17.12）
+// ①当たり判定の形（凸の点列）を作る関数 ②かわいい顔・もようを描く道具。
+// DOMには触らない（描く道具は ctx を受け取るだけ）ので、Nodeのテストからも読み込める。
+// 絵は ui.js が最初に1回だけ小さなキャンバスに描いて使い回す（毎フレーム描くと重いため）
+
+const TAU = Math.PI * 2;
+export const INK = '#4a3b33';
+
+const round2 = (v) => Math.round(v * 100) / 100;
+
+// となり同士がほぼ同じ点を消す（長さ0の辺があると当たり判定の計算が壊れる）
+function dedupe(points) {
+  const out = [];
+  for (const p of points) {
+    const q = out[out.length - 1];
+    if (!q || Math.hypot(p.x - q.x, p.y - q.y) > 0.5) out.push({ x: round2(p.x), y: round2(p.y) });
+  }
+  const first = out[0];
+  const last = out[out.length - 1];
+  if (out.length > 1 && Math.hypot(first.x - last.x, first.y - last.y) <= 0.5) out.pop();
+  return out;
+}
+
+// だ円（from〜to を指定すると弧。弧のときは両はしの点も入れる）
+export function ellipse(rx, ry, { n = 20, cx = 0, cy = 0, from = 0, to = TAU } = {}) {
+  const full = Math.abs(to - from) >= TAU - 1e-9;
+  const count = full ? n : n + 1;
+  const points = [];
+  for (let i = 0; i < count; i++) {
+    const a = from + ((to - from) * i) / n;
+    points.push({ x: cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry });
+  }
+  return dedupe(points);
+}
+
+// 角まる四角。上の角(rt)と下の角(rb)を別にできる（上はまるく・下は平らにして積みやすく、などに使う）
+export function blob(w, h, rt, rb, { cx = 0, cy = 0, seg = 4 } = {}) {
+  const corners = [
+    [-w / 2 + rt, -h / 2 + rt, rt, Math.PI],
+    [w / 2 - rt, -h / 2 + rt, rt, Math.PI * 1.5],
+    [w / 2 - rb, h / 2 - rb, rb, 0],
+    [-w / 2 + rb, h / 2 - rb, rb, Math.PI * 0.5],
+  ];
+  const points = [];
+  for (const [x, y, r, start] of corners) {
+    for (let i = 0; i <= seg; i++) {
+      const a = start + ((Math.PI / 2) * i) / seg;
+      points.push({ x: cx + x + Math.cos(a) * r, y: cy + y + Math.sin(a) * r });
+    }
+  }
+  return dedupe(points);
+}
+
+// おなかを平らにする（だ円のままだと とがった1点で着地して、車輪のように ころがり続けるため）
+// 平らにした辺の とちゅうの点は消す（一直線に点が並ぶと、Matterが接地点を かたよって選び、
+// 着地のいきおいで回り出してしまう）
+export function flatBottom(points, y) {
+  const flat = dedupe(points.map((p) => ({ x: p.x, y: Math.min(p.y, y) })));
+  return flat.filter((p, i) => {
+    const a = flat[(i + flat.length - 1) % flat.length];
+    const b = flat[(i + 1) % flat.length];
+    return !(a.y === y && p.y === y && b.y === y);
+  });
+}
+
+export function pts(list) {
+  return list.map(([x, y]) => ({ x, y }));
+}
+
+// ほしがた: へこんだ形は当たり判定にそのまま使えないので、まんなかの五角形＋とがり5つ（凸）に分ける
+export function starPolys(outer, inner) {
+  const top = -Math.PI / 2;
+  const outerPts = [];
+  const innerPts = [];
+  for (let i = 0; i < 5; i++) {
+    const a = top + (i * TAU) / 5;
+    const b = a + Math.PI / 5;
+    outerPts.push({ x: round2(Math.cos(a) * outer), y: round2(Math.sin(a) * outer) });
+    innerPts.push({ x: round2(Math.cos(b) * inner), y: round2(Math.sin(b) * inner) });
+  }
+  const polys = [innerPts];
+  for (let i = 0; i < 5; i++) polys.push([outerPts[i], innerPts[i], innerPts[(i + 4) % 5]]);
+  return polys;
+}
+
+// テスト用: 点列が凸か（どの角でも同じ向きに曲がる）
+export function isConvex(points) {
+  if (points.length < 3) return false;
+  let sign = 0;
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i];
+    const b = points[(i + 1) % points.length];
+    const c = points[(i + 2) % points.length];
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (Math.abs(cross) < 1e-6) continue;
+    const s = Math.sign(cross);
+    if (sign === 0) sign = s;
+    else if (s !== sign) return false;
+  }
+  return sign !== 0;
+}
+
+// 形全体のはこ（スプライトの大きさ・テストの大きさ確認に使う）
+export function boundsOf(piece) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const part of piece.parts) {
+    if (part.circle) {
+      const [x, y, r] = part.circle;
+      minX = Math.min(minX, x - r); maxX = Math.max(maxX, x + r);
+      minY = Math.min(minY, y - r); maxY = Math.max(maxY, y + r);
+    } else {
+      for (const p of part.points) {
+        minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+        minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+      }
+    }
+  }
+  return { minX, minY, maxX, maxY, w: maxX - minX, h: maxY - minY };
+}
+
+// ---------- 物理ボディを作る（Matterは引数でもらう。ui.js とNodeのテストで同じものを使う） ----------
+
+// 合体ボディの回りにくさ（慣性モーメント）を正しくする。Matterは部品ごとの値を足すだけで
+// 「中心から離れた部品ほど回りにくい」ぶん（平行軸の定理）を入れないため、小さすぎて
+// とがった先で ゆれながら すべり出してしまう（v0.17.10）
+export function fixCompoundInertia(M, body) {
+  let inertia = 0;
+  for (const part of body.parts.slice(1)) {
+    const dx = part.position.x - body.position.x;
+    const dy = part.position.y - body.position.y;
+    inertia += part.inertia + part.mass * (dx * dx + dy * dy);
+  }
+  M.Body.setInertia(body, inertia);
+}
+
+// いきもの1ぴきぶんのボディ。凸の部品を合体させる。
+// Matterはボディの位置を「重さの中心」にするので、絵の(0,0)とのずれ（offset）も返す
+export function buildPieceBody(M, piece, x, y) {
+  const options = { friction: piece.friction ?? 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
+  const parts = piece.parts.map((part) => {
+    if (part.circle) {
+      const [cx, cy, r] = part.circle;
+      return M.Bodies.circle(x + cx, y + cy, r, options);
+    }
+    // 点の並びの向きをMatterの決まりにそろえる。逆だと接触点の計算がおかしくなる
+    const points = M.Vertices.clockwiseSort(part.points.map((p) => ({ x: p.x, y: p.y })));
+    const c = M.Vertices.centre(points);
+    return M.Body.create({
+      ...options,
+      position: { x: x + c.x, y: y + c.y },
+      vertices: points.map((p) => ({ x: p.x - c.x, y: p.y - c.y })),
+    });
+  });
+  let body = parts[0];
+  if (parts.length > 1) {
+    body = M.Body.create({ ...options, parts });
+    fixCompoundInertia(M, body);
+  }
+  return { body, offset: { x: x - body.position.x, y: y - body.position.y } };
+}
+
+// ---------- 描く道具（ctxだけ使う） ----------
+
+function tracePart(ctx, part) {
+  if (part.circle) {
+    const [x, y, r] = part.circle;
+    ctx.moveTo(x + r, y);
+    ctx.arc(x, y, r, 0, TAU);
+    return;
+  }
+  const p = part.points;
+  ctx.moveTo(p[0].x, p[0].y);
+  for (let i = 1; i < p.length; i++) ctx.lineTo(p[i].x, p[i].y);
+  ctx.closePath();
+}
+
+// からだ全体: 先に全部の線を太めに引いてから全部ぬる → 部品のつなぎ目の線が消えて、1つの形に見える
+export function drawSilhouette(ctx, piece) {
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = piece.line;
+  ctx.lineWidth = 3;
+  for (const part of piece.parts) {
+    ctx.beginPath();
+    tracePart(ctx, part);
+    ctx.stroke();
+  }
+  for (const part of piece.parts) {
+    ctx.beginPath();
+    tracePart(ctx, part);
+    ctx.fillStyle = part.fill ?? piece.color;
+    ctx.fill();
+  }
+}
+
+// 部品の外がわの線をもう一度引く（こうらと あたま のように、色のちがう部品のさかいめを見せたいとき）
+export function strokePart(ctx, part, color, width = 2) {
+  ctx.beginPath();
+  tracePart(ctx, part);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+// 部品の中だけに描く（おなかの色・もようが形からはみ出さないように）
+export function clipPart(ctx, part, fn) {
+  ctx.save();
+  ctx.beginPath();
+  tracePart(ctx, part);
+  ctx.clip();
+  fn();
+  ctx.restore();
+}
+
+// 形をくりぬく（かにのハサミの切れこみ・たこの あしの すきま）
+export function cut(ctx, fn) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  fn();
+  ctx.restore();
+}
+
+export function oval(ctx, x, y, rx, ry, color, rotation = 0) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rotation, 0, TAU);
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+export function dot(ctx, x, y, r, color) {
+  oval(ctx, x, y, r, r, color);
+}
+
+export function poly(ctx, list, color) {
+  ctx.beginPath();
+  ctx.moveTo(list[0][0], list[0][1]);
+  for (let i = 1; i < list.length; i++) ctx.lineTo(list[i][0], list[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+export function line(ctx, list, color, width = 2) {
+  ctx.beginPath();
+  ctx.moveTo(list[0][0], list[0][1]);
+  for (let i = 1; i < list.length; i++) ctx.lineTo(list[i][0], list[i][1]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+// くろめ＋白いひかり（ひかりがあると ぐっと かわいく見える）
+export function eye(ctx, x, y, r = 3.2) {
+  dot(ctx, x, y, r, INK);
+  dot(ctx, x - r * 0.35, y - r * 0.4, r * 0.4, '#ffffff');
+}
+
+export function cheek(ctx, x, y, rx = 4.2, ry = 2.8) {
+  oval(ctx, x, y, rx, ry, 'rgba(255, 120, 145, 0.45)');
+}
+
+export function smile(ctx, x, y, w = 3.5) {
+  ctx.beginPath();
+  ctx.arc(x, y - w * 0.5, w, Math.PI * 0.2, Math.PI * 0.8);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+// 「お」の口（ふぐ・たこ など）
+export function pout(ctx, x, y, r = 2.2) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// つやの白いひかり
+export function shine(ctx, x, y, rx = 5, ry = 3, rotation = -0.4) {
+  oval(ctx, x, y, rx, ry, 'rgba(255, 255, 255, 0.55)', rotation);
+}

@@ -1,6 +1,7 @@
 // ui.js — バランスゲームの描画・入力（v0.8）
 // 物理はMatter.js（lib/matter.min.jsをローカル同梱・グローバルMatter）、描画はCanvas。
-// 性能規定（仕様§4.5）: ブロック上限30・sleeping有効・描画はrAFループのみ
+// 性能規定（仕様§4.5）: 動くブロックは30こまで・sleeping有効・描画はrAFループのみ
+// いきもの つみき（v0.17.12）の絵は しゅるいごとに1回だけ描いて、毎フレームは貼るだけ
 // （ループ内でDOMは触らない。スコア等のDOM更新はイベント時だけ）。?debugでfps表示。
 
 import {
@@ -15,6 +16,8 @@ import {
   SHAPES,
   fieldOf,
 } from './game.js';
+import { SEA_PIECES } from './sea.js';
+import { boundsOf, buildPieceBody, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playFall, playCrash, playWin } from '../../sound.js';
@@ -46,6 +49,12 @@ const LABEL_BREAK = { hexagon: 4 }; // ろっかく／けい
 const LABEL_FONT = 12;
 const LABEL_FONT_MIN = 8;
 
+// いきもの つみき（v0.17.12）: しゅるい → 形と絵の定義・名前
+const PIECE_SETS = {
+  sea: { pieces: SEA_PIECES, names: text.sea },
+};
+const SPRITE_PAD = 8; // 絵のまわりの よゆう（太い線・とげ・あし が はみ出すぶん）
+
 const SETTLE_FRAMES = 25;    // 静止とみなす連続フレーム数
 const SETTLE_TIMEOUT_MS = 5000;
 const CRASH_SHOW_MS = 1200;  // 崩れてから結果画面までの時間（星マーカー表示）
@@ -76,6 +85,10 @@ export function mount(root, config, { onExit }) {
   let crashing = false;
   let platform = null;
   let placedBodies = [];     // 積めた順のボディ（古いものから固定していく）
+  let namePill = null;       // いきもの つみき: 次に落とす子の名前（{label, width}。幅は1回だけ測る）
+
+  const pieceSet = PIECE_SETS[config.blocks] ?? null; // null = いままでの「かたち」
+  const spriteCache = new Map(); // いきもの → 1回だけ描いた絵（キャンバス）
 
   // fps計測（?debugのとき描画）
   let frameCount = 0;
@@ -165,14 +178,9 @@ export function mount(root, config, { onExit }) {
   // 合体ボディの回りにくさ（慣性モーメント）を正しくする。Matterは部品ごとの値を足すだけで
   // 「中心から離れた部品ほど回りにくい」ぶん（平行軸の定理）を入れないため、小さすぎて
   // ほしが とがった先で ゆれながら すべり出していた。setPositionで重心へ動かしたあとに呼ぶ
+  // （計算は kit.js に移した。いきもの つみき と共通）
   function fixCompoundInertia(body) {
-    let inertia = 0;
-    for (const part of body.parts.slice(1)) {
-      const dx = part.position.x - body.position.x;
-      const dy = part.position.y - body.position.y;
-      inertia += part.inertia + part.mass * (dx * dx + dy * dy);
-    }
-    M.Body.setInertia(body, inertia);
+    fixInertia(M, body);
   }
 
   function polar(count, radius, startAngle) {
@@ -219,7 +227,38 @@ export function mount(root, config, { onExit }) {
     return { lines, fontSize };
   }
 
+  // いきものの絵を小さなキャンバスに1回だけ描く。毎フレームは drawImage で貼るだけにして軽くする
+  // （顔・もようを毎フレーム線で描くと、ブロックが増えたときに重くなるため）
+  function spriteOf(id, piece) {
+    let sprite = spriteCache.get(id);
+    if (sprite) return sprite;
+    const box = boundsOf(piece);
+    const w = box.w + SPRITE_PAD * 2;
+    const h = box.h + SPRITE_PAD * 2;
+    const ratio = dpr * viewScale; // 画面に出る大きさと同じ細かさで描く（ぼやけない・むだに大きくしない）
+    const cvs = document.createElement('canvas');
+    cvs.width = Math.ceil(w * ratio);
+    cvs.height = Math.ceil(h * ratio);
+    const g = cvs.getContext('2d');
+    g.scale(ratio, ratio);
+    g.translate(SPRITE_PAD - box.minX, SPRITE_PAD - box.minY);
+    piece.draw(g, piece);
+    sprite = { canvas: cvs, x: box.minX - SPRITE_PAD, y: box.minY - SPRITE_PAD, w, h };
+    spriteCache.set(id, sprite);
+    return sprite;
+  }
+
+  // いきもの つみき: 形は kit.js で作る（Nodeのテストと同じもの）。
+  // offset = 絵の(0,0)と重さの中心のずれ。描くときに足して絵と当たり判定をそろえる
+  function makePieceBody(id, piece, x, y) {
+    const { body, offset } = buildPieceBody(M, piece, x, y);
+    body.plugin.kgb = { shape: id, sprite: spriteOf(id, piece), offset };
+    return body;
+  }
+
   function makeBody(shape, x, y) {
+    const piece = pieceSet?.pieces[shape];
+    if (piece) return makePieceBody(shape, piece, x, y);
     const options = { friction: 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
     let body;
     let outline = null;
@@ -277,6 +316,15 @@ export function mount(root, config, { onExit }) {
 
   function drawBody(body) {
     const info = body.plugin.kgb;
+    if (info?.sprite) {
+      const { sprite, offset } = info;
+      ctx.save();
+      ctx.translate(body.position.x, body.position.y);
+      ctx.rotate(body.angle);
+      ctx.drawImage(sprite.canvas, offset.x + sprite.x, offset.y + sprite.y, sprite.w, sprite.h);
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = info ? info.color : '#b98d6e';
     if (info?.outline) {
       ctx.save();
@@ -376,6 +424,26 @@ export function mount(root, config, { onExit }) {
     }
     ctx.restore();
 
+    // いきもの つみき: 次の子の名前を右上に（ことばの知育。からだに字を書くと顔が隠れるので外に出す）
+    if (aiming && namePill) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const pillW = namePill.width + 24;
+      const pillX = SCREEN_W - pillW - 10;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.beginPath(); // まるい はしの 名ふだ（roundRect は古いiOSに無いので arc で描く）
+      ctx.arc(pillX + 15, 25, 15, Math.PI / 2, Math.PI * 1.5);
+      ctx.arc(pillX + pillW - 15, 25, 15, -Math.PI / 2, Math.PI / 2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#4a3f35';
+      ctx.font = 'bold 17px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(namePill.label, pillX + pillW / 2, 26);
+      ctx.restore();
+    }
+
     if (debugMode) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // fpsは画面の座標で書く
@@ -438,8 +506,18 @@ export function mount(root, config, { onExit }) {
     previewX = W / 2;
     previewAngle = 0;
     previewBody = makeBody(previewShape, previewX, 52); // 表示専用（worldに追加しない）
+    updateNamePill();
     aiming = true;
     updateBanner();
+  }
+
+  function updateNamePill() {
+    if (!pieceSet) return;
+    const label = pieceSet.names[previewShape];
+    ctx.save();
+    ctx.font = 'bold 17px -apple-system, sans-serif';
+    namePill = { label, width: ctx.measureText(label).width };
+    ctx.restore();
   }
 
   function doDrop() {
@@ -679,7 +757,7 @@ export function mount(root, config, { onExit }) {
     platform.plugin.kgb = { shape: 'platform', color: '#8a6a4e', label: '' };
     M.Composite.add(engine.world, platform);
 
-    state = createGame({ difficulty: config.difficulty, mode: config.mode });
+    state = createGame({ difficulty: config.difficulty, mode: config.mode, blocks: config.blocks });
     cameraY = 0;
     placedBodies = [];
     starPos = null;
@@ -747,6 +825,7 @@ export function mount(root, config, { onExit }) {
       setShape(shape) {
         previewShape = shape;
         previewBody = makeBody(shape, previewX, 52);
+        updateNamePill();
       },
       drop: () => doDrop(),
     };
@@ -759,6 +838,7 @@ export function mount(root, config, { onExit }) {
       timers.clear();
       abort.abort();
       if (debugMode) delete window.__kgbBalance;
+      spriteCache.clear();
       if (engine) {
         M.Composite.clear(engine.world, false);
         M.Engine.clear(engine);
