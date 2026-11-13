@@ -4,6 +4,9 @@
 import assert from 'node:assert';
 import {
   BLOCK_LIMIT,
+  BLOCK_MAX,
+  ACTIVE_LIMIT,
+  continueRun,
   SHAPES,
   DIFFICULTY,
   createGame,
@@ -84,6 +87,46 @@ function makeRng(values) {
   assert.strictEqual(last.cleared, true, '30こでクリア');
   assert.strictEqual(state.finished, true);
   assert.strictEqual(confirmPlaced(state).ok, false, '終了後は積めない');
+}
+
+// ---------- 30こクリアのあと「つづけて つむ」（v0.17.11） ----------
+
+{
+  assert.ok(ACTIVE_LIMIT <= 30, '動くブロックは30こまで（性能規定）');
+  const place = (state) => { dropStarted(state); return confirmPlaced(state); };
+  const state = createGame({ mode: 'solo' });
+  assert.strictEqual(continueRun(state), false, 'クリア前は つづけられない（遊んでいる途中）');
+  for (let i = 0; i < BLOCK_LIMIT; i++) place(state);
+  assert.ok(state.finished && state.cleared, '30こでクリアの区切り');
+  assert.strictEqual(continueRun(state), true, 'つづけて つむ');
+  assert.strictEqual(state.finished, false);
+  assert.strictEqual(state.endless, true);
+  assert.strictEqual(continueRun(state), false, '2回目の つづける はない');
+  const r31 = place(state);
+  assert.strictEqual(r31.placed, 31, '31こめから数えつづける');
+  assert.strictEqual(state.finished, false, '31こでは終わらない');
+  const c = collapse(state);
+  assert.strictEqual(c.placed, 31, '崩れたら積めた数が きろく');
+  assert.strictEqual(state.cleared, true, 'クリアした事実は残る');
+
+  // こうたい: 手番は続き、崩した人の負け
+  const two = createGame({ mode: 'two' });
+  for (let i = 0; i < BLOCK_LIMIT; i++) place(two);
+  continueRun(two);
+  assert.strictEqual(two.currentPlayer, 0, '30こ（偶数）のあとは あか の番');
+  place(two);
+  dropStarted(two); // あお が落として崩れた
+  assert.strictEqual(collapse(two).loser, 1);
+
+  // 上限 BLOCK_MAX で終わり
+  const big = createGame({ mode: 'solo' });
+  for (let i = 0; i < BLOCK_LIMIT; i++) place(big);
+  continueRun(big);
+  let last;
+  while (!big.finished) last = place(big);
+  assert.strictEqual(last.placed, BLOCK_MAX);
+  assert.strictEqual(big.maxed, true, `${BLOCK_MAX}こで積みきり`);
+  assert.strictEqual(confirmPlaced(big).ok, false);
 }
 
 // ---------- ひとり: 崩れたら終了（スコアは積めた数のまま） ----------

@@ -5,7 +5,9 @@
 
 import {
   BLOCK_LIMIT,
+  ACTIVE_LIMIT,
   createGame,
+  continueRun,
   nextShape,
   dropStarted,
   confirmPlaced,
@@ -72,6 +74,8 @@ export function mount(root, config, { onExit }) {
   let starPos = null;        // 崩れたときの重心マーカー
   let roundsPlayed = 0;      // 「なんかいもチャレンジ」のほめ用
   let crashing = false;
+  let platform = null;
+  let placedBodies = [];     // 積めた順のボディ（古いものから固定していく）
 
   // fps計測（?debugのとき描画）
   let frameCount = 0;
@@ -144,7 +148,9 @@ export function mount(root, config, { onExit }) {
       banner.textContent = `${names[state.currentPlayer]}${text.turnSuffix}　${state.placed}こ`;
       banner.className = `kgb-turn-banner is-blinking kgb-player-${state.currentPlayer}`;
     } else {
-      banner.textContent = `${text.balanceCount}: ${state.placed}`;
+      banner.textContent = state.endless
+        ? `${text.balanceEndless}　${state.placed}こ`
+        : `${text.balanceCount}: ${state.placed}`;
       banner.className = 'kgb-turn-banner';
     }
   }
@@ -324,7 +330,11 @@ export function mount(root, config, { onExit }) {
     ctx.save();
     ctx.translate(0, -cameraY);
 
-    for (const body of M.Composite.allBodies(engine.world)) drawBody(body);
+    // 画面より下に流れたブロックは描かない（高い塔でも描く数が増えすぎない）
+    const viewBottom = cameraY + H;
+    for (const body of M.Composite.allBodies(engine.world)) {
+      if (body.bounds.min.y <= viewBottom) drawBody(body);
+    }
 
     // 照準中のブロック（半透明）＋落下ガイド線
     if (aiming && previewShape) {
@@ -412,7 +422,8 @@ export function mount(root, config, { onExit }) {
     // カメラ: タワーが高くなったら上へパン（なめらかに追従）
     let towerTop = GROUND_Y;
     for (const body of M.Composite.allBodies(engine.world)) {
-      if (!body.isStatic && body !== dropping) towerTop = Math.min(towerTop, body.position.y);
+      // 固定したブロックも塔の一部（platformだけ除く）
+      if (body !== platform && body !== dropping) towerTop = Math.min(towerTop, body.position.y);
     }
     const target = Math.min(0, towerTop - 170);
     cameraY += (target - cameraY) * 0.08;
@@ -451,17 +462,35 @@ export function mount(root, config, { onExit }) {
   function onSettled() {
     clearTimeout(dropTimeoutId);
     timers.delete(dropTimeoutId);
+    const settled = dropping;
     dropping = null;
     const result = confirmPlaced(state);
     if (!result.ok) return;
+    placedBodies.push(settled);
+    freezeOldBlocks();
     playPlace();
     updateBanner();
-    if (result.cleared) {
-      // 30こ到達クリア（仕様§4.5）
+    if (state.finished) {
+      // 30こ到達クリア（仕様§4.5）／きろく ちょうせん の積みきり。
+      // cleared は「30こ到達ずみ」の印で つづけたあとも true のままなので、終わりは finished で見る
       later(() => finishGame(), 400);
       return;
     }
     spawnPreview();
+  }
+
+  // 性能規定: 動くブロックは ACTIVE_LIMIT こまで。超えたら古い順に、止まっている（スリープ中の）ものを
+  // 固定する。古いブロックは塔の下のほうで上の重みで落ち着いているので、固定しても遊びはほぼ変わらない。
+  // まだ動いているものは固定しない（次に積んだときにまた試す）
+  function freezeOldBlocks() {
+    let active = placedBodies.filter((b) => !b.isStatic).length;
+    for (const body of placedBodies) {
+      if (active <= ACTIVE_LIMIT) break;
+      if (body.isStatic || !body.isSleeping) continue;
+      M.Sleeping.set(body, false); // static にする前に起こしておく（スリープのまま固定すると状態が残る）
+      M.Body.setStatic(body, true);
+      active--;
+    }
   }
 
   function onCollapse() {
@@ -485,9 +514,15 @@ export function mount(root, config, { onExit }) {
   // ---------- 終了処理（保存はここで1回だけ。§9） ----------
 
   function finishGame() {
-    roundsPlayed++;
-    emitPraise('finished_game');
-    if (roundsPlayed >= 3) emitPraise('retried');
+    // 30こクリアの区切りで1プレイとして記録する。つづけて積んだぶんは同じプレイの続き
+    // （スタンプ・プレイ回数を二重に数えない）。保存はどちらの区切りでも1回だけ（§9）
+    const isBreak = state.cleared && !state.endless; // 30こクリア（ここから つづけられる）
+    const continued = state.endless;
+    if (!continued) {
+      roundsPlayed++;
+      emitPraise('finished_game');
+      if (roundsPlayed >= 3) emitPraise('retried');
+    }
 
     let isNewRecord = false;
     let best = state.placed;
@@ -502,13 +537,17 @@ export function mount(root, config, { onExit }) {
       }
       saveStats(stats);
     }
-    recordPlay('balance', { won: false });
+    if (!continued) recordPlay('balance', { won: false });
 
     let title;
     let detail;
     let celebrate;
-    if (state.cleared) {
+    if (isBreak) {
       title = text.balanceClear;
+      detail = isTwoMode ? text.balanceContinueAsk : `${text.bestLabel}: ${best}\n${text.balanceContinueAsk}`;
+      celebrate = true;
+    } else if (state.maxed) {
+      title = `${state.placed}${text.balanceMaxedSuffix}`;
       detail = isTwoMode ? '' : `${text.bestLabel}: ${best}`;
       celebrate = true;
     } else if (isTwoMode) {
@@ -543,11 +582,20 @@ export function mount(root, config, { onExit }) {
     praiseText.textContent = pickPraise();
     praiseBox.append(praiseLabel, praiseText);
 
+    // 30こクリアのときだけ「つづけて つむ」を大きく上に出す（もういちど・ホームは下の段）
+    let continueButton = null;
+    if (isBreak) {
+      continueButton = document.createElement('button');
+      continueButton.type = 'button';
+      continueButton.className = 'kgb-dialog-button kgb-dialog-primary kgb-balance-continue';
+      continueButton.textContent = text.balanceContinue;
+    }
+
     const buttons = document.createElement('div');
     buttons.className = 'kgb-dialog-buttons';
     const replayButton = document.createElement('button');
     replayButton.type = 'button';
-    replayButton.className = 'kgb-dialog-button kgb-dialog-primary';
+    replayButton.className = isBreak ? 'kgb-dialog-button' : 'kgb-dialog-button kgb-dialog-primary';
     replayButton.textContent = text.replay;
     const homeButton = document.createElement('button');
     homeButton.type = 'button';
@@ -555,7 +603,9 @@ export function mount(root, config, { onExit }) {
     homeButton.textContent = text.goHome;
     buttons.append(replayButton, homeButton);
 
-    dialog.append(titleEl, detailEl, praiseBox, buttons);
+    dialog.append(titleEl, detailEl, praiseBox);
+    if (continueButton) dialog.append(continueButton);
+    dialog.append(buttons);
     resultOverlay.replaceChildren(dialog);
     if (celebrate) {
       resultOverlay.prepend(buildConfetti());
@@ -572,6 +622,18 @@ export function mount(root, config, { onExit }) {
       playTap();
       onExit();
     }, { signal: abort.signal });
+    continueButton?.addEventListener('click', () => {
+      playTap();
+      resumeEndless();
+    }, { signal: abort.signal });
+  }
+
+  // 30こクリアのあと、同じ塔のまま きろく ちょうせん を始める
+  function resumeEndless() {
+    if (!continueRun(state)) return;
+    resultOverlay.hidden = true;
+    resultOverlay.replaceChildren(); // ボタンのリスナーごと捨てる
+    spawnPreview();
   }
 
   function buildConfetti() {
@@ -610,7 +672,7 @@ export function mount(root, config, { onExit }) {
     engine.gravity.y = 0.75;          // 落下をゆるめてバウンドを控えめに
     engine.positionIterations = 12;   // 着地の食い込み跳ね返りを抑える
     engine.velocityIterations = 8;
-    const platform = M.Bodies.rectangle(W / 2, GROUND_Y, PLATFORM_W, 18, {
+    platform = M.Bodies.rectangle(W / 2, GROUND_Y, PLATFORM_W, 18, {
       isStatic: true,
       friction: 1,
     });
@@ -619,6 +681,7 @@ export function mount(root, config, { onExit }) {
 
     state = createGame({ difficulty: config.difficulty, mode: config.mode });
     cameraY = 0;
+    placedBodies = [];
     starPos = null;
     dropping = null;
     crashing = false;
@@ -669,6 +732,9 @@ export function mount(root, config, { onExit }) {
     window.__kgbBalance = {
       get placed() { return state.placed; },
       get finished() { return state.finished; },
+      get endless() { return state.endless; },
+      get activeCount() { return placedBodies.filter((b) => !b.isStatic).length; },
+      get frozenCount() { return placedBodies.filter((b) => b.isStatic).length; },
       get preview() { return previewShape; },
       get aiming() { return aiming; },
       get world() { return { W, H, platformW: PLATFORM_W, viewScale }; },

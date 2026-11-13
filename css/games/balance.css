@@ -44,3 +44,10 @@
   font-weight: bold;
   flex: 1.4;
 }
+
+/* 30こクリアのあとの「つづけて つむ」（v0.17.11）: もういちど・ホームの上に1段で大きく */
+.kgb-balance-continue {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+}
