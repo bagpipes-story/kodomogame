@@ -233,17 +233,18 @@ export function mount(root, config, { onExit }) {
     let sprite = spriteCache.get(id);
     if (sprite) return sprite;
     const box = boundsOf(piece);
-    const w = box.w + SPRITE_PAD * 2;
-    const h = box.h + SPRITE_PAD * 2;
+    const pad = piece.pad ?? SPRITE_PAD; // ひげ・とげが長い子は よゆうを広く（v0.17.17）
+    const w = box.w + pad * 2;
+    const h = box.h + pad * 2;
     const ratio = dpr * viewScale; // 画面に出る大きさと同じ細かさで描く（ぼやけない・むだに大きくしない）
     const cvs = document.createElement('canvas');
     cvs.width = Math.ceil(w * ratio);
     cvs.height = Math.ceil(h * ratio);
     const g = cvs.getContext('2d');
     g.scale(ratio, ratio);
-    g.translate(SPRITE_PAD - box.minX, SPRITE_PAD - box.minY);
+    g.translate(pad - box.minX, pad - box.minY);
     piece.draw(g, piece);
-    sprite = { canvas: cvs, x: box.minX - SPRITE_PAD, y: box.minY - SPRITE_PAD, w, h };
+    sprite = { canvas: cvs, x: box.minX - pad, y: box.minY - pad, w, h };
     spriteCache.set(id, sprite);
     return sprite;
   }
