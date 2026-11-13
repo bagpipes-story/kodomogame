@@ -17,7 +17,7 @@ import {
   fieldOf,
 } from './game.js';
 import { SEA_PIECES } from './sea.js';
-import { boundsOf, buildPieceBody, fixCompoundInertia as fixInertia } from './kit.js';
+import { boundsOf, buildPieceBody, dampSpin, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playFall, playCrash, playWin } from '../../sound.js';
@@ -144,7 +144,7 @@ export function mount(root, config, { onExit }) {
   const ctx = canvas.getContext('2d');
 
   // 盤の座標（W×H）は画面より広くできる。おとなは床2倍ぶん広げて、viewScaleで縮めて描く
-  const field = fieldOf(config.difficulty, config.blocks); // うみは床1.2倍（v0.17.13）
+  const field = fieldOf(config.difficulty, config.blocks); // うみは床が長い（おとな以外1.56倍・おとな2.4倍。v0.17.14）
   const viewScale = field.viewScale;
   const W = SCREEN_W / viewScale;
   const H = SCREEN_H / viewScale;
@@ -458,6 +458,8 @@ export function mount(root, config, { onExit }) {
   function loop(now) {
     rafId = requestAnimationFrame(loop);
     M.Engine.update(engine, 1000 / 60);
+    // いきもの つみき: まるい子が ころがり続けないように（v0.17.14。かたちは今までどおり）
+    if (pieceSet) dampSpin(M, M.Composite.allBodies(engine.world));
 
     // fps計測
     frameCount++;

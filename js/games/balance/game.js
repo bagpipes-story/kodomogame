@@ -64,10 +64,11 @@ export const FIELD = {
 
 // うみの いきもの（v0.17.13）: 形が図形より複雑で乗せにくいので、どの難易度も床を1.2倍に。
 // おとなは床が画面からはみ出さないよう、縮尺を0.7→0.65倍にする（床が画面の84%）
+// v0.17.14: 1.2倍では片がわ18pxほどしか広がらず見た目で分かりにくかったので、おとな以外はさらに30%（1.2×1.3=1.56倍。床が画面の84%）
 export const SEA_FIELD = {
-  easy: { platformRatio: 1.2, viewScale: 1 },
-  normal: { platformRatio: 1.2, viewScale: 1 },
-  hard: { platformRatio: 1.2, viewScale: 1 },
+  easy: { platformRatio: 1.56, viewScale: 1 },
+  normal: { platformRatio: 1.56, viewScale: 1 },
+  hard: { platformRatio: 1.56, viewScale: 1 },
   adult: { platformRatio: 2.4, viewScale: 0.65 },
 };
 

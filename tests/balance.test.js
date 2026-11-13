@@ -20,7 +20,7 @@ import {
   shapesFor,
 } from '../js/games/balance/game.js';
 import { SEA_PIECES } from '../js/games/balance/sea.js';
-import { isConvex, boundsOf, buildPieceBody } from '../js/games/balance/kit.js';
+import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
 
@@ -189,9 +189,11 @@ function makeRng(values) {
   // かならず入れる4しゅ（v0.17.13 の注文）
   for (const id of ['eel', 'seahare', 'seahorse', 'moray']) assert.ok(sea.adult.includes(id), `${id} がいる`);
   // うみは どの難易度も床1.2倍（形が図形より複雑なため）。かたちは今までどおり
+  // v0.17.14: おとな以外はさらに30%（1.2×1.3=1.56倍）
   for (const d of ['easy', 'normal', 'hard', 'adult']) {
     const ratio = fieldOf(d, 'sea').platformRatio / fieldOf(d).platformRatio;
-    assert.ok(Math.abs(ratio - 1.2) < 1e-9, `${d}: うみの床は1.2倍`);
+    const want = d === 'adult' ? 1.2 : 1.2 * 1.3;
+    assert.ok(Math.abs(ratio - want) < 1e-9, `${d}: うみの床は${want}倍`);
     const f = fieldOf(d, 'sea');
     assert.ok(0.54 * f.platformRatio * f.viewScale <= 0.9, `${d}: うみの床が画面に収まる`);
   }
@@ -269,12 +271,46 @@ function makeRng(values) {
     const { body, offset } = buildPieceBody(M, piece, W / 2, 52);
     assert.ok(Number.isFinite(offset.x) && Number.isFinite(offset.y));
     M.Composite.add(engine.world, [platform, body]);
-    for (let f = 0; f < 600; f++) M.Engine.update(engine, 1000 / 60);
+    for (let f = 0; f < 600; f++) {
+      M.Engine.update(engine, 1000 / 60);
+      dampSpin(M, [body]);
+    }
     const drift = Math.abs(body.position.x - W / 2);
     assert.ok(body.position.y < groundY, `${id} が床の上にいる（y=${body.position.y.toFixed(0)}）`);
     assert.ok(drift < 30, `${id} が ころがって行かない（ずれ ${drift.toFixed(0)}px）`);
     assert.ok(body.isSleeping, `${id} が10びょう以内に止まる`);
   }
+}
+
+// ---------- ころがりにくさ（v0.17.14）: くじらが かにのハサミで かたむいても、床を ころがって落ちない ----------
+// （実際にブラウザで起きた並び: くじら→かに（左に14.5px）→くじら（右に14.5px）。前は床を ころがって はしから落ちていた）
+
+{
+  const code = readFileSync(new URL('../lib/matter.min.js', import.meta.url), 'utf8');
+  const holder = { exports: {} };
+  new Function('module', 'exports', code)(holder, holder.exports);
+  const M = holder.exports;
+  const W = 343;
+  const groundY = 430 - 26;
+  const platformW = Math.round(W * 0.54 * fieldOf('easy', 'sea').platformRatio);
+  const engine = M.Engine.create({ enableSleeping: true });
+  engine.gravity.y = 0.75;
+  engine.positionIterations = 12;
+  engine.velocityIterations = 8;
+  M.Composite.add(engine.world, M.Bodies.rectangle(W / 2, groundY, platformW, 18, { isStatic: true, friction: 1 }));
+  let last = null;
+  for (const [id, dx] of [['whale', 0], ['crab', -14.5], ['whale', 14.5]]) {
+    let top = groundY;
+    for (const b of M.Composite.allBodies(engine.world)) if (!b.isStatic) top = Math.min(top, b.position.y);
+    last = buildPieceBody(M, SEA_PIECES[id], W / 2 + dx, Math.min(0, top - 170) + 52).body;
+    M.Composite.add(engine.world, last);
+    for (let f = 0; f < 300; f++) {
+      M.Engine.update(engine, 1000 / 60);
+      dampSpin(M, M.Composite.allBodies(engine.world));
+    }
+  }
+  assert.ok(last.position.y < groundY, `3こめの くじらが床の上に残る（y=${last.position.y.toFixed(0)}）`);
+  assert.ok(Math.abs(last.position.x - W / 2) < platformW / 2, 'くじらが床の はしまで ころがらない');
 }
 
 console.log('balance.test.js: すべてのテストに合格');

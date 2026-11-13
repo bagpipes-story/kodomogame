@@ -136,6 +136,18 @@ export function fixCompoundInertia(M, body) {
   M.Body.setInertia(body, inertia);
 }
 
+// ころがりにくさ（v0.17.14）。Matterには「転がりにくさ」の設定がないので、まるみのある いきものは
+// 一度まわり出すと 丸太のように床を ころがり続け、広い床の はしから落ちていた。
+// 毎フレーム まわる いきおいを少しずつ弱める（落ちる はやさ・まっすぐの動きは そのまま）
+export const SPIN_DAMP = 0.95;
+
+export function dampSpin(M, bodies, k = SPIN_DAMP) {
+  for (const body of bodies) {
+    if (body.isStatic || body.isSleeping || body.angularVelocity === 0) continue;
+    M.Body.setAngularVelocity(body, body.angularVelocity * k);
+  }
+}
+
 // いきもの1ぴきぶんのボディ。凸の部品を合体させる。
 // Matterはボディの位置を「重さの中心」にするので、絵の(0,0)とのずれ（offset）も返す
 export function buildPieceBody(M, piece, x, y) {
