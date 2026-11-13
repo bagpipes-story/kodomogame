@@ -20,6 +20,7 @@ import {
   shapesFor,
 } from '../js/games/balance/game.js';
 import { SEA_PIECES } from '../js/games/balance/sea.js';
+import { ANIMAL_PIECES } from '../js/games/balance/animal.js';
 import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
@@ -210,11 +211,27 @@ function makeRng(values) {
     for (const id of prev) assert.ok(cur.includes(id), `${order[i]} にも ${id}`);
   }
 
-  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる
+  // どうぶつ（v0.17.21）: うみ と同じ つくり（30しゅ・かんたん8／ふつう16／むずかしい24／おとな30・床も同じ）
+  const animal = BLOCK_SETS.animal;
+  assert.deepStrictEqual(createGame({ difficulty: 'hard', blocks: 'animal' }).shapes, animal.hard);
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => animal[d].length), [8, 16, 24, 30]);
+  assert.strictEqual(Object.keys(ANIMAL_PIECES).length, 30);
+  assert.strictEqual(new Set(animal.adult).size, 30, 'どうぶつが かさならない');
+  for (const d of ['easy', 'normal', 'hard', 'adult']) {
+    assert.deepStrictEqual(fieldOf(d, 'animal'), fieldOf(d, 'sea'), `${d}: どうぶつの床は うみと同じ`);
+    for (const id of animal[d === 'easy' ? 'easy' : d]) assert.ok(animal.adult.includes(id));
+  }
+  for (let i = 1; i < 4; i++) {
+    const order2 = ['easy', 'normal', 'hard', 'adult'];
+    for (const id of animal[order2[i - 1]]) assert.ok(animal[order2[i]].includes(id), `どうぶつ ${order2[i]} にも ${id}`);
+  }
+
+  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ）
   const kana = /^[ぁ-んァ-ヶー]+$/;
-  for (const [id, piece] of Object.entries(SEA_PIECES)) {
-    assert.ok(sea.adult.includes(id), `${id} がどこかの難易度で出る`);
-    assert.ok(kana.test(text.sea[id]), `${id} の名前はひらがな・カタカナのみ: ${text.sea[id]}`);
+  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals]];
+  for (const [pieces, set, names] of creatureSets) for (const [id, piece] of Object.entries(pieces)) {
+    assert.ok(set.adult.includes(id), `${id} がどこかの難易度で出る`);
+    assert.ok(kana.test(names[id]), `${id} の名前はひらがな・カタカナのみ: ${names[id]}`);
     assert.ok(piece.color && piece.line && typeof piece.draw === 'function');
     for (const part of piece.parts) {
       if (part.circle) {
@@ -248,7 +265,7 @@ function makeRng(values) {
     }
   }
   // 「かたち」の名前と いきものの名前が i18n にある（メニュー文言も）
-  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea']) {
+  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal']) {
     assert.ok(kana.test(text[key].replace(/ /g, '')), `${key} はひらがな・カタカナのみ`);
   }
 }
@@ -262,7 +279,7 @@ function makeRng(values) {
   new Function('module', 'exports', code)(holder, holder.exports);
   const M = holder.exports;
 
-  for (const [id, piece] of Object.entries(SEA_PIECES)) {
+  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES)]) {
     const engine = M.Engine.create({ enableSleeping: true });
     engine.gravity.y = 0.75;
     engine.positionIterations = 12;

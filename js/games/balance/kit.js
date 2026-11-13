@@ -298,3 +298,47 @@ export function pout(ctx, x, y, r = 2.2) {
 export function shine(ctx, x, y, rx = 5, ry = 3, rotation = -0.4) {
   oval(ctx, x, y, rx, ry, 'rgba(255, 255, 255, 0.55)', rotation);
 }
+
+// ---------- どうぶつ編（v0.17.21）で足した道具 ----------
+
+// 部品の一部だけを1つの形として描く（あし の部品は描かず、からだ・あたま だけ など）
+export function silhouetteOf(ctx, piece, indexes) {
+  drawSilhouette(ctx, { line: piece.line, color: piece.color, parts: indexes.map((i) => piece.parts[i]) });
+}
+
+// 角まるの四角（ぬってから ふちを描く）
+export function rrect(ctx, x, y, w, h, r, fill, stroke, width = 2) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width;
+    ctx.stroke();
+  }
+}
+
+// ふちどりつきの だ円（みみ・ほっぺの もよう など、からだの上に のせる部品）
+export function ovalLine(ctx, x, y, rx, ry, fill, stroke, width = 1.6, rotation = 0) {
+  ctx.beginPath();
+  ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+// 4本あし（xs = あしの まんなか）。hoof を わたすと 先を その色に（ひづめ）
+export function legRow(ctx, xs, top, bottom, w, fill, stroke, hoof) {
+  for (const x of xs) {
+    rrect(ctx, x - w / 2, top, w, bottom - top, Math.min(3, w / 2), fill, stroke, 1.8);
+    if (hoof) rrect(ctx, x - w / 2, bottom - 3.5, w, 3.5, 1.5, hoof, stroke, 1.4);
+  }
+}

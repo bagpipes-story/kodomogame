@@ -294,6 +294,8 @@ html, body {
   box-shadow: 0 4px 0 var(--kgb-shadow);
   cursor: pointer;
   transition: transform 0.1s ease;
+  /* 2行になるときは 空白の ところで折り返す（「うみの いき／もの」のように ことばの とちゅうで切れない。v0.17.21） */
+  word-break: keep-all;
 }
 
 .kgb-option-button:active {

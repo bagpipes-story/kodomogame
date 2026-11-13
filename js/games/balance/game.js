@@ -35,6 +35,11 @@ const SEA_EASY = ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'saury', 't
 const SEA_NORMAL = [...SEA_EASY, 'puffer', 'oarfish', 'dolphin', 'penguin', 'seahare', 'clownfish', 'seabream', 'salmon'];
 const SEA_HARD = [...SEA_NORMAL, 'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'horsemackerel', 'lobster'];
 
+// どうぶつ の顔ぶれ（v0.17.21。うみ と同じく、むずかしいほど前の難易度の子に新しい子が足される）
+const ANIMAL_EASY = ['pig', 'cow', 'sheep', 'hippo', 'crocodile', 'cat', 'dog', 'elephant'];
+const ANIMAL_NORMAL = [...ANIMAL_EASY, 'rabbit', 'bear', 'panda', 'lion', 'tiger', 'chick', 'hedgehog', 'koala'];
+const ANIMAL_HARD = [...ANIMAL_NORMAL, 'giraffe', 'zebra', 'monkey', 'owl', 'squirrel', 'frog', 'snake', 'fox'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -50,6 +55,14 @@ export const BLOCK_SETS = {
     normal: SEA_NORMAL,
     hard: SEA_HARD,
     adult: [...SEA_HARD, 'shell', 'sunfish', 'gardeneel', 'ray', 'urchin', 'hermitcrab'],
+  },
+  // かんたん=平らで積みやすい（ぶた・うし…）／ふつう=すわった子・まるい子／むずかしい=せが高い・上が でこぼこ／
+  // おとな=1本あし・まんまる など。形と絵は animal.js
+  animal: {
+    easy: ANIMAL_EASY,
+    normal: ANIMAL_NORMAL,
+    hard: ANIMAL_HARD,
+    adult: [...ANIMAL_HARD, 'flamingo', 'kangaroo', 'camel', 'rhino', 'hamster', 'ostrich'],
   },
 };
 
@@ -80,7 +93,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  const table = blocks === 'sea' ? SEA_FIELD : FIELD;
+  // いきもの つみき（うみ・どうぶつ）は 同じ床（形が図形より複雑なので長め。v0.17.21 で どうぶつも）
+  const table = blocks === 'sea' || blocks === 'animal' ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }
 
