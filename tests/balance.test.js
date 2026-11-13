@@ -181,8 +181,21 @@ function makeRng(values) {
 
   const sea = BLOCK_SETS.sea;
   assert.deepStrictEqual(createGame({ difficulty: 'normal', blocks: 'sea' }).shapes, sea.normal);
-  assert.strictEqual(sea.adult.length, 14, 'おとなは14しゅ ぜんぶ');
-  assert.strictEqual(Object.keys(SEA_PIECES).length, 14);
+  assert.strictEqual(sea.adult.length, 22, 'おとなは22しゅ ぜんぶ');
+  assert.strictEqual(Object.keys(SEA_PIECES).length, 22);
+  assert.strictEqual(new Set(sea.adult).size, 22, 'かさならない');
+  // v0.17.13: 各難易度で2しゅずつ増えた（かんたん6・ふつう12・むずかしい18・おとな22）
+  assert.deepStrictEqual(['easy', 'normal', 'hard'].map((d) => sea[d].length), [6, 12, 18]);
+  // かならず入れる4しゅ（v0.17.13 の注文）
+  for (const id of ['eel', 'seahare', 'seahorse', 'moray']) assert.ok(sea.adult.includes(id), `${id} がいる`);
+  // うみは どの難易度も床1.2倍（形が図形より複雑なため）。かたちは今までどおり
+  for (const d of ['easy', 'normal', 'hard', 'adult']) {
+    const ratio = fieldOf(d, 'sea').platformRatio / fieldOf(d).platformRatio;
+    assert.ok(Math.abs(ratio - 1.2) < 1e-9, `${d}: うみの床は1.2倍`);
+    const f = fieldOf(d, 'sea');
+    assert.ok(0.54 * f.platformRatio * f.viewScale <= 0.9, `${d}: うみの床が画面に収まる`);
+  }
+  assert.strictEqual(fieldOf('hard', 'shape').platformRatio, 1);
   // 難易度が上がるほど顔ぶれが増える（前の難易度の子はぜんぶ残る）
   const order = ['easy', 'normal', 'hard', 'adult'];
   for (let i = 1; i < order.length; i++) {
@@ -214,7 +227,7 @@ function makeRng(values) {
     // 大きさ: いままでの かたち（46〜78px）と同じくらい。落とす前の表示（上から52px）に収まる
     const box = boundsOf(piece);
     assert.ok(box.w >= 36 && box.w <= 100, `${id} の横はば ${box.w}`);
-    assert.ok(box.h >= 30 && box.h <= 80, `${id} の高さ ${box.h}`);
+    assert.ok(box.h >= 16 && box.h <= 80, `${id} の高さ ${box.h}`); // うなぎは ほそい板
     assert.ok(-box.minY <= 45, `${id} が上にはみ出さない`);
 
     // 絵を描いても止まらない（ctxのにせもので全部の命令を受けとめる）
@@ -252,7 +265,7 @@ function makeRng(values) {
     const W = 343;
     const H = 430;
     const groundY = H - 26;
-    const platform = M.Bodies.rectangle(W / 2, groundY, Math.round(W * 0.54), 18, { isStatic: true, friction: 1 });
+    const platform = M.Bodies.rectangle(W / 2, groundY, Math.round(W * 0.54 * fieldOf('easy', 'sea').platformRatio), 18, { isStatic: true, friction: 1 });
     const { body, offset } = buildPieceBody(M, piece, W / 2, 52);
     assert.ok(Number.isFinite(offset.x) && Number.isFinite(offset.y));
     M.Composite.add(engine.world, [platform, body]);

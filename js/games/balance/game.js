@@ -37,10 +37,14 @@ export const DIFFICULTY = {
 export const BLOCK_SETS = {
   shape: DIFFICULTY,
   sea: {
-    easy: ['whale', 'turtle', 'crab', 'seal'],
-    normal: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin'],
-    hard: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin', 'octopus', 'jellyfish', 'starfish', 'squid'],
-    adult: ['whale', 'turtle', 'crab', 'seal', 'puffer', 'fish', 'dolphin', 'penguin', 'octopus', 'jellyfish', 'starfish', 'squid', 'shell', 'sunfish'],
+    // v0.17.13 で各難易度に2しゅずつ追加（かんたん=うなぎ・ラッコ／ふつう=あめふらし・くまのみ／
+    // むずかしい=うつぼ・たつのおとしご／おとな=ちんあなご・えい）
+    easy: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter'],
+    normal: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish'],
+    hard: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish',
+      'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse'],
+    adult: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish',
+      'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'shell', 'sunfish', 'gardeneel', 'ray'],
   },
 };
 
@@ -58,8 +62,18 @@ export const FIELD = {
   adult: { platformRatio: 2, viewScale: 0.7 },
 };
 
-export function fieldOf(difficulty) {
-  return FIELD[difficulty] ?? FIELD.easy;
+// うみの いきもの（v0.17.13）: 形が図形より複雑で乗せにくいので、どの難易度も床を1.2倍に。
+// おとなは床が画面からはみ出さないよう、縮尺を0.7→0.65倍にする（床が画面の84%）
+export const SEA_FIELD = {
+  easy: { platformRatio: 1.2, viewScale: 1 },
+  normal: { platformRatio: 1.2, viewScale: 1 },
+  hard: { platformRatio: 1.2, viewScale: 1 },
+  adult: { platformRatio: 2.4, viewScale: 0.65 },
+};
+
+export function fieldOf(difficulty, blocks = 'shape') {
+  const table = blocks === 'sea' ? SEA_FIELD : FIELD;
+  return table[difficulty] ?? table.easy;
 }
 
 export function createGame({ difficulty = 'easy', mode = 'solo', blocks = 'shape', rng = Math.random } = {}) {

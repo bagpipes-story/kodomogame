@@ -144,7 +144,7 @@ export function mount(root, config, { onExit }) {
   const ctx = canvas.getContext('2d');
 
   // 盤の座標（W×H）は画面より広くできる。おとなは床2倍ぶん広げて、viewScaleで縮めて描く
-  const field = fieldOf(config.difficulty);
+  const field = fieldOf(config.difficulty, config.blocks); // うみは床1.2倍（v0.17.13）
   const viewScale = field.viewScale;
   const W = SCREEN_W / viewScale;
   const H = SCREEN_H / viewScale;
