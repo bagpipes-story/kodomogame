@@ -30,6 +30,11 @@ export const DIFFICULTY = {
   adult: ['square', 'rect', 'circle', 'triangle', 'lshape', 'star', 'diamond', 'hexagon', 'trapezoid', 'semicircle'],
 };
 
+// うみの いきもの の顔ぶれ（むずかしいほど、前の難易度の子に新しい子が足される）
+const SEA_EASY = ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'saury', 'tuna'];
+const SEA_NORMAL = [...SEA_EASY, 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish', 'seabream', 'salmon'];
+const SEA_HARD = [...SEA_NORMAL, 'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'horsemackerel', 'shrimp'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -39,12 +44,11 @@ export const BLOCK_SETS = {
   sea: {
     // v0.17.13 で各難易度に2しゅずつ追加（かんたん=うなぎ・ラッコ／ふつう=あめふらし・くまのみ／
     // むずかしい=うつぼ・たつのおとしご／おとな=ちんあなご・えい）
-    easy: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter'],
-    normal: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish'],
-    hard: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish',
-      'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse'],
-    adult: ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish',
-      'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'shell', 'sunfish', 'gardeneel', 'ray'],
+    // v0.17.16 でさらに2しゅずつ（かんたん=さんま・まぐろ／ふつう=たい・さけ／むずかしい=あじ・えび／おとな=うに・やどかり）
+    easy: SEA_EASY,
+    normal: SEA_NORMAL,
+    hard: SEA_HARD,
+    adult: [...SEA_HARD, 'shell', 'sunfish', 'gardeneel', 'ray', 'urchin', 'hermitcrab'],
   },
 };
 
