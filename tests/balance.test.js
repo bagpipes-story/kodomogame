@@ -51,7 +51,7 @@ function makeRng(values) {
   }
   assert.strictEqual(new Set(adult).size, adult.length, 'かたちの重複なし');
   assert.strictEqual(fieldOf('adult').platformRatio, 2, 'おとなは床の幅2倍');
-  assert.strictEqual(fieldOf('hard').platformRatio, 1, 'むずかしいまでは今までどおり');
+  assert.strictEqual(fieldOf('hard').platformRatio, 1.1, 'むずかしいまでは1.1倍（v0.17.15）');
   assert.strictEqual(fieldOf('unknown'), FIELD.easy, '知らない難易度はかんたん扱い');
   assert.deepStrictEqual(createGame({ difficulty: 'unknown' }).shapes, DIFFICULTY.easy);
   // 縮めて描いたとき、床が画面のはば（盤の54%×倍率×縮尺）の9割以内に収まる
@@ -189,15 +189,15 @@ function makeRng(values) {
   // かならず入れる4しゅ（v0.17.13 の注文）
   for (const id of ['eel', 'seahare', 'seahorse', 'moray']) assert.ok(sea.adult.includes(id), `${id} がいる`);
   // うみは どの難易度も床1.2倍（形が図形より複雑なため）。かたちは今までどおり
-  // v0.17.14: おとな以外はさらに30%（1.2×1.3=1.56倍）
+  // v0.17.15: うみは おとな以外1.404倍（1.56倍から10%短く）・おとな2.4倍。かたちは おとな以外1.1倍・おとな2倍
   for (const d of ['easy', 'normal', 'hard', 'adult']) {
-    const ratio = fieldOf(d, 'sea').platformRatio / fieldOf(d).platformRatio;
-    const want = d === 'adult' ? 1.2 : 1.2 * 1.3;
-    assert.ok(Math.abs(ratio - want) < 1e-9, `${d}: うみの床は${want}倍`);
+    const want = d === 'adult' ? [2.4, 2] : [1.56 * 0.9, 1.1];
+    assert.ok(Math.abs(fieldOf(d, 'sea').platformRatio - want[0]) < 1e-9, `${d}: うみの床は${want[0]}倍`);
+    assert.ok(Math.abs(fieldOf(d, 'shape').platformRatio - want[1]) < 1e-9, `${d}: かたちの床は${want[1]}倍`);
     const f = fieldOf(d, 'sea');
     assert.ok(0.54 * f.platformRatio * f.viewScale <= 0.9, `${d}: うみの床が画面に収まる`);
   }
-  assert.strictEqual(fieldOf('hard', 'shape').platformRatio, 1);
+  assert.strictEqual(fieldOf('hard', 'shape').platformRatio, 1.1);
   // 難易度が上がるほど顔ぶれが増える（前の難易度の子はぜんぶ残る）
   const order = ['easy', 'normal', 'hard', 'adult'];
   for (let i = 1; i < order.length; i++) {

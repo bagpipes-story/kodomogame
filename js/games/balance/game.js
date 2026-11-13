@@ -55,20 +55,22 @@ export function shapesFor(blocks, difficulty) {
 
 // 床（土台）の広さと画面の縮尺。おとなは床の幅を2倍にし、
 // 盤ごと0.7倍に縮めて画面に収める（ブロックの大きさは他の難易度と同じ。広い床にたくさん並べられる）
+// v0.17.15: かんたん〜むずかしいは床を10%長く（1→1.1倍）。おとなは2倍のまま
 export const FIELD = {
-  easy: { platformRatio: 1, viewScale: 1 },
-  normal: { platformRatio: 1, viewScale: 1 },
-  hard: { platformRatio: 1, viewScale: 1 },
+  easy: { platformRatio: 1.1, viewScale: 1 },
+  normal: { platformRatio: 1.1, viewScale: 1 },
+  hard: { platformRatio: 1.1, viewScale: 1 },
   adult: { platformRatio: 2, viewScale: 0.7 },
 };
 
 // うみの いきもの（v0.17.13）: 形が図形より複雑で乗せにくいので、どの難易度も床を1.2倍に。
 // おとなは床が画面からはみ出さないよう、縮尺を0.7→0.65倍にする（床が画面の84%）
-// v0.17.14: 1.2倍では片がわ18pxほどしか広がらず見た目で分かりにくかったので、おとな以外はさらに30%（1.2×1.3=1.56倍。床が画面の84%）
+// v0.17.14: 1.2倍では見た目で分かりにくかったので、おとな以外はさらに30%（1.56倍）にしたが、
+// 大きすぎたので v0.17.15 で10%短く（1.56×0.9=1.404倍。床が画面の76%）
 export const SEA_FIELD = {
-  easy: { platformRatio: 1.56, viewScale: 1 },
-  normal: { platformRatio: 1.56, viewScale: 1 },
-  hard: { platformRatio: 1.56, viewScale: 1 },
+  easy: { platformRatio: 1.404, viewScale: 1 },
+  normal: { platformRatio: 1.404, viewScale: 1 },
+  hard: { platformRatio: 1.404, viewScale: 1 },
   adult: { platformRatio: 2.4, viewScale: 0.65 },
 };
 
