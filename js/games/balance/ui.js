@@ -85,7 +85,7 @@ export function mount(root, config, { onExit }) {
   let crashing = false;
   let platform = null;
   let placedBodies = [];     // 積めた順のボディ（古いものから固定していく）
-  let namePill = null;       // いきもの つみき: 次に落とす子の名前（{label, width}。幅は1回だけ測る）
+  let namePill = null;       // いきもの つみき: 次に落とす子の名前（{label, width, fontSize}。幅は1回だけ測る）
 
   const pieceSet = PIECE_SETS[config.blocks] ?? null; // null = いままでの「かたち」
   const spriteCache = new Map(); // いきもの → 1回だけ描いた絵（キャンバス）
@@ -438,7 +438,7 @@ export function mount(root, config, { onExit }) {
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = '#4a3f35';
-      ctx.font = 'bold 17px -apple-system, sans-serif';
+      ctx.font = `bold ${namePill.fontSize}px -apple-system, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(namePill.label, pillX + pillW / 2, 26);
@@ -519,7 +519,15 @@ export function mount(root, config, { onExit }) {
     const label = pieceSet.names[previewShape];
     ctx.save();
     ctx.font = 'bold 17px -apple-system, sans-serif';
-    namePill = { label, width: ctx.measureText(label).width };
+    let width = ctx.measureText(label).width;
+    let fontSize = 17;
+    // 「りゅうぐうのつかい」のような長い名前は 文字を小さくして、落とす前の絵に かぶりにくくする（v0.17.18）
+    if (width > 110) {
+      fontSize = 13;
+      ctx.font = `bold ${fontSize}px -apple-system, sans-serif`;
+      width = ctx.measureText(label).width;
+    }
+    namePill = { label, width, fontSize };
     ctx.restore();
   }
 

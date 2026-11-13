@@ -156,7 +156,7 @@ export const text = {
     crab: 'かに',
     seal: 'あざらし',
     puffer: 'ふぐ',
-    fish: 'さかな',
+    oarfish: 'りゅうぐうのつかい', // v0.17.18 で さかな と入れかえ
     octopus: 'たこ',
     penguin: 'ペンギン',
     dolphin: 'いるか',
@@ -180,7 +180,7 @@ export const text = {
     seabream: 'たい',
     salmon: 'さけ',
     horsemackerel: 'あじ',
-    shrimp: 'えび',
+    lobster: 'いせえび', // v0.17.18 で えび を描きなおし
     urchin: 'うに',
     hermitcrab: 'やどかり',
   },

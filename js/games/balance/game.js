@@ -32,8 +32,8 @@ export const DIFFICULTY = {
 
 // うみの いきもの の顔ぶれ（むずかしいほど、前の難易度の子に新しい子が足される）
 const SEA_EASY = ['whale', 'turtle', 'crab', 'seal', 'eel', 'otter', 'saury', 'tuna'];
-const SEA_NORMAL = [...SEA_EASY, 'puffer', 'fish', 'dolphin', 'penguin', 'seahare', 'clownfish', 'seabream', 'salmon'];
-const SEA_HARD = [...SEA_NORMAL, 'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'horsemackerel', 'shrimp'];
+const SEA_NORMAL = [...SEA_EASY, 'puffer', 'oarfish', 'dolphin', 'penguin', 'seahare', 'clownfish', 'seabream', 'salmon'];
+const SEA_HARD = [...SEA_NORMAL, 'octopus', 'jellyfish', 'starfish', 'squid', 'moray', 'seahorse', 'horsemackerel', 'lobster'];
 
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
@@ -44,6 +44,7 @@ export const BLOCK_SETS = {
   sea: {
     // v0.17.13 で各難易度に2しゅずつ追加（かんたん=うなぎ・ラッコ／ふつう=あめふらし・くまのみ／
     // むずかしい=うつぼ・たつのおとしご／おとな=ちんあなご・えい）
+    // v0.17.18 で さかな→りゅうぐうのつかい、えび→いせえび に入れかえ
     // v0.17.16 でさらに2しゅずつ（かんたん=さんま・まぐろ／ふつう=たい・さけ／むずかしい=あじ・えび／おとな=うに・やどかり）
     easy: SEA_EASY,
     normal: SEA_NORMAL,

@@ -186,8 +186,9 @@ function makeRng(values) {
   assert.strictEqual(new Set(sea.adult).size, 30, 'かさならない');
   // v0.17.13・v0.17.16 で各難易度に2しゅずつ増えた（かんたん8・ふつう16・むずかしい24・おとな30）
   assert.deepStrictEqual(['easy', 'normal', 'hard'].map((d) => sea[d].length), [8, 16, 24]);
-  // かならず入れる しゅるい（v0.17.13・v0.17.16 の注文）
-  for (const id of ['eel', 'seahare', 'seahorse', 'moray', 'seabream', 'horsemackerel', 'saury', 'salmon', 'shrimp', 'tuna']) {
+  // かならず入れる しゅるい（v0.17.13・v0.17.16・v0.17.18 の注文。さかな は りゅうぐうのつかい に入れかえた）
+  assert.ok(!sea.adult.includes('fish') && !sea.adult.includes('shrimp'), 'さかな・えび は もう出ない');
+  for (const id of ['eel', 'seahare', 'seahorse', 'moray', 'seabream', 'horsemackerel', 'saury', 'salmon', 'lobster', 'tuna', 'oarfish']) {
     assert.ok(sea.adult.includes(id), `${id} がいる`);
   }
   // うみは どの難易度も床1.2倍（形が図形より複雑なため）。かたちは今までどおり
