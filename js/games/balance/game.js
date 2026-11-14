@@ -43,9 +43,12 @@ const ANIMAL_HARD = [...ANIMAL_NORMAL, 'giraffe', 'zebra', 'monkey', 'owl', 'squ
 // とり の顔ぶれ（v0.17.23。うみ・どうぶつ と同じく、むずかしいほど前の難易度の子に新しい子が足される）
 // かんたん=すわる・うかぶ（おなかが平ら）／ふつう=立つ小さな とり・たてながの子／むずかしい=サギの なかま など せが高い／
 // おとな=いちばん せが高い・かざりの 大きな子
-const BIRD_EASY = ['sparrow', 'crow', 'spotbill', 'coot', 'gull', 'whiteEye', 'tit', 'ptarmigan'];
-const BIRD_NORMAL = [...BIRD_EASY, 'starling', 'kingfisher', 'plover', 'sandpiper', 'cormorant', 'tern', 'puffin', 'tuftedPuffin'];
-const BIRD_HARD = [...BIRD_NORMAL, 'nightHeron', 'cattleEgret', 'littleEgret', 'intermediateEgret', 'greyHeron', 'ibis', 'shoebill', 'goshawk'];
+const BIRD_EASY = ['sparrow', 'crow', 'spotbill', 'coot', 'gull', 'whiteEye', 'tit', 'ptarmigan',
+  'longTailedTit', 'mandarinDuck', 'grebe', 'swan', 'kiwi']; // 2ぎょうめは v0.17.25 で追加
+const BIRD_NORMAL = [...BIRD_EASY, 'starling', 'kingfisher', 'plover', 'sandpiper', 'cormorant', 'tern', 'puffin', 'tuftedPuffin',
+  'wagtail', 'bluetail', 'owl', 'chicken', 'okinawaRail'];
+const BIRD_HARD = [...BIRD_NORMAL, 'nightHeron', 'cattleEgret', 'littleEgret', 'intermediateEgret', 'greyHeron', 'ibis', 'shoebill', 'goshawk',
+  'crestedKingfisher', 'ruddyKingfisher', 'dollarbird', 'woodpecker'];
 
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
@@ -71,12 +74,13 @@ export const BLOCK_SETS = {
     hard: ANIMAL_HARD,
     adult: [...ANIMAL_HARD, 'flamingo', 'kangaroo', 'camel', 'rhino', 'hamster', 'ostrich'],
   },
-  // 形と絵は bird.js（フラミンゴは どうぶつ と同じもの）
+  // 形と絵は bird.js（フラミンゴ・フクロウは どうぶつ と同じもの）。v0.17.25 で 18しゅ ふやして 13/26/38/48しゅ
   bird: {
     easy: BIRD_EASY,
     normal: BIRD_NORMAL,
     hard: BIRD_HARD,
-    adult: [...BIRD_HARD, 'greatEgret', 'crane', 'flamingo', 'peacock', 'birdOfParadise', 'vulture'],
+    adult: [...BIRD_HARD, 'greatEgret', 'crane', 'flamingo', 'peacock', 'birdOfParadise', 'vulture',
+      'pheasant', 'copperPheasant', 'pelican', 'cassowary'],
   },
 };
 

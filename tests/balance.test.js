@@ -227,16 +227,19 @@ function makeRng(values) {
     for (const id of animal[order2[i - 1]]) assert.ok(animal[order2[i]].includes(id), `どうぶつ ${order2[i]} にも ${id}`);
   }
 
-  // とり（v0.17.23）: うみ・どうぶつ と同じ つくり。ユーザー指定の30しゅが ぜんぶ いる
+  // とり（v0.17.23）: うみ・どうぶつ と同じ つくり。ユーザー指定の30しゅが ぜんぶ いる（v0.17.25 で 18しゅ ふえて 48しゅ）
   const bird = BLOCK_SETS.bird;
   assert.deepStrictEqual(createGame({ difficulty: 'normal', blocks: 'bird' }).shapes, bird.normal);
-  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => bird[d].length), [8, 16, 24, 30]);
-  assert.strictEqual(Object.keys(BIRD_PIECES).length, 30);
-  assert.strictEqual(new Set(bird.adult).size, 30, 'とりが かさならない');
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => bird[d].length), [13, 26, 38, 48]);
+  assert.strictEqual(Object.keys(BIRD_PIECES).length, 48);
+  assert.strictEqual(new Set(bird.adult).size, 48, 'とりが かさならない');
   const wantBirds = ['すずめ', 'からす', 'コサギ', 'チュウサギ', 'ダイサギ', 'アオサギ', 'アマサギ', 'ゴイサギ', 'シギ', 'カワウ',
     'チドリ', 'カルガモ', 'オオバン', 'ユリカモメ', 'カワセミ', 'メジロ', 'ムクドリ', 'シジュウカラ', 'コアジサシ', 'ツノメドリ',
-    'エトピリカ', 'オオフウチョウ', 'クジャク', 'トキ', 'ハシビロコウ', 'フラミンゴ', 'ライチョウ', 'ハゲワシ', 'オオタカ', 'ツル'];
-  assert.deepStrictEqual(bird.adult.map((id) => text.birds[id]).sort(), [...wantBirds].sort(), 'たのまれた とり 30しゅ');
+    'エトピリカ', 'オオフウチョウ', 'クジャク', 'トキ', 'ハシビロコウ', 'フラミンゴ', 'ライチョウ', 'ハゲワシ', 'オオタカ', 'ツル',
+    // v0.17.25（たのまれた19しゅの うち キジは 2かい あったので 18しゅ）
+    'シマエナガ', 'ハクセキレイ', 'オシドリ', 'カイツブリ', 'ハクチョウ', 'キジ', 'キツツキ', 'フクロウ', 'ルリビタキ', 'ヤマセミ',
+    'アカショウビン', 'ブッポウソウ', 'ヤンバルクイナ', 'ヤマドリ', 'ペリカン', 'ヒクイドリ', 'キーウィ', 'ニワトリ'];
+  assert.deepStrictEqual(bird.adult.map((id) => text.birds[id]).sort(), [...wantBirds].sort(), 'たのまれた とり 48しゅ');
   for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'bird'), fieldOf(d, 'sea'), `${d}: とりの床は うみと同じ`);
   for (let i = 1; i < 4; i++) {
     const order3 = ['easy', 'normal', 'hard', 'adult'];
