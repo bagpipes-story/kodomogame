@@ -151,8 +151,10 @@ export function dampSpin(M, bodies, k = SPIN_DAMP) {
 // いきもの1ぴきぶんのボディ。凸の部品を合体させる。
 // Matterはボディの位置を「重さの中心」にするので、絵の(0,0)とのずれ（offset）も返す
 export function buildPieceBody(M, piece, x, y) {
-  const options = { friction: piece.friction ?? 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
+  const baseOptions = { friction: piece.friction ?? 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
   const parts = piece.parts.map((part) => {
+    // 部品ごとの 重さ（v0.17.31）: トンボの ほそい おなかのように、形は ながいけれど かるい 部品に
+    const options = part.density ? { ...baseOptions, density: part.density } : baseOptions;
     if (part.circle) {
       const [cx, cy, r] = part.circle;
       return M.Bodies.circle(x + cx, y + cy, r, options);
@@ -168,7 +170,7 @@ export function buildPieceBody(M, piece, x, y) {
   });
   let body = parts[0];
   if (parts.length > 1) {
-    body = M.Body.create({ ...options, parts });
+    body = M.Body.create({ ...baseOptions, parts });
     fixCompoundInertia(M, body);
   }
   return { body, offset: { x: x - body.position.x, y: y - body.position.y } };

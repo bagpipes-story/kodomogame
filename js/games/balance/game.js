@@ -56,6 +56,14 @@ const FRESH_EASY = ['giantSalamander', 'softshellTurtle', 'pondTurtle', 'carp', 
 const FRESH_NORMAL = [...FRESH_EASY, 'yamame', 'amago', 'rainbowTrout', 'ayu', 'paleChub', 'dace', 'medaka', 'goby'];
 const FRESH_HARD = [...FRESH_NORMAL, 'iwana', 'dollyVarden', 'riverCrab', 'crayfish', 'newt', 'divingBeetle', 'waterBug', 'tadpole'];
 
+// むし の顔ぶれ（v0.17.31。たのまれた12しゅ＋子どもに にんきの 18しゅ。いやがられやすい むしは 入れない）
+// かんたん=上から見た カブトムシ・クワガタ・セミ（あしの 板で 平ら）と ほそながい ナナフシ／
+// ふつう=＋まるい・ながい しょっかくの 子・よこから見た バッタ／むずかしい=＋はねを ひろげた トンボ（2まいの はねの さきで 立つ）・
+// はねを 立てた スズムシ など／おとな=＋カマを 立てた カマキリ・はさみの つのの ヘラクレス・はねを ひろげた チョウ・ミツバチ
+const INSECT_EASY = ['rhinoBeetle', 'giantStag', 'flatStag', 'sawStag', 'jewelBeetle', 'brownCicada', 'slimCicada', 'stickInsect'];
+const INSECT_NORMAL = [...INSECT_EASY, 'miyamaStag', 'rainbowStag', 'rosalia', 'greenCicada', 'firefly', 'ladybug', 'locust', 'longHeadGrasshopper'];
+const INSECT_HARD = [...INSECT_NORMAL, 'katydid', 'bellCricket', 'cricket', 'tigerBeetle', 'goldenRinged', 'emperorDragonfly', 'skimmer', 'redDragonfly'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -95,6 +103,13 @@ export const BLOCK_SETS = {
     hard: FRESH_HARD,
     adult: [...FRESH_HARD, 'ito', 'arowana', 'rockCatfish', 'lamprey', 'treeFrog', 'clam'],
   },
+  // 形と絵は insect.js（v0.17.31）
+  insect: {
+    easy: INSECT_EASY,
+    normal: INSECT_NORMAL,
+    hard: INSECT_HARD,
+    adult: [...INSECT_HARD, 'mantis', 'hercules', 'swallowtail', 'cabbageWhite', 'purpleEmperor', 'honeybee'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -124,8 +139,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり・たんすい）は 同じ床（形が図形より複雑なので長め。
-  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい も）
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし）は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし も）
   const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }

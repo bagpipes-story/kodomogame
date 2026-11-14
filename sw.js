@@ -6,7 +6,7 @@
 //   タップで skipWaiting → controllerchange で再読み込み（ゲーム途中に勝手に入れ替わらない）。
 // 外部通信は一切しない（同一オリジンのGETだけ扱う）。
 
-const VERSION = 'v0.17.30';
+const VERSION = 'v0.17.31';
 const CACHE_NAME = `kgb-${VERSION}`;
 
 // プリキャッシュ一覧（相対パス。tests/sw.test.js が「存在する」「漏れがない」を検査する）
@@ -56,6 +56,7 @@ const PRECACHE = [
   './js/games/balance/animal.js',
   './js/games/balance/bird.js',
   './js/games/balance/fresh.js',
+  './js/games/balance/insect.js',
   './js/games/balance/game.js',
   './js/games/balance/kit.js',
   './js/games/balance/sea.js',
