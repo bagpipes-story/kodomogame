@@ -288,6 +288,11 @@ html, body {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+/* 3列で さいごの1つだけ はみ出す とき（7択の つみき など）は よこいっぱいに（v0.17.34） */
+.kgb-option-row.is-grid-3 > .kgb-option-button:last-child:nth-child(3n + 1) {
+  grid-column: span 3;
+}
+
 .kgb-option-button {
   flex: 1 1 0;
   min-height: var(--kgb-tap-min);

@@ -430,3 +430,62 @@ export function colorEye(ctx, x, y, r, iris) {
   dot(ctx, x, y, r * 0.52, INK);
   dot(ctx, x - r * 0.3, y - r * 0.35, r * 0.24, '#ffffff');
 }
+
+// ---------- むし編（v0.17.31）で insect.js に作り、しんかい編（v0.17.34）で 共通に した道具 ----------
+
+// 点の あつまりを つつむ 凸の形（当たり判定）。クワガタの あごのように すきまの ある形は、当たり判定では
+// すきまを うめる（へこんだ部品は Matter で正しく ぶつからないため）。ちかすぎる点は まとめる（長さ0の辺で こわれるため）
+export function hull(list) {
+  const p = list.map(([x, y]) => [round2(x), round2(y)]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const half = (arr) => {
+    const out = [];
+    for (const q of arr) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
+      out.push(q);
+    }
+    return out.slice(0, -1);
+  };
+  const h = [...half(p), ...half([...p].reverse())];
+  const out = [];
+  for (const q of h) {
+    const last = out[out.length - 1];
+    if (!last || Math.hypot(q[0] - last[0], q[1] - last[1]) > 0.8) out.push(q);
+  }
+  if (out.length > 3 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= 0.8) out.pop();
+  return pts(out);
+}
+
+// なめらかな とじた形（はね・あご）。点は かどの めやす（線は 点と点の まんなかを とおる）
+export function smoothPath(ctx, list) {
+  const n = list.length;
+  const mid = (i) => [(list[i][0] + list[(i + 1) % n][0]) / 2, (list[i][1] + list[(i + 1) % n][1]) / 2];
+  ctx.beginPath();
+  const m0 = mid(n - 1);
+  ctx.moveTo(m0[0], m0[1]);
+  for (let i = 0; i < n; i++) {
+    const m = mid(i);
+    ctx.quadraticCurveTo(list[i][0], list[i][1], m[0], m[1]);
+  }
+  ctx.closePath();
+}
+export function smooth(ctx, list, fill, stroke, width = 1.4) {
+  smoothPath(ctx, list);
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = width;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+}
+export function smoothClip(ctx, list, fn) {
+  ctx.save();
+  smoothPath(ctx, list);
+  ctx.clip();
+  fn();
+  ctx.restore();
+}

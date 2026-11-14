@@ -64,6 +64,12 @@ const INSECT_EASY = ['rhinoBeetle', 'giantStag', 'flatStag', 'sawStag', 'jewelBe
 const INSECT_NORMAL = [...INSECT_EASY, 'miyamaStag', 'rainbowStag', 'rosalia', 'greenCicada', 'firefly', 'ladybug', 'locust', 'longHeadGrasshopper'];
 const INSECT_HARD = [...INSECT_NORMAL, 'katydid', 'bellCricket', 'cricket', 'tigerBeetle', 'goldenRinged', 'emperorDragonfly', 'skimmer', 'redDragonfly'];
 
+// しんかいの いきもの の顔ぶれ（v0.17.34。たのまれた6しゅ＋24しゅ）。積みやすさより しんかいらしい かたちを だいじに したので、
+// 顔ぶれは よく 知られている じゅん（かんたん=ずかんの 人気もの → おとな=めずらしい 子）
+const DEEP_EASY = ['anglerfish', 'giantSquid', 'flapjackOctopus', 'giantIsopod', 'spiderCrab', 'coelacanth', 'oarfish', 'nautilus'];
+const DEEP_NORMAL = [...DEEP_EASY, 'giantSlickhead', 'barreleye', 'goblinShark', 'frilledShark', 'megamouth', 'seaPig', 'gulperEel', 'vampireSquid'];
+const DEEP_HARD = [...DEEP_NORMAL, 'predatoryTunicate', 'viperfish', 'fangtooth', 'lancetfish', 'chimaera', 'lanternfish', 'hatchetfish', 'yetiCrab'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -110,6 +116,13 @@ export const BLOCK_SETS = {
     hard: INSECT_HARD,
     adult: [...INSECT_HARD, 'mantis', 'hercules', 'swallowtail', 'cabbageWhite', 'purpleEmperor', 'honeybee'],
   },
+  // 形と絵は deep.js（v0.17.34）
+  deep: {
+    easy: DEEP_EASY,
+    normal: DEEP_NORMAL,
+    hard: DEEP_HARD,
+    adult: [...DEEP_HARD, 'swimmingSeaCucumber', 'seaLily', 'glassSponge', 'snailfish', 'crownJelly', 'scalyFoot'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -139,8 +152,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし）は 同じ床（形が図形より複雑なので長め。
-  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし も）
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい）は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい も）
   const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }

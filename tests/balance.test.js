@@ -24,6 +24,7 @@ import { ANIMAL_PIECES } from '../js/games/balance/animal.js';
 import { BIRD_PIECES } from '../js/games/balance/bird.js';
 import { FRESH_PIECES } from '../js/games/balance/fresh.js';
 import { INSECT_PIECES } from '../js/games/balance/insect.js';
+import { DEEP_PIECES } from '../js/games/balance/deep.js';
 import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
@@ -283,11 +284,25 @@ function makeRng(values) {
     const order5 = ['easy', 'normal', 'hard', 'adult'];
     for (const id of insect[order5[i - 1]]) assert.ok(insect[order5[i]].includes(id), `むし ${order5[i]} にも ${id}`);
   }
+
+  // しんかいの いきもの（v0.17.34）: たのまれた6しゅ＋24しゅ＝30しゅ。うみ と同じ つくり（積みやすさは かんがえない）
+  const deep = BLOCK_SETS.deep;
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => deep[d].length), [8, 16, 24, 30]);
+  assert.strictEqual(Object.keys(DEEP_PIECES).length, 30);
+  assert.strictEqual(new Set(deep.adult).size, 30, 'しんかいの いきものが かさならない');
+  for (const name of ['シーラカンス', 'リュウグウノツカイ', 'ヨコヅナイワシ', 'チョウチンアンコウ', 'タカアシガニ', 'ダイオウイカ']) {
+    assert.ok(deep.adult.some((id) => text.deep[id] === name), `たのまれた ${name} がいる`);
+  }
+  for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'deep'), fieldOf(d, 'sea'), `${d}: しんかいの床は うみと同じ`);
+  for (let i = 1; i < 4; i++) {
+    const order6 = ['easy', 'normal', 'hard', 'adult'];
+    for (const id of deep[order6[i - 1]]) assert.ok(deep[order6[i]].includes(id), `しんかい ${order6[i]} にも ${id}`);
+  }
   assert.strictEqual(fieldOf('easy', 'toString'), fieldOf('easy', 'shape'), 'へんな なまえは かたちの床');
 
-  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ・とり・たんすい・むし）
+  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ・とり・たんすい・むし・しんかい）
   const kana = /^[ぁ-んァ-ヶー]+$/;
-  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects]];
+  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects], [DEEP_PIECES, deep, text.deep]];
   for (const [pieces, set, names] of creatureSets) for (const [id, piece] of Object.entries(pieces)) {
     assert.ok(set.adult.includes(id), `${id} がどこかの難易度で出る`);
     assert.ok(kana.test(names[id]), `${id} の名前はひらがな・カタカナのみ: ${names[id]}`);
@@ -324,7 +339,7 @@ function makeRng(values) {
     }
   }
   // 「かたち」の名前と いきものの名前が i18n にある（メニュー文言も）
-  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect']) {
+  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect', 'balanceBlocksDeep']) {
     assert.ok(kana.test(text[key].replace(/ /g, '')), `${key} はひらがな・カタカナのみ`);
   }
 }
@@ -338,7 +353,7 @@ function makeRng(values) {
   new Function('module', 'exports', code)(holder, holder.exports);
   const M = holder.exports;
 
-  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES)]) {
+  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES), ...Object.entries(DEEP_PIECES)]) {
     const engine = M.Engine.create({ enableSleeping: true });
     engine.gravity.y = 0.75;
     engine.positionIterations = 12;

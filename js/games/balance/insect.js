@@ -6,7 +6,7 @@
 // 板は あしの 絵が かくす。バッタ・カマキリ・ナナフシ・ミツバチ は よこから見た すがた（あしで 立つ）
 
 import {
-  ellipse, blob, pts, seg, turn, flatBottom,
+  ellipse, blob, pts, seg, turn, flatBottom, hull, smoothPath, smooth, smoothClip,
   drawSilhouette, silhouetteOf, strokePart, clipPart,
   oval, ovalLine, dot, poly, line, curve, leg, beak,
   eye, ringEye, colorEye, cheek, smile, shine, INK,
@@ -14,29 +14,6 @@ import {
 
 const PI = Math.PI;
 const r2 = (v) => Math.round(v * 100) / 100;
-
-// 点の あつまりを つつむ 凸の形（当たり判定）。クワガタの あごのように すきまの ある形は、当たり判定では
-// すきまを うめる（へこんだ部品は Matter で正しく ぶつからないため）。ちかすぎる点は まとめる（長さ0の辺で こわれるため）
-function hull(list) {
-  const p = list.map(([x, y]) => [r2(x), r2(y)]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
-  const half = (arr) => {
-    const out = [];
-    for (const q of arr) {
-      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop();
-      out.push(q);
-    }
-    return out.slice(0, -1);
-  };
-  const h = [...half(p), ...half([...p].reverse())];
-  const out = [];
-  for (const q of h) {
-    const last = out[out.length - 1];
-    if (!last || Math.hypot(q[0] - last[0], q[1] - last[1]) > 0.8) out.push(q);
-  }
-  if (out.length > 3 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) <= 0.8) out.pop();
-  return pts(out);
-}
 
 // 上がわ（s=-1）と 下がわ（s=1）に 同じものを
 const flip = (list, s) => list.map(([x, y]) => [x, y * s]);
@@ -56,40 +33,6 @@ const boards = (w, cx, cy) => [
   { points: blob(w, 4, 1.5, 1.5, { cx, cy }) },
   { points: blob(w, 4, 1.5, 1.5, { cx, cy: -cy }) },
 ];
-
-// なめらかな とじた形（はね・あご）。点は かどの めやす（線は 点と点の まんなかを とおる）
-function smoothPath(ctx, list) {
-  const n = list.length;
-  const mid = (i) => [(list[i][0] + list[(i + 1) % n][0]) / 2, (list[i][1] + list[(i + 1) % n][1]) / 2];
-  ctx.beginPath();
-  const m0 = mid(n - 1);
-  ctx.moveTo(m0[0], m0[1]);
-  for (let i = 0; i < n; i++) {
-    const m = mid(i);
-    ctx.quadraticCurveTo(list[i][0], list[i][1], m[0], m[1]);
-  }
-  ctx.closePath();
-}
-function smooth(ctx, list, fill, stroke, width = 1.4) {
-  smoothPath(ctx, list);
-  if (fill) {
-    ctx.fillStyle = fill;
-    ctx.fill();
-  }
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = width;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-  }
-}
-function smoothClip(ctx, list, fn) {
-  ctx.save();
-  smoothPath(ctx, list);
-  ctx.clip();
-  fn();
-  ctx.restore();
-}
 
 // drawSilhouette と 同じ（先に ぜんぶの ふちを 引いてから ぬる）。ちぢめて 描く ときに 線の 太さだけ かえる
 function outlined(ctx, piece, indexes, width) {
