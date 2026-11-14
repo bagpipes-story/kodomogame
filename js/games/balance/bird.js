@@ -117,6 +117,35 @@ function neckOver(ctx, list, w, color) {
 
 const WHITE_LINE = '#a6aeb7';
 
+// オシドリの いちょうばね（v0.17.27。実物の写真から: まえの ふちは くぼんで こい あおの すじ、上の さきは まえを むき、
+// うしろの ふちは 大きく ふくらんで せなかへ ながれる 帆のような形）。dx,dy で ずらして おくの1まいにも使う
+function ginkgoFeather(ctx, dx, dy, fill) {
+  const P = (x, y) => [x + dx, y + dy];
+  const path = () => {
+    ctx.beginPath();
+    ctx.moveTo(...P(15, -4));
+    ctx.quadraticCurveTo(...P(17, -13), ...P(12, -21)); // まえの ふち（くぼむ）
+    ctx.quadraticCurveTo(...P(15, -24.5), ...P(20, -20)); // 上の さき
+    ctx.quadraticCurveTo(...P(28.5, -14), ...P(27, -4)); // うしろの ふち（ふくらむ）
+    ctx.closePath();
+  };
+  path();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.save();
+  path();
+  ctx.clip();
+  for (const [x, y] of [[14, -21], [17, -22], [21, -19], [25, -14], [27, -9]]) line(ctx, [P(17, -4), P(x, y)], '#c8661e', 0.8); // はねの すじ
+  curve(ctx, [P(15, -4), P(16.6, -13), P(12.4, -20.6)], '#2a3a6a', 2.8); // まえの ふちの こい あお
+  ctx.restore();
+  path();
+  ctx.strokeStyle = '#8a5a34';
+  ctx.lineWidth = 1.4;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+
 export const BIRD_PIECES = {
   // ---------- かんたん（すわる・うかぶ。おなかが平ら） ----------
 
@@ -346,8 +375,10 @@ export const BIRD_PIECES = {
     },
   },
 
-  // オシドリ（オス）: せなかの オレンジの「いちょうばね」（イチョウの はの形。v0.17.26 で とがった三角から なおした）・
-  // めの上から うしろへ しろい すじ・オレンジの ほお・あかい くちばし
+  // オシドリ（オス）: せなかの うしろ寄りに立つ オレンジの「いちょうばね」2まい・めの うしろの 大きな しろい みかづき・
+  // オレンジの ほおの はね・むらさきの むねに しろと くろの すじ・あかい くちばし
+  // v0.17.27: いちょうばねを 実物の写真に あわせて作りなおし（まえの ふちが くぼんで こい あお、上の さきは まえを むき、
+  // うしろの ふちが 大きく ふくらむ 帆のような形）。当たり判定は 2まいを つつむ 凸の形、絵は 曲線で 別に描く
   mandarinDuck: {
     color: '#e9b77c',
     line: '#8a5a34',
@@ -356,30 +387,36 @@ export const BIRD_PIECES = {
       { points: ellipse(11, 11, { cx: -17, cy: -12, n: 16 }) },                         // あたま
       { points: ellipse(10, 10, { cx: -14, cy: 0, n: 14 }) },                           // むね
       { points: pts([[-26, -14], [-35, -11], [-26, -8]]), fill: '#e8383d' },            // あかい くちばし
-      { points: pts([[9, -4], [14, -4], [21, -12], [19, -17], [13, -19], [8, -16]]), fill: '#f08a3a' }, // いちょうばね（上が まるく ひろがる）
+      { points: pts([[8, -4], [27, -4], [27, -11], [21, -20], [13, -24], [7, -21]]) },  // いちょうばね 2まい（当たり判定だけ）
     ],
     draw(ctx, piece) {
       beak(ctx, [[30, -2], [42, -8], [41, 0], [34, 3]], '#4a3a30', '#8a5a34', 1.4); // しっぽ
-      beak(ctx, [[6, -4], [10, -4], [15, -14], [11, -18.5], [5, -17], [3, -12]], '#d8742a', '#8a5a34', 1.4); // おくの いちょうばね（2まいで 1くみ）
-      drawSilhouette(ctx, piece);
+      ginkgoFeather(ctx, -5, -1, '#d8742a'); // おくの いちょうばね
+      silhouetteOf(ctx, piece, [0, 1, 2, 3]);
       clipPart(ctx, piece.parts[0], () => {
-        oval(ctx, 24, -4, 15, 6, '#4a3a30'); // せなか
-        for (const x of [-6, 0, 6, 12]) line(ctx, [[x, 4], [x + 3, 15]], '#d39a60', 0.9); // わきの こまかい もよう
+        oval(ctx, 26, -4, 13, 6, '#4a3a30'); // せなか
+        for (const x of [-6, 0, 6, 12, 18]) line(ctx, [[x, 4], [x + 3, 15]], '#d39a60', 0.9); // わきの こまかい もよう
+        line(ctx, [[27, 1], [29, 14]], '#ffffff', 1.6); // おしりの しろと くろの すじ
+        line(ctx, [[30, 1], [32, 14]], '#2e2620', 1.6);
       });
       clipPart(ctx, piece.parts[2], () => oval(ctx, -16, 2, 10, 10, '#6e3a5c')); // むらさきの むね
       line(ctx, [[-6, -3], [-5, 9]], '#ffffff', 1.8); // むねの しろと くろの すじ
       line(ctx, [[-3.6, -3], [-2.6, 9]], INK, 1.4);
-      clipPart(ctx, piece.parts[4], () => {
-        for (const [x, y] of [[9.5, -15], [12.5, -17.5], [16, -17], [19, -13.5]]) line(ctx, [[11.5, -4], [x, y]], '#d06a20', 0.9); // いちょうばねの すじ
-        curve(ctx, [[7, -16], [13, -20], [19.5, -17.5], [22, -12]], '#4a3a30', 2.4); // 上の ふち
-      });
       clipPart(ctx, piece.parts[1], () => {
-        oval(ctx, -16, -21, 12, 6, '#3a6a5a'); // みどりの かんむり
+        oval(ctx, -18, -21, 11, 5, '#3a6a5a'); // みどりの ひたい
+        oval(ctx, -7, -16, 6, 7, '#b0602a'); // うしろあたまの かんむり
         oval(ctx, -16, -4, 10, 6, '#f08a3a'); // オレンジの ほおの はね
         for (const x of [-22, -18, -14, -10]) line(ctx, [[x, -8], [x + 1, -1]], '#d06a20', 0.9);
+        ctx.beginPath(); // めの うしろの 大きな しろい みかづき（オシドリの しるし）
+        ctx.moveTo(-21, -15.5);
+        ctx.quadraticCurveTo(-14, -21, -5, -16);
+        ctx.quadraticCurveTo(-8, -10.5, -12, -11.5);
+        ctx.quadraticCurveTo(-16, -12.5, -21, -15.5);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
       });
-      curve(ctx, [[-22, -15.5], [-14, -17], [-5, -14]], '#ffffff', 3.2); // しろい すじ（オシドリの しるし）
-      eye(ctx, -19, -13, 2.4);
+      eye(ctx, -19, -13.5, 2.4);
+      ginkgoFeather(ctx, 0, 0, '#f08a3a'); // てまえの いちょうばね
       dot(ctx, -33.5, -11, 1, '#f6e0c0'); // くちばしの さき
       shine(ctx, -20, -20, 3.4, 1.8);
     },
