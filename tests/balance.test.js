@@ -256,6 +256,10 @@ function makeRng(values) {
     'オイカワ', 'フナ', 'イワトコナマズ', 'サワガニ', 'スッポン', 'イシガメ', 'ウナギ', 'ドジョウ', 'ウグイ', 'ヨシノボリ',
     'カジカ', 'タガメ', 'ゲンゴロウ', 'ヤツメウナギ', 'モリアオガエル', 'アロワナ'];
   for (const name of wantFresh) assert.ok(fresh.adult.some((id) => text.fresh[id] === name), `たのまれた ${name} がいる`);
+  // v0.17.29: タニシを けして シジミに いれかえ（たのまれた いれかえ）
+  assert.ok(fresh.adult.some((id) => text.fresh[id] === 'シジミ'), 'シジミが いる');
+  assert.ok(!Object.values(text.fresh).includes('タニシ'), 'タニシは もう いない');
+  assert.strictEqual(FRESH_PIECES.eel, SEA_PIECES.eel, 'ウナギは うみと 同じ絵');
   for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'fresh'), fieldOf(d, 'sea'), `${d}: たんすいの床は うみと同じ`);
   for (let i = 1; i < 4; i++) {
     const order4 = ['easy', 'normal', 'hard', 'adult'];

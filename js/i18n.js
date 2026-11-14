@@ -300,7 +300,7 @@ export const text = {
     rockCatfish: 'イワトコナマズ',
     lamprey: 'ヤツメウナギ',
     treeFrog: 'モリアオガエル',
-    mudSnail: 'タニシ',
+    clam: 'シジミ',
   },
   balanceBlocksAnimal: 'どうぶつ',
   balanceBlocksBird: 'とり',

@@ -50,7 +50,7 @@ const BIRD_NORMAL = [...BIRD_EASY, 'starling', 'kingfisher', 'plover', 'sandpipe
 const BIRD_HARD = [...BIRD_NORMAL, 'nightHeron', 'cattleEgret', 'littleEgret', 'intermediateEgret', 'greyHeron', 'ibis', 'shoebill', 'goshawk',
   'crestedKingfisher', 'ruddyKingfisher', 'dollarbird', 'woodpecker'];
 
-// たんすいの いきもの の顔ぶれ（v0.17.28。たのまれた26しゅ＋メダカ・ザリガニ・オタマジャクシ・タニシ）
+// たんすいの いきもの の顔ぶれ（v0.17.28。たのまれた26しゅ＋メダカ・ザリガニ・オタマジャクシ・シジミ）
 // かんたん=平ら・ほそながい板／ふつう=さかな／むずかしい=はさみ・あし・まるい子／おとな=ながい・とがった子
 const FRESH_EASY = ['giantSalamander', 'softshellTurtle', 'pondTurtle', 'carp', 'crucianCarp', 'sculpin', 'eel', 'loach'];
 const FRESH_NORMAL = [...FRESH_EASY, 'yamame', 'amago', 'rainbowTrout', 'ayu', 'paleChub', 'dace', 'medaka', 'goby'];
@@ -93,7 +93,7 @@ export const BLOCK_SETS = {
     easy: FRESH_EASY,
     normal: FRESH_NORMAL,
     hard: FRESH_HARD,
-    adult: [...FRESH_HARD, 'ito', 'arowana', 'rockCatfish', 'lamprey', 'treeFrog', 'mudSnail'],
+    adult: [...FRESH_HARD, 'ito', 'arowana', 'rockCatfish', 'lamprey', 'treeFrog', 'clam'],
   },
 };
 

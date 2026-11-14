@@ -7,7 +7,7 @@
 import {
   ellipse, blob, pts, starPolys, flatBottom,
   drawSilhouette, strokePart, clipPart, cut,
-  oval, dot, poly, line, eye, cheek, smile, pout, shine,
+  oval, ovalLine, dot, poly, line, curve, eye, cheek, smile, pout, shine,
 } from './kit.js';
 
 const PI = Math.PI;
@@ -375,24 +375,55 @@ export const SEA_PIECES = {
   },
   // ---------- v0.17.13 で追加（各難易度に2しゅずつ） ----------
 
-  // うなぎ: ほそながい板（下は平ら。いちばんの土台になる。かんたん）
+  // うなぎ（v0.17.29 で 作りなおし）: ほそながい板（下は平ら。いちばんの土台になる。かんたん）。
+  // とがった かお・すこし つき出た したあご・くろっぽい せなかと しろい おなか・ちいさな まるい むなびれ・
+  // せなかから しっぽを まわって おなかまで つづく ひれ（うなぎの しるし）
   eel: {
-    color: '#b9a98a',
-    line: '#7d6e50',
-    parts: [{ points: [...ellipse(12, 11, { cx: -36, from: PI / 2, to: PI * 1.5, n: 8 }), ...pts([[34, -9], [48, 3], [46, 11]])] }],
+    color: '#8c8a64', // ひれの いろ（からだは 中に かさねて描く）
+    line: '#2a2e20',
+    parts: [{ points: pts([[-48, 3.5], [-47, 0.5], [-44, -3], [-38, -6], [-28, -7.6], [-10, -8], [12, -7.5], [30, -5.5], [42, -2.5], [48, 1], [48, 3.4], [44, 6.6], [34, 8], [-36, 8], [-42, 7], [-46, 5.6]]) }],
     draw(ctx, piece) {
       drawSilhouette(ctx, piece);
       clipPart(ctx, piece.parts[0], () => {
-        oval(ctx, 2, 12, 50, 6, '#e6dcc4'); // おなか
-        const fin = [];
-        for (let x = -22; x <= 42; x += 8) fin.push([x, -9 + ((x + 22) / 8) % 2 * 2.5 + (x + 22) * 0.02]);
-        line(ctx, fin, '#d6c9a8', 2.5); // せびれ（なみなみ）
+        for (let x = -10; x <= 44; x += 4) { // ひれの すじ
+          line(ctx, [[x, -9], [x + 1.4, -5]], 'rgba(60, 64, 40, 0.3)', 0.8);
+          if (x > 0) line(ctx, [[x, 9], [x + 1.4, 5]], 'rgba(60, 64, 40, 0.3)', 0.8);
+        }
+        ctx.beginPath(); // からだ（うしろに いくほど ほそくなり、まわりに ひれが のこる）
+        ctx.moveTo(-50, 10);
+        ctx.lineTo(-50, -10);
+        ctx.lineTo(-14, -10);
+        ctx.quadraticCurveTo(14, -5.6, 44.5, 1.6);
+        ctx.quadraticCurveTo(20, 6.2, -2, 7.4);
+        ctx.lineTo(-2, 10);
+        ctx.closePath();
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = '#3e4636';
+        ctx.fill();
+        oval(ctx, -6, 10, 48, 6.4, '#efe6c4'); // しろい おなか
+        oval(ctx, -8, -10, 54, 7, '#2c3226'); // くろっぽい せなか
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(30, 34, 22, 0.55)';
+        ctx.lineWidth = 0.9;
+        ctx.stroke();
       });
-      oval(ctx, -20, 4, 4, 2.5, '#9c8b68', 0.3); // むなびれ
-      shine(ctx, -36, -6, 5, 2.5);
-      eye(ctx, -38, -2, 3);
-      cheek(ctx, -31, 5, 3.2, 2.2);
-      smile(ctx, -44, 4, 2.6);
+      curve(ctx, [[-34, -2], [-35, 1.5], [-34, 4.5]], 'rgba(0, 0, 0, 0.3)', 1); // えら
+      ctx.beginPath(); // ちいさな まるい むなびれ（おうぎ形）
+      ctx.moveTo(-32, 1.6);
+      ctx.arc(-32, 1.6, 4, -0.7, 0.9);
+      ctx.closePath();
+      ctx.fillStyle = '#9a9a72';
+      ctx.fill();
+      ctx.strokeStyle = '#2a2e20';
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
+      for (const a of [-0.3, 0.1, 0.5]) line(ctx, [[-32, 1.6], [-32 + Math.cos(a) * 3.4, 1.6 + Math.sin(a) * 3.4]], '#5a5c40', 0.6);
+      line(ctx, [[-47.6, 3.2], [-41, 3.2]], '#2a2e20', 1.1); // くち（したあごが すこし まえ）
+      shine(ctx, -38, -4.4, 4, 1.6);
+      dot(ctx, -40.5, -1.6, 2.9, '#ffffff');
+      eye(ctx, -40.5, -1.6, 2.2);
+      cheek(ctx, -36.5, 4.4, 2.4, 1.5);
     },
   },
 
