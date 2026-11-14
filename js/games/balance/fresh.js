@@ -1,4 +1,4 @@
-// fresh.js — たんすいの いきもの つみき（v0.17.28）
+// fresh.js — たんすいの いきもの つみき（v0.17.28〜）
 // うみ・どうぶつ・とり と同じしくみ: 1ぴきずつ「当たり判定の形（凸の部品）」と「絵の描き方」を持つ。みんな 左むき。
 // さかなは makeFish() で つくる（からだの下は平らで 積める。おびれの下は からだより上で止めて、2か所で着地しない）。
 // ヤマメ・アマゴ・イワナ など にた形の さかなは、もようで 見分ける（パーマーク・あかい てん・しろい てん・にじいろの おび）
@@ -151,7 +151,7 @@ export const FRESH_PIECES = {
         }
       }
       silhouetteOf(ctx, piece, [1, 2, 3]);
-      const spots = [[-38, -7, 2.6], [-30, 6, 2.8], [-26, -4, 2], [-16, -6, 3.2], [-12, 4, 2.6], [-2, -2, 3], [6, 6, 2.6], [10, -6, 2.8], [18, 1, 2.6], [28, -2, 2.2], [38, 1, 1.8]];
+      const spots = [[-29, -10, 2.2], [-30, 6, 2.8], [-26, -4, 2], [-16, -6, 3.2], [-12, 4, 2.6], [-2, -2, 3], [6, 6, 2.6], [10, -6, 2.8], [18, 1, 2.6], [28, -2, 2.2], [38, 1, 1.8]];
       for (const part of piece.parts.slice(1)) {
         clipPart(ctx, part, () => {
           for (const [x, y, r] of spots) oval(ctx, x, y, r * 1.3, r, '#4e3e2e');
@@ -163,11 +163,40 @@ export const FRESH_PIECES = {
         for (let x = -22; x <= 16; x += 3.8) fold.push([x, s * (8.6 + ((x + 22) / 3.8) % 2 * 1.6)]);
         line(ctx, fold, '#4e3e2e', 1.1);
       }
-      curve(ctx, [[-41, -9], [-44.6, -4], [-45.4, 0], [-44.6, 4], [-41, 9]], '#3e3226', 1.2); // 大きな くち（まえの ふち）
+      // すこし あけた 大きな くち（v0.17.30）。とじた 線だけより、ピンクの くちの なかが 見えるほうが かわいいため。
+      // よこから 見た かおの「D」の くちを 左むきに した形: まるい ほうが はなさき、まっすぐな ほうが め がわ。
+      // ゲームの 大きさでも ピンクが 見えるよう、あたまの まえを ひろく つかう
+      const outer = [[-40, -8.8], [-44.6, -5], [-45.6, 0], [-44.6, 5], [-40, 8.8]];
+      const inner = [[-40, 8.8], [-40.6, 4.4], [-40.8, 0], [-40.6, -4.4], [-40, -8.8]];
+      const mouthPath = () => { // curve() と おなじ なめらかさ。ぬり・きりぬき・ふちどりで 3回 つかう
+        ctx.beginPath();
+        ctx.moveTo(...outer[0]);
+        for (const list of [outer, inner]) {
+          for (let i = 1; i < list.length - 1; i++) {
+            const [x, y] = list[i];
+            const [nx, ny] = list[i + 1];
+            ctx.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2);
+          }
+          ctx.lineTo(...list[list.length - 1]);
+        }
+        ctx.closePath();
+      };
+      mouthPath();
+      ctx.fillStyle = '#ff97a6';
+      ctx.fill();
+      ctx.save();
+      ctx.clip();
+      oval(ctx, -44.6, 0, 2.6, 4.2, '#e9607e'); // した（oval は beginPath するので、ふちどりの前に 形を つくりなおす）
+      ctx.restore();
+      mouthPath();
+      ctx.strokeStyle = '#3e3226';
+      ctx.lineWidth = 1.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
       for (const s of [-1, 1]) {
-        dot(ctx, -39, s * 5.6, 1.7, INK); // ちいさな め（オオサンショウウオの しるし）
-        dot(ctx, -39.4, s * 5.6 - 0.5, 0.55, '#ffffff');
-        cheek(ctx, -35, s * 9.4, 2.4, 1.5);
+        dot(ctx, -37.2, s * 6, 1.7, INK); // ちいさな め（オオサンショウウオの しるし。くちが ひろがったぶん うしろへ）
+        dot(ctx, -37.6, s * 6 - 0.5, 0.55, '#ffffff');
+        cheek(ctx, -34, s * 9.6, 2.4, 1.5);
       }
       shine(ctx, -30, -4, 5, 2.2);
     },
