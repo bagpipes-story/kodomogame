@@ -18,6 +18,7 @@ import {
 } from './game.js';
 import { SEA_PIECES } from './sea.js';
 import { ANIMAL_PIECES } from './animal.js';
+import { BIRD_PIECES } from './bird.js';
 import { boundsOf, buildPieceBody, dampSpin, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
@@ -54,6 +55,7 @@ const LABEL_FONT_MIN = 8;
 const PIECE_SETS = {
   sea: { pieces: SEA_PIECES, names: text.sea },
   animal: { pieces: ANIMAL_PIECES, names: text.animals }, // v0.17.21
+  bird: { pieces: BIRD_PIECES, names: text.birds }, // v0.17.23
 };
 const SPRITE_PAD = 8; // 絵のまわりの よゆう（太い線・とげ・あし が はみ出すぶん）
 

@@ -40,6 +40,13 @@ const ANIMAL_EASY = ['pig', 'cow', 'sheep', 'hippo', 'crocodile', 'cat', 'dog', 
 const ANIMAL_NORMAL = [...ANIMAL_EASY, 'rabbit', 'bear', 'panda', 'lion', 'tiger', 'chick', 'hedgehog', 'koala'];
 const ANIMAL_HARD = [...ANIMAL_NORMAL, 'giraffe', 'zebra', 'monkey', 'owl', 'squirrel', 'frog', 'snake', 'fox'];
 
+// とり の顔ぶれ（v0.17.23。うみ・どうぶつ と同じく、むずかしいほど前の難易度の子に新しい子が足される）
+// かんたん=すわる・うかぶ（おなかが平ら）／ふつう=立つ小さな とり・たてながの子／むずかしい=サギの なかま など せが高い／
+// おとな=いちばん せが高い・かざりの 大きな子
+const BIRD_EASY = ['sparrow', 'crow', 'spotbill', 'coot', 'gull', 'whiteEye', 'tit', 'ptarmigan'];
+const BIRD_NORMAL = [...BIRD_EASY, 'starling', 'kingfisher', 'plover', 'sandpiper', 'cormorant', 'tern', 'puffin', 'tuftedPuffin'];
+const BIRD_HARD = [...BIRD_NORMAL, 'nightHeron', 'cattleEgret', 'littleEgret', 'intermediateEgret', 'greyHeron', 'ibis', 'shoebill', 'goshawk'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -63,6 +70,13 @@ export const BLOCK_SETS = {
     normal: ANIMAL_NORMAL,
     hard: ANIMAL_HARD,
     adult: [...ANIMAL_HARD, 'flamingo', 'kangaroo', 'camel', 'rhino', 'hamster', 'ostrich'],
+  },
+  // 形と絵は bird.js（フラミンゴは どうぶつ と同じもの）
+  bird: {
+    easy: BIRD_EASY,
+    normal: BIRD_NORMAL,
+    hard: BIRD_HARD,
+    adult: [...BIRD_HARD, 'greatEgret', 'crane', 'flamingo', 'peacock', 'birdOfParadise', 'vulture'],
   },
 };
 
@@ -93,8 +107,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ）は 同じ床（形が図形より複雑なので長め。v0.17.21 で どうぶつも）
-  const table = blocks === 'sea' || blocks === 'animal' ? SEA_FIELD : FIELD;
+  // いきもの つみき（うみ・どうぶつ・とり）は 同じ床（形が図形より複雑なので長め。v0.17.21 で どうぶつ、v0.17.23 で とりも）
+  const table = blocks === 'sea' || blocks === 'animal' || blocks === 'bird' ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }
 
