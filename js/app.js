@@ -24,7 +24,7 @@ import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 
-const APP_VERSION = 'v0.17.27';
+const APP_VERSION = 'v0.17.28';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -132,7 +132,7 @@ const setupConfigs = {
     defaults: { mode: 'solo', blocks: 'shape', difficulty: 'easy' },
     groups: [
       { key: 'mode', label: text.modeLabel, options: [['solo', text.modeSolo], ['two', text.modeTwo]] },
-      { key: 'blocks', label: text.balanceBlocksLabel, options: [['shape', text.balanceBlocksShape], ['sea', text.balanceBlocksSea], ['animal', text.balanceBlocksAnimal], ['bird', text.balanceBlocksBird]] },
+      { key: 'blocks', label: text.balanceBlocksLabel, options: [['shape', text.balanceBlocksShape], ['sea', text.balanceBlocksSea], ['animal', text.balanceBlocksAnimal], ['bird', text.balanceBlocksBird], ['fresh', text.balanceBlocksFresh]] },
       { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard], ['adult', text.sizeAdult]] },
     ],
   },
@@ -367,9 +367,11 @@ function buildSetupScreen(gameId) {
     label.textContent = group.label;
 
     const row = document.createElement('div');
-    // 文字ラベル4つは1行に収まらないため2×2にする（数字だけの5択は1行のまま）
+    // 文字ラベル4つ以上は1行に収まらないため2れつにする（数字だけの5択は1行のまま）。
+    // v0.17.28: つみきが5つ（かたち〜たんすい）になり 1行で はみ出したので、5つでも 文字なら 2れつに
+    const shortLabels = group.options.every(([, optionLabel]) => String(optionLabel).length <= 2);
     row.className = group.options.length >= 6 ? 'kgb-option-row is-grid-3'
-      : group.options.length === 4 ? 'kgb-option-row is-grid' : 'kgb-option-row';
+      : group.options.length >= 4 && !shortLabels ? 'kgb-option-row is-grid' : 'kgb-option-row';
     for (const [value, optionLabel] of group.options) {
       const button = document.createElement('button');
       button.type = 'button';

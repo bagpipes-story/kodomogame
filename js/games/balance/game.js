@@ -50,6 +50,12 @@ const BIRD_NORMAL = [...BIRD_EASY, 'starling', 'kingfisher', 'plover', 'sandpipe
 const BIRD_HARD = [...BIRD_NORMAL, 'nightHeron', 'cattleEgret', 'littleEgret', 'intermediateEgret', 'greyHeron', 'ibis', 'shoebill', 'goshawk',
   'crestedKingfisher', 'ruddyKingfisher', 'dollarbird', 'woodpecker'];
 
+// たんすいの いきもの の顔ぶれ（v0.17.28。たのまれた26しゅ＋メダカ・ザリガニ・オタマジャクシ・タニシ）
+// かんたん=平ら・ほそながい板／ふつう=さかな／むずかしい=はさみ・あし・まるい子／おとな=ながい・とがった子
+const FRESH_EASY = ['giantSalamander', 'softshellTurtle', 'pondTurtle', 'carp', 'crucianCarp', 'sculpin', 'eel', 'loach'];
+const FRESH_NORMAL = [...FRESH_EASY, 'yamame', 'amago', 'rainbowTrout', 'ayu', 'paleChub', 'dace', 'medaka', 'goby'];
+const FRESH_HARD = [...FRESH_NORMAL, 'iwana', 'dollyVarden', 'riverCrab', 'crayfish', 'newt', 'divingBeetle', 'waterBug', 'tadpole'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -82,6 +88,13 @@ export const BLOCK_SETS = {
     adult: [...BIRD_HARD, 'greatEgret', 'crane', 'flamingo', 'peacock', 'birdOfParadise', 'vulture',
       'pheasant', 'copperPheasant', 'pelican', 'cassowary'],
   },
+  // 形と絵は fresh.js（ウナギは うみ と同じもの）
+  fresh: {
+    easy: FRESH_EASY,
+    normal: FRESH_NORMAL,
+    hard: FRESH_HARD,
+    adult: [...FRESH_HARD, 'ito', 'arowana', 'rockCatfish', 'lamprey', 'treeFrog', 'mudSnail'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -111,8 +124,9 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり）は 同じ床（形が図形より複雑なので長め。v0.17.21 で どうぶつ、v0.17.23 で とりも）
-  const table = blocks === 'sea' || blocks === 'animal' || blocks === 'bird' ? SEA_FIELD : FIELD;
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい）は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい も）
+  const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }
 

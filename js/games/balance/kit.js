@@ -342,3 +342,89 @@ export function legRow(ctx, xs, top, bottom, w, fill, stroke, hoof) {
     if (hoof) rrect(ctx, x - w / 2, bottom - 3.5, w, 3.5, 1.5, hoof, stroke, 1.4);
   }
 }
+
+// ---------- とり編（v0.17.23）で bird.js に作り、たんすい編（v0.17.28）で 共通に した道具 ----------
+
+// 点を (cx,cy) のまわりに まわす（a>0 で右まわり。サギの からだを むね上がりに かたむける など）
+export function turn(points, a, cx = 0, cy = 0) {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return points.map(({ x, y }) => ({
+    x: round2(cx + (x - cx) * c - (y - cy) * s),
+    y: round2(cy + (x - cx) * s + (y - cy) * c),
+  }));
+}
+
+// ほそながい四角（くびの 当たり判定）。(x1,y1)→(x2,y2) を はば w で
+export function seg(x1, y1, x2, y2, w) {
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  const nx = (-(y2 - y1) / len) * (w / 2);
+  const ny = ((x2 - x1) / len) * (w / 2);
+  return pts([[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]].map(([x, y]) => [round2(x), round2(y)]));
+}
+
+// なめらかな線（点の あいだを まるく つなぐ）。くび・かざりばね に使う
+export function curve(ctx, list, color, width) {
+  ctx.beginPath();
+  ctx.moveTo(list[0][0], list[0][1]);
+  for (let i = 1; i < list.length - 1; i++) {
+    const [x, y] = list[i];
+    const [nx, ny] = list[i + 1];
+    ctx.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2);
+  }
+  const last = list[list.length - 1];
+  ctx.lineTo(last[0], last[1]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+// ふちどりした ほそい あし
+export function leg(ctx, list, color, stroke, w = 2) {
+  line(ctx, list, stroke, w + 1.6);
+  line(ctx, list, color, w);
+}
+
+// あしゆび（左むき: まえに ながく、うしろに みじかく）
+export function foot(ctx, x, y, len, color, stroke, w = 1.8) {
+  leg(ctx, [[x + len * 0.4, y], [x - len, y]], color, stroke, w);
+}
+
+// ふちどりつきの多角形（くちばし・しっぽ）
+export function beak(ctx, list, fill, stroke, width = 1.2) {
+  ctx.beginPath();
+  ctx.moveTo(list[0][0], list[0][1]);
+  for (let i = 1; i < list.length; i++) ctx.lineTo(list[i][0], list[i][1]);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+// はねの うろこもよう（∪）
+export function scallop(ctx, x, y, r, color, w = 1.1) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, Math.PI * 0.15, Math.PI * 0.85);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+// まわりを ふちどった め（くろい かおの上でも見えるように）
+export function ringEye(ctx, x, y, r, ring) {
+  dot(ctx, x, y, r + 1.1, ring);
+  eye(ctx, x, y, r);
+}
+
+// いろつきの め（あかい め・きいろい め）: いろ→くろめ→ひかり
+export function colorEye(ctx, x, y, r, iris) {
+  dot(ctx, x, y, r, iris);
+  dot(ctx, x, y, r * 0.52, INK);
+  dot(ctx, x - r * 0.3, y - r * 0.35, r * 0.24, '#ffffff');
+}

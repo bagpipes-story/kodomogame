@@ -256,6 +256,8 @@ html, body {
   width: 100%;
   max-width: 400px;
   margin-top: 24px;
+  /* 選択肢が多くて 画面に入りきらない ときも「スタート！」と くっつかないように（v0.17.28） */
+  margin-bottom: 20px;
 }
 
 .kgb-setup-label {
@@ -273,6 +275,11 @@ html, body {
 .kgb-option-row.is-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+/* 5択（つみき）など 数が はんぱの ときは、さいごの1つを よこいっぱいに（v0.17.28） */
+.kgb-option-row.is-grid > .kgb-option-button:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
 
 /* 6択以上（ことばのカテゴリ）は3列にして縦に伸びすぎないようにする */

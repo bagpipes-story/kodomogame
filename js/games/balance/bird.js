@@ -5,62 +5,14 @@
 // 絵は なめらかな S字（ふち→からだ→なかみ の順に描いて つなぎ目の線を消す）
 
 import {
-  ellipse, blob, pts, flatBottom,
+  ellipse, blob, pts, flatBottom, turn, seg,
   drawSilhouette, silhouetteOf, clipPart,
-  oval, ovalLine, dot, poly, line, rrect,
-  eye, cheek, shine, INK,
+  oval, ovalLine, dot, poly, line, rrect, curve, leg, foot, beak, scallop,
+  eye, ringEye, colorEye, cheek, shine, INK,
 } from './kit.js';
 import { ANIMAL_PIECES } from './animal.js';
 
 const PI = Math.PI;
-const r2 = (v) => Math.round(v * 100) / 100;
-
-// 点を (cx,cy) のまわりに まわす（a>0 で右まわり。サギの からだを むね上がりに かたむける など）
-function turn(points, a, cx = 0, cy = 0) {
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  return points.map(({ x, y }) => ({
-    x: r2(cx + (x - cx) * c - (y - cy) * s),
-    y: r2(cy + (x - cx) * s + (y - cy) * c),
-  }));
-}
-
-// ほそながい四角（くびの 当たり判定）。(x1,y1)→(x2,y2) を はば w で
-function seg(x1, y1, x2, y2, w) {
-  const len = Math.hypot(x2 - x1, y2 - y1);
-  const nx = (-(y2 - y1) / len) * (w / 2);
-  const ny = ((x2 - x1) / len) * (w / 2);
-  return pts([[x1 + nx, y1 + ny], [x2 + nx, y2 + ny], [x2 - nx, y2 - ny], [x1 - nx, y1 - ny]].map(([x, y]) => [r2(x), r2(y)]));
-}
-
-// なめらかな線（点の あいだを まるく つなぐ）。くび・かざりばね に使う
-function curve(ctx, list, color, width) {
-  ctx.beginPath();
-  ctx.moveTo(list[0][0], list[0][1]);
-  for (let i = 1; i < list.length - 1; i++) {
-    const [x, y] = list[i];
-    const [nx, ny] = list[i + 1];
-    ctx.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2);
-  }
-  const last = list[list.length - 1];
-  ctx.lineTo(last[0], last[1]);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.stroke();
-}
-
-// ふちどりした ほそい あし
-function leg(ctx, list, color, stroke, w = 2) {
-  line(ctx, list, stroke, w + 1.6);
-  line(ctx, list, color, w);
-}
-
-// あしゆび（左むき: まえに ながく、うしろに みじかく）
-function foot(ctx, x, y, len, color, stroke, w = 1.8) {
-  leg(ctx, [[x + len * 0.4, y], [x - len, y]], color, stroke, w);
-}
 
 // 2本あし（上の はしと 下の はしの x をならべる）
 function legs(ctx, list, top, bottom, color, stroke, w, footLen, footColor = color, footStroke = stroke) {
@@ -68,43 +20,6 @@ function legs(ctx, list, top, bottom, color, stroke, w, footLen, footColor = col
     leg(ctx, [[x0, top], [x1, bottom]], color, stroke, w);
     foot(ctx, x1, bottom + 0.5, footLen, footColor, footStroke, w * 0.85);
   }
-}
-
-// ふちどりつきの多角形（くちばし・しっぽ）
-function beak(ctx, list, fill, stroke, width = 1.2) {
-  ctx.beginPath();
-  ctx.moveTo(list[0][0], list[0][1]);
-  for (let i = 1; i < list.length; i++) ctx.lineTo(list[i][0], list[i][1]);
-  ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = width;
-  ctx.stroke();
-}
-
-// はねの うろこもよう（∪）
-function scallop(ctx, x, y, r, color, w = 1.1) {
-  ctx.beginPath();
-  ctx.arc(x, y, r, PI * 0.15, PI * 0.85);
-  ctx.strokeStyle = color;
-  ctx.lineWidth = w;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-}
-
-// まわりを ふちどった め（くろい かおの上でも見えるように）
-function ringEye(ctx, x, y, r, ring) {
-  dot(ctx, x, y, r + 1.1, ring);
-  eye(ctx, x, y, r);
-}
-
-// いろつきの め（あかい め・きいろい め）: いろ→くろめ→ひかり
-function colorEye(ctx, x, y, r, iris) {
-  dot(ctx, x, y, r, iris);
-  dot(ctx, x, y, r * 0.52, INK);
-  dot(ctx, x - r * 0.3, y - r * 0.35, r * 0.24, '#ffffff');
 }
 
 // サギの くび: 当たり判定の板とは別に、絵は なめらかな S字。ふち（下じき）を からだより先に描く
