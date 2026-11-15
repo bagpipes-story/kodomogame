@@ -76,6 +76,12 @@ const DINO_EASY = ['tyrannosaurus', 'triceratops', 'stegosaurus', 'brachiosaurus
 const DINO_NORMAL = [...DINO_EASY, 'parasaurolophus', 'diplodocus', 'allosaurus', 'iguanodon', 'protoceratops', 'styracosaurus', 'carnotaurus', 'dilophosaurus'];
 const DINO_HARD = [...DINO_NORMAL, 'ornithomimus', 'therizinosaurus', 'giganotosaurus', 'mamenchisaurus', 'amargasaurus', 'oviraptor', 'microraptor', 'compsognathus'];
 
+// とどうふけん の顔ぶれ（v0.17.40。47都道府県）。地図の かたちが 見分けやすい じゅんに、どの 難易度にも
+// いろいろな 地方が 入る ように わけた（かんたんに 1つの 地方だけ かたまらない ように）
+const PREF_EASY = ['hokkaido', 'aomori', 'tokyo', 'chiba', 'ishikawa', 'shizuoka', 'aichi', 'shiga', 'osaka', 'kochi', 'kagoshima', 'okinawa'];
+const PREF_NORMAL = [...PREF_EASY, 'iwate', 'akita', 'miyagi', 'niigata', 'nagano', 'kanagawa', 'kyoto', 'hyogo', 'hiroshima', 'kagawa', 'fukuoka', 'nagasaki'];
+const PREF_HARD = [...PREF_NORMAL, 'yamagata', 'fukushima', 'ibaraki', 'saitama', 'toyama', 'yamanashi', 'mie', 'wakayama', 'tottori', 'yamaguchi', 'ehime', 'kumamoto'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -136,6 +142,13 @@ export const BLOCK_SETS = {
     hard: DINO_HARD,
     adult: [...DINO_HARD, 'psittacosaurus', 'kamuysaurus', 'fukuiraptor', 'kentrosaurus', 'baryonyx', 'yutyrannus'],
   },
+  // 形と絵は pref.js（v0.17.40）
+  pref: {
+    easy: PREF_EASY,
+    normal: PREF_NORMAL,
+    hard: PREF_HARD,
+    adult: [...PREF_HARD, 'tochigi', 'gunma', 'fukui', 'gifu', 'nara', 'shimane', 'okayama', 'tokushima', 'saga', 'oita', 'miyazaki'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -165,8 +178,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）は 同じ床（形が図形より複雑なので長め。
-  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい、v0.17.38 で きょうりゅう も）
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）と とどうふけん は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい、v0.17.38 で きょうりゅう、v0.17.40 で とどうふけん も）
   const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }

@@ -298,6 +298,14 @@ html, body {
   grid-column: span 2;
 }
 
+/* 320pxの ほそい 画面では 3列の 1マスが 91pxしか なく、6もじの「とどうふけん」（20pxで 110px）が 入らないので
+   3列の ときだけ 文字を すこし 小さく（v0.17.40。375px いじょうは そのまま） */
+@media (max-width: 340px) {
+  .kgb-option-row.is-grid-3 > .kgb-option-button {
+    font-size: 16px;
+  }
+}
+
 .kgb-option-button {
   flex: 1 1 0;
   min-height: var(--kgb-tap-min);
