@@ -102,6 +102,41 @@ function drawLeg(ctx, l, fill, stroke) {
   }
 }
 
+// てまえの あしの 付け根を からだに なじませる: からだの 中に 入った あしの ふちを けして、もようを つなぎ、
+// ももの まえだけ うすい 線で のこす（あしを 上から はりつけた ように 見えたため）
+function joinLeg(ctx, l, body, o) {
+  // あしの ふち（はばの 外がわ 半分）まで おおう ように、すこし ふとく、上にも のばした 形で ぬりなおす
+  const [p0, p1] = l.pts;
+  const d = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1;
+  const up = [p0[0] - ((p1[0] - p0[0]) / d) * 3, p0[1] - ((p1[1] - p0[1]) / d) * 3];
+  const cover = taper([up, ...l.pts], [l.ws[0] + 3, ...l.ws.map((w) => w + 3)]);
+  const fill = o.legColor ?? o.color;
+  clipEach(ctx, body, () => {
+    ctx.save();
+    ctx.beginPath();
+    addSmooth(ctx, cover);
+    ctx.clip();
+    ctx.fillStyle = fill;
+    ctx.fillRect(-80, -80, 160, 160);
+    o.pattern?.(ctx);
+    ctx.restore();
+    if (l.foot !== 'thero') return;
+    // ももの まえの きわ（あたまが 左なので 前は L がわ）を 下はんぶんだけ うすく のこす
+    const sh = taper(l.pts, l.ws);
+    const [ax, ay] = sh[0];
+    const [bx, by] = sh[1];
+    ctx.beginPath();
+    ctx.moveTo(ax + (bx - ax) * 0.45, ay + (by - ay) * 0.45);
+    ctx.quadraticCurveTo(ax + (bx - ax) * 0.6, ay + (by - ay) * 0.85, bx, by);
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = o.line;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  });
+}
+
 // こまかい 絵の 道具
 function teeth(ctx, [ax, ay], [bx, by], n, len, dir = 1, color = '#f6f2e6') {
   for (let i = 0; i < n; i++) {
@@ -168,7 +203,11 @@ function scaled(piece, k) {
 // legs/arms の near=true が てまえ（当たり判定にも 入れる）、false が むこうがわ（すこし くらい 色）
 function dino(o) {
   const tail = taper(o.tail[0], o.tail[1]);
-  const neck = taper(o.neck[0], o.neck[1]);
+  // くびの 付け根は どうへ むけて ひろげて なじませる（ほそい つつを さしこんだ ように かどが 出たため。絵だけ）
+  const [n0, n1] = o.neck[0];
+  const nd = Math.hypot(n1[0] - n0[0], n1[1] - n0[1]) || 1;
+  const [flareLen, flareW] = o.neckFlare ?? [5, 1.7];
+  const neck = taper([[n0[0] - ((n1[0] - n0[0]) / nd) * flareLen, n0[1] - ((n1[1] - n0[1]) / nd) * flareLen], ...o.neck[0]], [o.neck[1][0] * flareW, ...o.neck[1]]);
   const body = [tail, ...(o.tailExtra ?? []), o.torso, neck, ...(o.preHead ?? []), o.head, ...(o.jaw ? [o.jaw] : [])];
   const near = o.legs.filter((l) => l.near);
   const far = o.legs.filter((l) => !l.near);
@@ -203,6 +242,7 @@ function dino(o) {
       if (o.pattern) clipEach(ctx, body, () => o.pattern(ctx));
       for (const l of near) {
         drawLeg(ctx, l, o.legColor ?? o.color, o.line);
+        joinLeg(ctx, l, body, o);
         o.legPattern?.(ctx, l);
       }
       for (const a of o.arms ?? []) {
@@ -229,6 +269,7 @@ function theropod(o) {
     tail: [[[14, -8], [26, -9.4], [38, -9.6], [49, -8.6]], [14, 9.4, 5.2, 1.6]],
     torso: [[-17, -8], [-9, -15], [4, -16], [15, -12.6], [21, -6], [20, 2.6], [10, 9], [-3, 11], [-13, 6.4], [-19, -1]],
     neck: [[[-13, -5], [-17, -10], [-21, -15]], [12.4, 11.4, 10]],
+    neckFlare: [3, 1.25], // くびが ふとく みじかいので すこしだけ（ひろげすぎると むねに こぶが 出た）
     legs: theroLegs(),
     ...o,
   });
@@ -416,8 +457,9 @@ export const DINO_PIECES = {
     line: '#2a2e24',
     far: '#6a7062',
     tail: [[[22, -2], [34, 1], [44, 5], [50, 9]], [12, 7, 4, 1.6]],
-    torso: [[-20, -8], [-12, -14], [2, -14], [16, -9], [24, -3], [22, 5], [8, 9], [-10, 9], [-20, 5], [-24, -1]],
+    torso: [[-23, -9], [-12, -14], [2, -14], [16, -9], [24, -3], [22, 5], [8, 9], [-10, 9], [-20, 5], [-24.4, -2]],
     neck: [[[-17, -10], [-21, -22], [-25, -33], [-28, -39]], [14, 10.6, 8.4, 7.4]],
+    neckFlare: [9, 1.5], // くびが ほぼ たてなので、ふかく さしこんで のどの 線を むねへ つなぐ
     head: [[-25, -41], [-28, -44.6], [-33, -45], [-38, -43], [-41, -40.6], [-40.6, -38.2], [-35, -37.4], [-28, -37.6]],
     legs: [
       { pts: [[-12, 4], [-13, 17], [-12, 25]], ws: [10, 8, 7.6], foot: 'column' },
@@ -427,7 +469,7 @@ export const DINO_PIECES = {
     ],
     pattern: (ctx) => {
       poly(ctx, [[-30, 0], [-16, 4], [0, 8], [24, 4], [26, 14], [-30, 14]], '#c4c8b4');
-      line(ctx, [[-20, -10], [-24, -24], [-28, -36]], '#b4baa4', 2.4); // くびの 下の 明るい いろ
+      line(ctx, [[-21, -1], [-21.6, -10], [-24.6, -24], [-28, -36]], '#b4baa4', 2.4); // くびの 下の 明るい いろ（むねまで）
       scaleDots(ctx, -18, 40, -12, 4, 24, 'rgba(40, 46, 34, 0.4)');
       for (const x of [-8, 2, 12]) oval(ctx, x, -9, 3.6, 2, 'rgba(60, 66, 54, 0.35)');
     },
@@ -661,7 +703,7 @@ export const DINO_PIECES = {
       scaleDots(ctx, -14, 44, -14, 6, 26, 'rgba(36, 40, 28, 0.4)');
     },
     details: (ctx) => {
-      beak(ctx, [[-12, 24.6], [-15.6, 20], [-11, 22.6]], '#e8e0c8', '#262a20', 1);          // おやゆびの とげ
+      beak(ctx, [[-12.6, 23.4], [-17.6, 18.4], [-12, 20.6]], '#e8e0c8', '#262a20', 1.1);     // おやゆびの とげ（てくびから まえ上へ）
       amberEye(ctx, -32, -17.6, 1.5);
       poly(ctx, [[-46, -14], [-43, -15], [-42.4, -11.6], [-45, -11.6]], '#4a4a3a');           // くちばし
       line(ctx, [[-45, -12.4], [-34, -12.2]], '#262a20', 1);
@@ -902,13 +944,28 @@ export const DINO_PIECES = {
 
   // アマルガサウルス: くびから せなかに 2れつ ならぶ とても ながい とげ・ちいさめの くびの ながい 草食
   amargasaurus: (() => {
+    // とげの ねもとは くびと せなかの 上の ふちに のせて、すこし からだの 中へ うめる
+    // （まっすぐな 線に ならべたら、まがった くびから ねもとが うき上がったため）
+    const neckPts = [[-12, -8], [-20, -16], [-28, -22], [-34, -25]];
+    const neckWs = [10, 8, 6.4, 5.4];
+    const ridge = [...taper(neckPts, neckWs).slice(0, neckPts.length).reverse(), [-2, -13.6], [10, -13.6]]; // あたま→せなか
+    const segLen = ridge.slice(1).map((q, i) => Math.hypot(q[0] - ridge[i][0], q[1] - ridge[i][1]));
+    const total = segLen.reduce((a, b) => a + b, 0);
+    const at = (dist) => {
+      let i = 0;
+      while (i < segLen.length - 1 && dist > segLen[i]) dist -= segLen[i++];
+      const k = Math.min(1, dist / segLen[i]);
+      const [ax, ay] = ridge[i];
+      const [bx, by] = ridge[i + 1];
+      const l = segLen[i] || 1;
+      return [ax + (bx - ax) * k + ((by - ay) / l) * 2.6, ay + (by - ay) * k - ((bx - ax) / l) * 2.6]; // 2.6 だけ 内がわへ
+    };
     const spines = [];
     for (let i = 0; i < 9; i++) {
       const t = i / 8;
-      const x = -30 + t * 40;
-      const y = -24 + t * 12 - Math.sin(t * PI) * 2;
-      const h = 18 - t * 13;
-      spines.push([x, y, x + 2 + t * 2, y - h]);
+      const [x, y] = at(total * (0.1 + t * 0.84));
+      const h = 16.4 - t * 10;
+      spines.push([r2(x), r2(y), r2(x + 2 + t * 2), r2(y - h)]);
     }
     return dino({
       color: '#a08a68',
@@ -916,7 +973,7 @@ export const DINO_PIECES = {
       far: '#7e6a4e',
       tail: [[[20, -4], [32, -4], [42, -2], [49, 0]], [10, 6, 3.4, 1.4]],
       torso: [[-12, -8], [-2, -13], [10, -13], [18, -9], [22, -2], [18, 5], [8, 9], [-6, 9], [-12, 4], [-16, -2]],
-      neck: [[[-12, -8], [-20, -16], [-28, -22], [-34, -25]], [10, 8, 6.4, 5.4]],
+      neck: [neckPts, neckWs],
       head: [[-32, -27.6], [-36, -29], [-42, -28], [-44, -25.6], [-42, -23.6], [-36, -23.4]],
       legs: [
         { pts: [[-2, 4], [-3, 17], [-2, 25]], ws: [8, 6.4, 6], foot: 'column' },
