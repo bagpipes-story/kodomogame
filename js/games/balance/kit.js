@@ -173,6 +173,9 @@ export function buildPieceBody(M, piece, x, y) {
     body = M.Body.create({ ...baseOptions, parts });
     fixCompoundInertia(M, body);
   }
+  // まわりにくさの ばいりつ（v0.17.38）: ちいさく ちぢめた きょうりゅうは まわりにくさが 長さの 4じょうで へり、
+  // 2本あしで 立つと 着地の あと ゆれが とまらずに たおれた。ちぢめた ぶんを おぎなう
+  if (piece.inertiaScale) M.Body.setInertia(body, body.inertia * piece.inertiaScale);
   return { body, offset: { x: x - body.position.x, y: y - body.position.y } };
 }
 

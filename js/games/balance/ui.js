@@ -22,6 +22,7 @@ import { BIRD_PIECES } from './bird.js';
 import { FRESH_PIECES } from './fresh.js';
 import { INSECT_PIECES } from './insect.js';
 import { DEEP_PIECES } from './deep.js';
+import { DINO_PIECES } from './dino.js';
 import { boundsOf, buildPieceBody, dampSpin, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
@@ -62,6 +63,7 @@ const PIECE_SETS = {
   fresh: { pieces: FRESH_PIECES, names: text.fresh }, // v0.17.28
   insect: { pieces: INSECT_PIECES, names: text.insects }, // v0.17.31
   deep: { pieces: DEEP_PIECES, names: text.deep }, // v0.17.34
+  dino: { pieces: DINO_PIECES, names: text.dinos }, // v0.17.38
 };
 const SPRITE_PAD = 8; // 絵のまわりの よゆう（太い線・とげ・あし が はみ出すぶん）
 

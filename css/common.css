@@ -282,15 +282,20 @@ html, body {
   grid-column: span 2;
 }
 
-/* 6択以上（ことばのカテゴリ）は3列にして縦に伸びすぎないようにする */
+/* 6択以上（ことばのカテゴリ）は3列にして縦に伸びすぎないようにする
+   （1fr: ながい ことばの れつは すこし ひろがって 1つの ことばが 1行に おさまる。320pxでも はみ出さない） */
 .kgb-option-row.is-grid-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
 }
 
-/* 3列で さいごの1つだけ はみ出す とき（7択の つみき など）は よこいっぱいに（v0.17.34） */
+/* 3列で さいごの1つだけ はみ出す とき（7択）は よこいっぱい（v0.17.34）、2つ はみ出す とき（8択の つみき）は
+   まえの ほう（ながい ことばの「しんかいの いきもの」）を 2マスに して 行を うめる（v0.17.38） */
 .kgb-option-row.is-grid-3 > .kgb-option-button:last-child:nth-child(3n + 1) {
   grid-column: span 3;
+}
+.kgb-option-row.is-grid-3 > .kgb-option-button:nth-last-child(2):nth-child(3n + 1) {
+  grid-column: span 2;
 }
 
 .kgb-option-button {

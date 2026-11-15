@@ -70,6 +70,12 @@ const DEEP_EASY = ['anglerfish', 'giantSquid', 'flapjackOctopus', 'giantIsopod',
 const DEEP_NORMAL = [...DEEP_EASY, 'giantSlickhead', 'barreleye', 'goblinShark', 'frilledShark', 'megamouth', 'seaPig', 'gulperEel', 'vampireSquid'];
 const DEEP_HARD = [...DEEP_NORMAL, 'predatoryTunicate', 'viperfish', 'fangtooth', 'lancetfish', 'chimaera', 'lanternfish', 'hatchetfish', 'yetiCrab'];
 
+// きょうりゅう の顔ぶれ（v0.17.38。ほんとうの きょうりゅう 30しゅ）。積みやすさより リアルさを だいじに したので、
+// 顔ぶれは よく 知られている じゅん（かんたん=ずかんの 人気もの → おとな=めずらしい 子・日本の きょうりゅう）
+const DINO_EASY = ['tyrannosaurus', 'triceratops', 'stegosaurus', 'brachiosaurus', 'ankylosaurus', 'spinosaurus', 'velociraptor', 'pachycephalosaurus'];
+const DINO_NORMAL = [...DINO_EASY, 'parasaurolophus', 'diplodocus', 'allosaurus', 'iguanodon', 'protoceratops', 'styracosaurus', 'carnotaurus', 'dilophosaurus'];
+const DINO_HARD = [...DINO_NORMAL, 'ornithomimus', 'therizinosaurus', 'giganotosaurus', 'mamenchisaurus', 'amargasaurus', 'oviraptor', 'microraptor', 'compsognathus'];
+
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
 // うみの いきものも難易度で出る顔ぶれを変える（かんたん=平らで積みやすい子だけ → むずかしいほど まるい・とがった子が増える）。
 // 顔ぶれは「まんなかに落とし続けて何こ積めるか」のシミュレーションで、かたちの同じ難易度と近くなるように決めた
@@ -123,6 +129,13 @@ export const BLOCK_SETS = {
     hard: DEEP_HARD,
     adult: [...DEEP_HARD, 'swimmingSeaCucumber', 'seaLily', 'glassSponge', 'snailfish', 'crownJelly', 'scalyFoot'],
   },
+  // 形と絵は dino.js（v0.17.38）
+  dino: {
+    easy: DINO_EASY,
+    normal: DINO_NORMAL,
+    hard: DINO_HARD,
+    adult: [...DINO_HARD, 'psittacosaurus', 'kamuysaurus', 'fukuiraptor', 'kentrosaurus', 'baryonyx', 'yutyrannus'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -152,8 +165,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい）は 同じ床（形が図形より複雑なので長め。
-  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい も）
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい、v0.17.38 で きょうりゅう も）
   const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }

@@ -25,6 +25,7 @@ import { BIRD_PIECES } from '../js/games/balance/bird.js';
 import { FRESH_PIECES } from '../js/games/balance/fresh.js';
 import { INSECT_PIECES } from '../js/games/balance/insect.js';
 import { DEEP_PIECES } from '../js/games/balance/deep.js';
+import { DINO_PIECES } from '../js/games/balance/dino.js';
 import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
@@ -298,11 +299,26 @@ function makeRng(values) {
     const order6 = ['easy', 'normal', 'hard', 'adult'];
     for (const id of deep[order6[i - 1]]) assert.ok(deep[order6[i]].includes(id), `しんかい ${order6[i]} にも ${id}`);
   }
+
+  // きょうりゅう（v0.17.38）: ほんとうの きょうりゅう 30しゅ。うみ と同じ つくり（積みやすさより リアルさ）
+  const dino = BLOCK_SETS.dino;
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => dino[d].length), [8, 16, 24, 30]);
+  assert.strictEqual(Object.keys(DINO_PIECES).length, 30);
+  assert.strictEqual(new Set(dino.adult).size, 30, 'きょうりゅうが かさならない');
+  for (const name of ['ティラノサウルス', 'トリケラトプス', 'ステゴサウルス', 'ブラキオサウルス', 'ヴェロキラプトル']) {
+    assert.ok(dino.adult.some((id) => text.dinos[id] === name), `ゆうめいな ${name} がいる`);
+  }
+  for (const name of ['プテラノドン', 'フタバスズキリュウ', 'モササウルス']) assert.ok(!Object.values(text.dinos).includes(name), `きょうりゅう では ない ${name} は いない`);
+  for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'dino'), fieldOf(d, 'sea'), `${d}: きょうりゅうの床は うみと同じ`);
+  for (let i = 1; i < 4; i++) {
+    const order7 = ['easy', 'normal', 'hard', 'adult'];
+    for (const id of dino[order7[i - 1]]) assert.ok(dino[order7[i]].includes(id), `きょうりゅう ${order7[i]} にも ${id}`);
+  }
   assert.strictEqual(fieldOf('easy', 'toString'), fieldOf('easy', 'shape'), 'へんな なまえは かたちの床');
 
-  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ・とり・たんすい・むし・しんかい）
+  // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）
   const kana = /^[ぁ-んァ-ヶー]+$/;
-  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects], [DEEP_PIECES, deep, text.deep]];
+  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects], [DEEP_PIECES, deep, text.deep], [DINO_PIECES, dino, text.dinos]];
   for (const [pieces, set, names] of creatureSets) for (const [id, piece] of Object.entries(pieces)) {
     assert.ok(set.adult.includes(id), `${id} がどこかの難易度で出る`);
     assert.ok(kana.test(names[id]), `${id} の名前はひらがな・カタカナのみ: ${names[id]}`);
@@ -339,7 +355,7 @@ function makeRng(values) {
     }
   }
   // 「かたち」の名前と いきものの名前が i18n にある（メニュー文言も）
-  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect', 'balanceBlocksDeep']) {
+  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect', 'balanceBlocksDeep', 'balanceBlocksDino']) {
     assert.ok(kana.test(text[key].replace(/ /g, '')), `${key} はひらがな・カタカナのみ`);
   }
 }
@@ -353,7 +369,7 @@ function makeRng(values) {
   new Function('module', 'exports', code)(holder, holder.exports);
   const M = holder.exports;
 
-  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES), ...Object.entries(DEEP_PIECES)]) {
+  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES), ...Object.entries(DEEP_PIECES), ...Object.entries(DINO_PIECES)]) {
     const engine = M.Engine.create({ enableSleeping: true });
     engine.gravity.y = 0.75;
     engine.positionIterations = 12;
