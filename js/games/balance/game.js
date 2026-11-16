@@ -85,6 +85,11 @@ const DINO_HARD = [...DINO_NORMAL, 'ornithomimus', 'therizinosaurus', 'giganotos
 // いろいろな 地方が 入る ように わけた（かんたんに 1つの 地方だけ かたまらない ように）
 const PREF_EASY = ['hokkaido', 'aomori', 'tokyo', 'chiba', 'ishikawa', 'shizuoka', 'aichi', 'shiga', 'osaka', 'kochi', 'kagoshima', 'okinawa'];
 const PREF_NORMAL = [...PREF_EASY, 'iwate', 'akita', 'miyagi', 'niigata', 'nagano', 'kanagawa', 'kyoto', 'hyogo', 'hiroshima', 'kagawa', 'fukuoka', 'nagasaki'];
+// せかいのくに の顔ぶれ（v0.17.42。よく 知られた 60の 国）。知っている 子が 多い じゅんに、どの 難易度にも
+// いろいろな 大陸が 入る ように わけた
+const WORLD_EASY = ['japan', 'china', 'southKorea', 'india', 'russia', 'uk', 'france', 'italy', 'usa', 'canada', 'brazil', 'mexico', 'egypt', 'southAfrica', 'australia'];
+const WORLD_NORMAL = [...WORLD_EASY, 'germany', 'spain', 'greece', 'norway', 'sweden', 'mongolia', 'thailand', 'vietnam', 'philippines', 'indonesia', 'saudiArabia', 'kenya', 'argentina', 'chile', 'newZealand'];
+const WORLD_HARD = [...WORLD_NORMAL, 'portugal', 'netherlands', 'switzerland', 'finland', 'iceland', 'ireland', 'turkey', 'iran', 'nepal', 'sriLanka', 'malaysia', 'morocco', 'madagascar', 'cuba', 'colombia'];
 const PREF_HARD = [...PREF_NORMAL, 'yamagata', 'fukushima', 'ibaraki', 'saitama', 'toyama', 'yamanashi', 'mie', 'wakayama', 'tottori', 'yamaguchi', 'ehime', 'kumamoto'];
 
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
@@ -154,6 +159,13 @@ export const BLOCK_SETS = {
     hard: PREF_HARD,
     adult: [...PREF_HARD, 'tochigi', 'gunma', 'fukui', 'gifu', 'nara', 'shimane', 'okayama', 'tokushima', 'saga', 'oita', 'miyazaki'],
   },
+  // 形と絵は world.js（v0.17.42）
+  world: {
+    easy: WORLD_EASY,
+    normal: WORLD_NORMAL,
+    hard: WORLD_HARD,
+    adult: [...WORLD_HARD, 'austria', 'denmark', 'poland', 'ukraine', 'belgium', 'kazakhstan', 'pakistan', 'cambodia', 'nigeria', 'ethiopia', 'ghana', 'tanzania', 'algeria', 'peru', 'venezuela'],
+  },
 };
 
 export function shapesFor(blocks, difficulty) {
@@ -183,8 +195,8 @@ export const SEA_FIELD = {
 };
 
 export function fieldOf(difficulty, blocks = 'shape') {
-  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）と とどうふけん は 同じ床（形が図形より複雑なので長め。
-  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい、v0.17.38 で きょうりゅう、v0.17.40 で とどうふけん も）
+  // いきもの つみき（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）と とどうふけん・せかいのくに は 同じ床（形が図形より複雑なので長め。
+  // v0.17.21 で どうぶつ、v0.17.23 で とり、v0.17.28 で たんすい、v0.17.31 で むし、v0.17.34 で しんかい、v0.17.38 で きょうりゅう、v0.17.40 で とどうふけん、v0.17.42 で せかいのくに も）
   const table = blocks !== 'shape' && Object.prototype.hasOwnProperty.call(BLOCK_SETS, blocks) ? SEA_FIELD : FIELD;
   return table[difficulty] ?? table.easy;
 }

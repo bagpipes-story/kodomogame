@@ -24,6 +24,7 @@ import { INSECT_PIECES } from './insect.js';
 import { DEEP_PIECES } from './deep.js';
 import { DINO_PIECES } from './dino.js';
 import { PREF_PIECES } from './pref.js';
+import { WORLD_PIECES } from './world.js';
 import { boundsOf, buildPieceBody, dampSpin, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
@@ -66,6 +67,7 @@ const PIECE_SETS = {
   deep: { pieces: DEEP_PIECES, names: text.deep }, // v0.17.34
   dino: { pieces: DINO_PIECES, names: text.dinos }, // v0.17.38
   pref: { pieces: PREF_PIECES, names: text.prefs }, // v0.17.40
+  world: { pieces: WORLD_PIECES, names: text.countries }, // v0.17.42
 };
 const SPRITE_PAD = 8; // 絵のまわりの よゆう（太い線・とげ・あし が はみ出すぶん）
 

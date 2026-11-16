@@ -16,6 +16,6 @@ lines = []
 for pid, o in D.items():
     rings = '[' + ','.join(flat(r) for r in o['draw']) + ']'
     parts = '[' + ','.join(flat(r) for r in o['parts']) + ']'
-    lake = (',' + flat(o['lake'])) if o.get('lake') else ''
-    lines.append(f"  {pid}: ['{o['region']}', {o['pad']}, {rings}, {parts}{lake}],")
+    lake = (', [' + ','.join(flat(r) for r in o['lakes']) + ']') if o.get('lakes') else ''
+    lines.append(f"  {pid}: ['{o['group']}', {o['pad']}, {rings}, {parts}{lake}],")
 open(sys.argv[2], 'w').write('\n'.join(lines) + '\n')

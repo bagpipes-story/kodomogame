@@ -28,6 +28,7 @@ import { INSECT_PIECES } from '../js/games/balance/insect.js';
 import { DEEP_PIECES } from '../js/games/balance/deep.js';
 import { DINO_PIECES } from '../js/games/balance/dino.js';
 import { PREF_PIECES } from '../js/games/balance/pref.js';
+import { WORLD_PIECES } from '../js/games/balance/world.js';
 import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
@@ -345,11 +346,37 @@ function makeRng(values) {
   for (const id of ['kagawa', 'osaka', 'tokyo']) assert.ok(areaOf('iwate') > areaOf(id) * 1.5, `岩手は ${id} より 大きい`);
   // かんたんにも 北の はし（北海道）と 南の はし（沖縄）が いる
   assert.ok(pref.easy.includes('hokkaido') && pref.easy.includes('okinawa'));
+  // せかいのくに（v0.17.42）: 60の 国。かたちは メルカトル、大きさは ほんとうの 面積の じゅん。うみ と同じ床
+  const world = BLOCK_SETS.world;
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => world[d].length), [15, 30, 45, 60]);
+  assert.strictEqual(Object.keys(WORLD_PIECES).length, 60);
+  assert.strictEqual(new Set(world.adult).size, 60, 'せかいのくにが かさならない');
+  assert.strictEqual(Object.keys(text.countries).length, 60);
+  for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'world'), fieldOf(d, 'sea'), `${d}: せかいのくにの床は うみと同じ`);
+  for (let i = 1; i < 4; i++) {
+    const order9 = ['easy', 'normal', 'hard', 'adult'];
+    for (const id of world[order9[i - 1]]) assert.ok(world[order9[i]].includes(id), `せかいのくに ${order9[i]} にも ${id}`);
+  }
+  assert.ok(world.easy.includes('japan'), 'かんたんに にほん');
+  const worldArea = (id) => WORLD_PIECES[id].parts.reduce((sum, part) => {
+    let a = 0;
+    for (let i = 0; i < part.points.length; i++) {
+      const p = part.points[i];
+      const q = part.points[(i + 1) % part.points.length];
+      a += p.x * q.y - q.x * p.y;
+    }
+    return sum + Math.abs(a) / 2;
+  }, 0);
+  // 大きさの じゅんは ほんとうの 面積と 同じ（ロシアが いちばん 大きい・小さい 国は 大きい 国より 小さい）
+  for (const id of Object.keys(WORLD_PIECES)) if (id !== 'russia') assert.ok(worldArea('russia') > worldArea(id), `ロシアは ${id} より 大きい`);
+  for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico']]) {
+    assert.ok(worldArea(big) > worldArea(small), `${big} は ${small} より 大きい`);
+  }
   assert.strictEqual(fieldOf('easy', 'toString'), fieldOf('easy', 'shape'), 'へんな なまえは かたちの床');
 
   // まだ積んでいない いきものも含めて、ぜんぶの形をしらべる（うみ・どうぶつ・とり・たんすい・むし・しんかい・きょうりゅう）
   const kana = /^[ぁ-んァ-ヶー]+$/;
-  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects], [DEEP_PIECES, deep, text.deep], [DINO_PIECES, dino, text.dinos], [PREF_PIECES, pref, text.prefs]];
+  const creatureSets = [[SEA_PIECES, sea, text.sea], [ANIMAL_PIECES, animal, text.animals], [BIRD_PIECES, bird, text.birds], [FRESH_PIECES, fresh, text.fresh], [INSECT_PIECES, insect, text.insects], [DEEP_PIECES, deep, text.deep], [DINO_PIECES, dino, text.dinos], [PREF_PIECES, pref, text.prefs], [WORLD_PIECES, world, text.countries]];
   for (const [pieces, set, names] of creatureSets) for (const [id, piece] of Object.entries(pieces)) {
     assert.ok(set.adult.includes(id), `${id} がどこかの難易度で出る`);
     assert.ok(kana.test(names[id]), `${id} の名前はひらがな・カタカナのみ: ${names[id]}`);
@@ -369,8 +396,8 @@ function makeRng(values) {
     }
     // 大きさ: いままでの かたち（46〜78px）と同じくらい。落とす前の表示（上から52px）に収まる
     const box = boundsOf(piece);
-    if (pieces === PREF_PIECES) { // とどうふけんは ほんとうの 大きさの じゅんに するので 小さい 県は 小さい（見える 大きさは のこす）
-      assert.ok(box.w <= 100 && box.h <= 80 && Math.max(box.w, box.h) >= 24 && Math.min(box.w, box.h) >= 14, `${id} の大きさ ${box.w}x${box.h}`);
+    if (pieces === PREF_PIECES || pieces === WORLD_PIECES) { // 地図の つみきは ほんとうの 大きさの じゅんに するので 小さい 県・国は 小さい（見える 大きさは のこす）
+      assert.ok(box.w <= 100 && box.h <= 80 && Math.max(box.w, box.h) >= 20 && Math.min(box.w, box.h) >= 12, `${id} の大きさ ${box.w}x${box.h}`);
     } else {
       assert.ok(box.w >= 36 && box.w <= 100, `${id} の横はば ${box.w}`);
       assert.ok(box.h >= 16 && box.h <= 80, `${id} の高さ ${box.h}`); // うなぎは ほそい板
@@ -390,7 +417,7 @@ function makeRng(values) {
     }
   }
   // 「かたち」の名前と いきものの名前が i18n にある（メニュー文言も）
-  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect', 'balanceBlocksDeep', 'balanceBlocksDino', 'balanceBlocksPref']) {
+  for (const key of ['balanceBlocksLabel', 'balanceBlocksShape', 'balanceBlocksSea', 'balanceBlocksAnimal', 'balanceBlocksBird', 'balanceBlocksFresh', 'balanceBlocksInsect', 'balanceBlocksDeep', 'balanceBlocksDino', 'balanceBlocksPref', 'balanceBlocksWorld']) {
     assert.ok(kana.test(text[key].replace(/ /g, '')), `${key} はひらがな・カタカナのみ`);
   }
 }
@@ -404,7 +431,7 @@ function makeRng(values) {
   new Function('module', 'exports', code)(holder, holder.exports);
   const M = holder.exports;
 
-  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES), ...Object.entries(DEEP_PIECES), ...Object.entries(DINO_PIECES), ...Object.entries(PREF_PIECES)]) {
+  for (const [id, piece] of [...Object.entries(SEA_PIECES), ...Object.entries(ANIMAL_PIECES), ...Object.entries(BIRD_PIECES), ...Object.entries(FRESH_PIECES), ...Object.entries(INSECT_PIECES), ...Object.entries(DEEP_PIECES), ...Object.entries(DINO_PIECES), ...Object.entries(PREF_PIECES), ...Object.entries(WORLD_PIECES)]) {
     const engine = M.Engine.create({ enableSleeping: true });
     engine.gravity.y = 0.75;
     engine.positionIterations = 12;
