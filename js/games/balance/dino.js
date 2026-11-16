@@ -169,7 +169,8 @@ const amberEye = (ctx, x, y, r = 1.8, iris = '#e0a028') => colorEye(ctx, x, y, r
 function scaled(piece, k) {
   return {
     ...piece,
-    inertiaScale: 1 / (k * k), // ちぢめて へった まわりにくさを おぎなう（kit.js の buildPieceBody）
+    // v0.17.38 では ちぢめた ぶん まわりにくさを おぎなって いたが（inertiaScale）、物理を ほんものに ちかづけた
+    // v0.17.44 からは なくても 立つので やめた（小さい ものほど はやく たおれる のが ほんとう）
     parts: piece.parts.map((p) => {
       const out = [];
       for (const q of p.points) { // ちぢめて ちかすぎる 点は まとめる（長さ0の辺で こわれるため）

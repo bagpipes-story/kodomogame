@@ -139,13 +139,30 @@ export function fixCompoundInertia(M, body) {
 // ころがりにくさ（v0.17.14）。Matterには「転がりにくさ」の設定がないので、まるみのある いきものは
 // 一度まわり出すと 丸太のように床を ころがり続け、広い床の はしから落ちていた。
 // 毎フレーム まわる いきおいを少しずつ弱める（落ちる はやさ・まっすぐの動きは そのまま）
-export const SPIN_DAMP = 0.95;
+// v0.17.44: 前は 毎フレーム 5%（0.95）弱めていたが、強すぎて「はみ出して たおれる はずの つみき」が ゆっくりしか
+// かたむかず、とちゅうで スリープして 止まって いた（台から 重心が はみ出した 板や、細い ところで ささえた 地図が 止まる）。
+// 2%に よわめ、着地の あとの はやい くるくる（FAST_SPIN こえ）だけ 強く 弱める。たおれはじめの ゆっくりした かたむきは じゃましない
+export const SPIN_DAMP = 0.98;
+export const FAST_SPIN = 0.03;     // ラジアン/フレーム
+export const FAST_SPIN_DAMP = 0.85;
 
 export function dampSpin(M, bodies, k = SPIN_DAMP) {
   for (const body of bodies) {
-    if (body.isStatic || body.isSleeping || body.angularVelocity === 0) continue;
-    M.Body.setAngularVelocity(body, body.angularVelocity * k);
+    if (body.isStatic || body.isSleeping) continue;
+    // こまかく わけて 計算する（PHYSICS_SUBSTEPS）ので、1フレームあたりに なおした 値で みる
+    const w = M.Body.getAngularVelocity(body);
+    if (w === 0) continue;
+    M.Body.setAngularVelocity(body, w * k * (Math.abs(w) > FAST_SPIN ? FAST_SPIN_DAMP : 1));
   }
+}
+
+// 物理の 1フレーム（v0.17.44）。1フレームを 3つに わけて 計算する。
+// 1回で 計算すると 計算の ずれで、ちゃんと つりあった 塔も（四角を すこし ずらした 10だんで）くずれた。
+// それを スリープ（止まった ものを 計算しない しくみ）で ささえて いたので、たおれかけの つみきまで 止まって いた。
+// 3つに わけると 14だんでも ずれが 1px いか（そのぶん 計算は 3ばい。いちばん おもい 場面でも 1フレーム 5ミリ秒くらい）
+export const PHYSICS_SUBSTEPS = 3;
+export function stepPhysics(M, engine) {
+  for (let i = 0; i < PHYSICS_SUBSTEPS; i++) M.Engine.update(engine, 1000 / 60 / PHYSICS_SUBSTEPS);
 }
 
 // いきもの1ぴきぶんのボディ。凸の部品を合体させる。

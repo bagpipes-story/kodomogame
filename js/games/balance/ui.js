@@ -1,6 +1,6 @@
 // ui.js — バランスゲームの描画・入力（v0.8）
 // 物理はMatter.js（lib/matter.min.jsをローカル同梱・グローバルMatter）、描画はCanvas。
-// 性能規定（仕様§4.5）: 動くブロックは30こまで・sleeping有効・描画はrAFループのみ
+// 性能規定（仕様§4.5）: 動くブロックは30こまで（おとなは 60こ）・sleeping有効・物理は 1フレーム3分割（v0.17.44）・描画はrAFループのみ
 // いきもの つみき（v0.17.12）の絵は しゅるいごとに1回だけ描いて、毎フレームは貼るだけ
 // （ループ内でDOMは触らない。スコア等のDOM更新はイベント時だけ）。?debugでfps表示。
 
@@ -25,7 +25,7 @@ import { DEEP_PIECES } from './deep.js';
 import { DINO_PIECES } from './dino.js';
 import { PREF_PIECES } from './pref.js';
 import { WORLD_PIECES } from './world.js';
-import { boundsOf, buildPieceBody, dampSpin, fixCompoundInertia as fixInertia } from './kit.js';
+import { boundsOf, buildPieceBody, dampSpin, stepPhysics, fixCompoundInertia as fixInertia } from './kit.js';
 import { text } from '../../i18n.js';
 import { getNames, turnOf, winOf } from '../../players.js';
 import { playTap, playPlace, playFall, playCrash, playWin } from '../../sound.js';
@@ -474,7 +474,7 @@ export function mount(root, config, { onExit }) {
 
   function loop(now) {
     rafId = requestAnimationFrame(loop);
-    M.Engine.update(engine, 1000 / 60);
+    stepPhysics(M, engine); // 1フレームを 3つに わけて 計算（v0.17.44）
     // いきもの つみき: まるい子が ころがり続けないように（v0.17.14。かたちは今までどおり）
     if (pieceSet) dampSpin(M, M.Composite.allBodies(engine.world));
 
@@ -498,7 +498,8 @@ export function mount(root, config, { onExit }) {
 
     // 落下中ブロックの静止判定
     if (dropping && !state.finished) {
-      if (dropping.speed < 0.2 && dropping.angularSpeed < 0.05) {
+      // 1フレームあたりに なおした はやさで みる（こまかく わけて 計算しても 同じ きじゅんに なる）
+      if (M.Body.getSpeed(dropping) < 0.2 && M.Body.getAngularSpeed(dropping) < 0.05) {
         stableFrames++;
         if (stableFrames >= SETTLE_FRAMES) onSettled();
       } else {

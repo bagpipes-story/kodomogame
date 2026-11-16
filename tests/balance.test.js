@@ -29,7 +29,7 @@ import { DEEP_PIECES } from '../js/games/balance/deep.js';
 import { DINO_PIECES } from '../js/games/balance/dino.js';
 import { PREF_PIECES } from '../js/games/balance/pref.js';
 import { WORLD_PIECES } from '../js/games/balance/world.js';
-import { isConvex, boundsOf, buildPieceBody, dampSpin } from '../js/games/balance/kit.js';
+import { isConvex, boundsOf, buildPieceBody, dampSpin, stepPhysics, PHYSICS_SUBSTEPS } from '../js/games/balance/kit.js';
 import { readFileSync } from 'node:fs';
 import { text } from '../js/i18n.js';
 
@@ -447,7 +447,7 @@ function makeRng(values) {
     assert.ok(Number.isFinite(offset.x) && Number.isFinite(offset.y));
     M.Composite.add(engine.world, [platform, body]);
     for (let f = 0; f < 600; f++) {
-      M.Engine.update(engine, 1000 / 60);
+      stepPhysics(M, engine); // ゲームと同じ（1フレームを 3つに わけて 計算）
       dampSpin(M, [body]);
     }
     const drift = Math.abs(body.position.x - W / 2);
@@ -480,12 +480,70 @@ function makeRng(values) {
     last = buildPieceBody(M, SEA_PIECES[id], W / 2 + dx, Math.min(0, top - 170) + 52).body;
     M.Composite.add(engine.world, last);
     for (let f = 0; f < 300; f++) {
-      M.Engine.update(engine, 1000 / 60);
+      stepPhysics(M, engine); // ゲームと同じ（1フレームを 3つに わけて 計算）
       dampSpin(M, M.Composite.allBodies(engine.world));
     }
   }
   assert.ok(last.position.y < groundY, `3こめの くじらが床の上に残る（y=${last.position.y.toFixed(0)}）`);
   assert.ok(Math.abs(last.position.x - W / 2) < platformW / 2, 'くじらが床の はしまで ころがらない');
+}
+
+// ---------- 物理が ほんものらしく きく（v0.17.44） ----------
+// たおれる はずの ものは たおれ（はみ出した まま 止まらない）、つりあって いる ものは たつ。
+// 前は まわる いきおいを 毎フレーム 5%弱めて いたため、はみ出した つみきが ゆっくりしか かたむかず、スリープして 止まっていた
+
+{
+  const code = readFileSync(new URL('../lib/matter.min.js', import.meta.url), 'utf8');
+  const holder = { exports: {} };
+  new Function('module', 'exports', code)(holder, holder.exports);
+  const M = holder.exports;
+  const W = 343;
+  const groundY = 430 - 26;
+  const top = groundY - 9;
+  const platformW = Math.round(W * 0.54 * fieldOf('easy', 'sea').platformRatio);
+  const o = { friction: 0.9, frictionStatic: 1.2, restitution: 0, density: 0.002 };
+  const scene = (bodies, frames) => {
+    const engine = M.Engine.create({ enableSleeping: true });
+    engine.gravity.y = 0.75;
+    engine.positionIterations = 12;
+    engine.velocityIterations = 8;
+    M.Composite.add(engine.world, [M.Bodies.rectangle(W / 2, groundY, platformW, 18, { isStatic: true, friction: 1 }), ...bodies]);
+    for (let f = 0; f < frames; f++) {
+      stepPhysics(M, engine);
+      dampSpin(M, M.Composite.allBodies(engine.world));
+    }
+  };
+  assert.ok(PHYSICS_SUBSTEPS >= 3, '1フレームを 3つ いじょうに わけて 計算する');
+  // 台の はしから 重心が 4px はみ出した 板 → おちる
+  const over = M.Bodies.rectangle(W / 2 + platformW / 2 + 4, top - 15, 72, 30, o);
+  scene([over], 360);
+  assert.ok(over.position.y > groundY + 30, '重心が はみ出した 板は 台から おちる');
+  // 細い 板（20×70）: 17.5°（重心が 角の 外）は たおれ、12°は もどって 立つ
+  const lean = M.Bodies.rectangle(W / 2, top - 40, 20, 70, o);
+  M.Body.setAngle(lean, 17.5 / 57.3);
+  scene([lean], 480);
+  assert.ok(Math.abs(lean.angle) > 1.2, '17.5°で 立てた 細い 板は たおれる');
+  const back = M.Bodies.rectangle(W / 2, top - 40, 20, 70, o);
+  M.Body.setAngle(back, 12 / 57.3);
+  scene([back], 480);
+  assert.ok(Math.abs(back.angle) < 0.1, '12°なら もどって 立つ');
+  // 四角の 上に 重心が 3px はみ出して のせた 四角 → おちる
+  const base = M.Bodies.rectangle(W / 2, top - 23, 46, 46, o);
+  const topBox = M.Bodies.rectangle(W / 2 + 26, top - 69.5, 46, 46, o);
+  scene([base, topBox], 360);
+  assert.ok(topBox.position.y > top - 40, '重心が はみ出した 上の 四角は おちる');
+  // すこしずつ ずらした 10だん（つりあっている）→ たつ
+  const tower = [];
+  for (let i = 0; i < 10; i++) tower.push(M.Bodies.rectangle(W / 2 + (i % 2 ? 6 : -6), top - 23 - i * 46.5, 46, 46, o));
+  scene(tower, 600);
+  for (const [i, b] of tower.entries()) assert.ok(Math.abs(b.position.x - (W / 2 + (i % 2 ? 6 : -6))) < 4, `つりあった 10だんの ${i + 1}だんめが くずれない`);
+  // 地図の つみきも 台から 重心が はみ出したら おちる（v0.17.40 は まわりにくさ 20ばいで 止まっていた）
+  for (const piece of [WORLD_PIECES.vietnam, WORLD_PIECES.japan, PREF_PIECES.iwate, PREF_PIECES.tokyo]) {
+    const b = buildPieceBody(M, piece, 0, 0).body;
+    M.Body.setPosition(b, { x: W / 2 + platformW / 2 + 5, y: top - (b.bounds.max.y - b.position.y) - 0.5 });
+    scene([b], 480);
+    assert.ok(b.position.y > groundY + 30, '重心が はみ出した 地図は 台から おちる');
+  }
 }
 
 console.log('balance.test.js: すべてのテストに合格');
