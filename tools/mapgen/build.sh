@@ -27,7 +27,7 @@ json.dump({'type': 'FeatureCollection', 'features': [f for f in d['features'] if
     echo "wrote js/games/balance/pref.js" ;;
   world)
     get ne_10m_admin_0_countries_jpn # 日本から 見た 国境（北方領土は 日本）
-    "$PY" -B -E -s world.py "$DATA/ne_10m_admin_0_countries_jpn.geojson" "$DATA/ne_10m_lakes.geojson" "${P:-0.2}" "$DATA/world.json"
+    "$PY" -B -E -s world.py "$DATA/ne_10m_admin_0_countries_jpn.geojson" "$DATA/ne_10m_lakes.geojson" "${P:-0.28}" "$DATA/world.json"
     "$PY" -B -E -s emit.py "$DATA/world.json" "$DATA/world-data.js"
     cat head_world.js "$DATA/world-data.js" tail_world.js > ../../js/games/balance/world.js
     echo "wrote js/games/balance/world.js" ;;

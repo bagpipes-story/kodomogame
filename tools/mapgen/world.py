@@ -10,8 +10,8 @@ from shapely.geometry import shape, Polygon, MultiPolygon
 from shapely.ops import unary_union
 from common import polys_of, tf, clean_ring, convex_parts, pts_of
 
-P_EXP = float(sys.argv[3]) if len(sys.argv) > 3 else 0.2
-MAX_W, MAX_H = 98, 78  # つみきの 大きさの 上限（テストは 100×80）
+P_EXP = float(sys.argv[3]) if len(sys.argv) > 3 else 0.28
+MAX_W, MAX_H = 148, 86  # つみきの 大きさの 上限（v0.17.43。大きい 国を ほかの つみきより 大きく して 大きさの ちがいを はっきり。テストは 150×88）
 
 # id: Natural Earth の ADM0_A3
 COUNTRIES = {

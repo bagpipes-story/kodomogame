@@ -369,6 +369,7 @@ function makeRng(values) {
   }, 0);
   // 大きさの じゅんは ほんとうの 面積と 同じ（ロシアが いちばん 大きい・小さい 国は 大きい 国より 小さい）
   for (const id of Object.keys(WORLD_PIECES)) if (id !== 'russia') assert.ok(worldArea('russia') > worldArea(id), `ロシアは ${id} より 大きい`);
+  assert.ok(worldArea('russia') > worldArea('belgium') * 25, '大きさの ちがいが はっきり（ロシアは ベルギーの 25ばい いじょうの 広さに 見える）');
   for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico']]) {
     assert.ok(worldArea(big) > worldArea(small), `${big} は ${small} より 大きい`);
   }
@@ -396,8 +397,10 @@ function makeRng(values) {
     }
     // 大きさ: いままでの かたち（46〜78px）と同じくらい。落とす前の表示（上から52px）に収まる
     const box = boundsOf(piece);
-    if (pieces === PREF_PIECES || pieces === WORLD_PIECES) { // 地図の つみきは ほんとうの 大きさの じゅんに するので 小さい 県・国は 小さい（見える 大きさは のこす）
-      assert.ok(box.w <= 100 && box.h <= 80 && Math.max(box.w, box.h) >= 20 && Math.min(box.w, box.h) >= 12, `${id} の大きさ ${box.w}x${box.h}`);
+    if (pieces === WORLD_PIECES) { // せかいのくに（v0.17.43）: 大きさの ちがいを はっきり させる ため 大きい 国は ほかの つみきより 大きい（150×88まで）
+      assert.ok(box.w <= 150 && box.h <= 88 && Math.max(box.w, box.h) >= 18 && Math.min(box.w, box.h) >= 12, `${id} の大きさ ${box.w}x${box.h}`);
+    } else if (pieces === PREF_PIECES) { // とどうふけんは ほんとうの 大きさの じゅんに するので 小さい 県は 小さい（見える 大きさは のこす）
+      assert.ok(box.w <= 100 && box.h <= 80 && Math.max(box.w, box.h) >= 24 && Math.min(box.w, box.h) >= 14, `${id} の大きさ ${box.w}x${box.h}`);
     } else {
       assert.ok(box.w >= 36 && box.w <= 100, `${id} の横はば ${box.w}`);
       assert.ok(box.h >= 16 && box.h <= 80, `${id} の高さ ${box.h}`); // うなぎは ほそい板
