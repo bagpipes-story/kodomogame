@@ -10,7 +10,7 @@ from shapely.geometry import shape, Polygon, MultiPolygon
 from shapely.ops import unary_union
 from common import polys_of, tf, clean_ring, convex_parts, pts_of
 
-P_EXP = float(sys.argv[3]) if len(sys.argv) > 3 else 0.28
+P_EXP = float(sys.argv[3]) if len(sys.argv) > 3 else 0.24
 MAX_W, MAX_H = 148, 86  # つみきの 大きさの 上限（v0.17.43。大きい 国を ほかの つみきより 大きく して 大きさの ちがいを はっきり。テストは 150×88）
 
 # id: Natural Earth の ADM0_A3
@@ -25,6 +25,12 @@ COUNTRIES = {
     'colombia': 'COL', 'austria': 'AUT', 'denmark': 'DNK', 'poland': 'POL', 'ukraine': 'UKR', 'belgium': 'BEL',
     'kazakhstan': 'KAZ', 'pakistan': 'PAK', 'cambodia': 'KHM', 'nigeria': 'NGA', 'ethiopia': 'ETH', 'ghana': 'GHA',
     'tanzania': 'TZA', 'algeria': 'DZA', 'peru': 'PER', 'venezuela': 'VEN',
+    # v0.17.45 で 30 ふやした
+    'bangladesh': 'BGD', 'myanmar': 'MMR', 'laos': 'LAO', 'uzbekistan': 'UZB', 'bhutan': 'BTN', 'oman': 'OMN',
+    'romania': 'ROU', 'hungary': 'HUN', 'czechia': 'CZE', 'croatia': 'HRV', 'serbia': 'SRB', 'bulgaria': 'BGR',
+    'belarus': 'BLR', 'estonia': 'EST', 'angola': 'AGO', 'sudan': 'SDN', 'libya': 'LBY', 'mali': 'MLI',
+    'zambia': 'ZMB', 'namibia': 'NAM', 'uganda': 'UGA', 'coteDIvoire': 'CIV', 'cameroon': 'CMR', 'ecuador': 'ECU',
+    'bolivia': 'BOL', 'paraguay': 'PRY', 'uruguay': 'URY', 'panama': 'PAN', 'costaRica': 'CRI', 'papuaNewGuinea': 'PNG',
 }
 GROUP = {'Asia': 'asia', 'Europe': 'europe', 'Africa': 'africa', 'North America': 'northAmerica',
          'South America': 'southAmerica', 'Oceania': 'oceania'}
@@ -39,6 +45,8 @@ def far_territory(cid, lon, lat):
         return lon < -10 or lat < 40   # 海外県
     if cid == 'netherlands':
         return lat < 45                # カリブの 島
+    if cid == 'ecuador':
+        return lon < -85               # ガラパゴス
     return False
 
 R = 6371.0
@@ -144,7 +152,7 @@ for cid, I in info.items():
     core = unary_union(big)
     draw = []
     for q in big + small:
-        q2 = q.simplify(0.45, preserve_topology=True)
+        q2 = q.simplify(0.6, preserve_topology=True)  # 絵の りんかく（0.6px より こまかい でこぼこは 見えない ので はぶいて かるく）
         for qq in polys_of(q2):
             if qq.area < 0.8:
                 continue

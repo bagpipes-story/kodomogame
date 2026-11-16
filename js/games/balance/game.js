@@ -85,11 +85,12 @@ const DINO_HARD = [...DINO_NORMAL, 'ornithomimus', 'therizinosaurus', 'giganotos
 // いろいろな 地方が 入る ように わけた（かんたんに 1つの 地方だけ かたまらない ように）
 const PREF_EASY = ['hokkaido', 'aomori', 'tokyo', 'chiba', 'ishikawa', 'shizuoka', 'aichi', 'shiga', 'osaka', 'kochi', 'kagoshima', 'okinawa'];
 const PREF_NORMAL = [...PREF_EASY, 'iwate', 'akita', 'miyagi', 'niigata', 'nagano', 'kanagawa', 'kyoto', 'hyogo', 'hiroshima', 'kagawa', 'fukuoka', 'nagasaki'];
-// せかいのくに の顔ぶれ（v0.17.42。よく 知られた 60の 国）。知っている 子が 多い じゅんに、どの 難易度にも
-// いろいろな 大陸が 入る ように わけた
+// せかいのくに の顔ぶれ（v0.17.42。よく 知られた 60の 国 → v0.17.45 で 90）。知っている 子が 多い じゅんに、どの 難易度にも
+// いろいろな 大陸が 入る ように わけた（ふやした 30は むずかしい・おとなに 15ずつ）
 const WORLD_EASY = ['japan', 'china', 'southKorea', 'india', 'russia', 'uk', 'france', 'italy', 'usa', 'canada', 'brazil', 'mexico', 'egypt', 'southAfrica', 'australia'];
 const WORLD_NORMAL = [...WORLD_EASY, 'germany', 'spain', 'greece', 'norway', 'sweden', 'mongolia', 'thailand', 'vietnam', 'philippines', 'indonesia', 'saudiArabia', 'kenya', 'argentina', 'chile', 'newZealand'];
-const WORLD_HARD = [...WORLD_NORMAL, 'portugal', 'netherlands', 'switzerland', 'finland', 'iceland', 'ireland', 'turkey', 'iran', 'nepal', 'sriLanka', 'malaysia', 'morocco', 'madagascar', 'cuba', 'colombia'];
+const WORLD_HARD = [...WORLD_NORMAL, 'portugal', 'netherlands', 'switzerland', 'finland', 'iceland', 'ireland', 'turkey', 'iran', 'nepal', 'sriLanka', 'malaysia', 'morocco', 'madagascar', 'cuba', 'colombia',
+  'myanmar', 'bangladesh', 'bhutan', 'romania', 'czechia', 'croatia', 'hungary', 'ecuador', 'bolivia', 'uruguay', 'panama', 'costaRica', 'angola', 'libya', 'papuaNewGuinea'];
 const PREF_HARD = [...PREF_NORMAL, 'yamagata', 'fukushima', 'ibaraki', 'saitama', 'toyama', 'yamanashi', 'mie', 'wakayama', 'tottori', 'yamaguchi', 'ehime', 'kumamoto'];
 
 // つみきの しゅるい（v0.17.12）。メニューの「つみき」で選ぶ。
@@ -164,7 +165,8 @@ export const BLOCK_SETS = {
     easy: WORLD_EASY,
     normal: WORLD_NORMAL,
     hard: WORLD_HARD,
-    adult: [...WORLD_HARD, 'austria', 'denmark', 'poland', 'ukraine', 'belgium', 'kazakhstan', 'pakistan', 'cambodia', 'nigeria', 'ethiopia', 'ghana', 'tanzania', 'algeria', 'peru', 'venezuela'],
+    adult: [...WORLD_HARD, 'austria', 'denmark', 'poland', 'ukraine', 'belgium', 'kazakhstan', 'pakistan', 'cambodia', 'nigeria', 'ethiopia', 'ghana', 'tanzania', 'algeria', 'peru', 'venezuela',
+      'laos', 'uzbekistan', 'oman', 'serbia', 'bulgaria', 'belarus', 'estonia', 'sudan', 'mali', 'zambia', 'namibia', 'uganda', 'coteDIvoire', 'cameroon', 'paraguay'],
   },
 };
 

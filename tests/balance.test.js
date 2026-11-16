@@ -346,12 +346,12 @@ function makeRng(values) {
   for (const id of ['kagawa', 'osaka', 'tokyo']) assert.ok(areaOf('iwate') > areaOf(id) * 1.5, `岩手は ${id} より 大きい`);
   // かんたんにも 北の はし（北海道）と 南の はし（沖縄）が いる
   assert.ok(pref.easy.includes('hokkaido') && pref.easy.includes('okinawa'));
-  // せかいのくに（v0.17.42）: 60の 国。かたちは メルカトル、大きさは ほんとうの 面積の じゅん。うみ と同じ床
+  // せかいのくに（v0.17.42。v0.17.45 で 90）:かたちは メルカトル、大きさは ほんとうの 面積の じゅん。うみ と同じ床
   const world = BLOCK_SETS.world;
-  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => world[d].length), [15, 30, 45, 60]);
-  assert.strictEqual(Object.keys(WORLD_PIECES).length, 60);
-  assert.strictEqual(new Set(world.adult).size, 60, 'せかいのくにが かさならない');
-  assert.strictEqual(Object.keys(text.countries).length, 60);
+  assert.deepStrictEqual(['easy', 'normal', 'hard', 'adult'].map((d) => world[d].length), [15, 30, 60, 90]);
+  assert.strictEqual(Object.keys(WORLD_PIECES).length, 90);
+  assert.strictEqual(new Set(world.adult).size, 90, 'せかいのくにが かさならない');
+  assert.strictEqual(Object.keys(text.countries).length, 90);
   for (const d of ['easy', 'normal', 'hard', 'adult']) assert.deepStrictEqual(fieldOf(d, 'world'), fieldOf(d, 'sea'), `${d}: せかいのくにの床は うみと同じ`);
   for (let i = 1; i < 4; i++) {
     const order9 = ['easy', 'normal', 'hard', 'adult'];
@@ -369,8 +369,13 @@ function makeRng(values) {
   }, 0);
   // 大きさの じゅんは ほんとうの 面積と 同じ（ロシアが いちばん 大きい・小さい 国は 大きい 国より 小さい）
   for (const id of Object.keys(WORLD_PIECES)) if (id !== 'russia') assert.ok(worldArea('russia') > worldArea(id), `ロシアは ${id} より 大きい`);
-  assert.ok(worldArea('russia') > worldArea('belgium') * 25, '大きさの ちがいが はっきり（ロシアは ベルギーの 25ばい いじょうの 広さに 見える）');
-  for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico']]) {
+  assert.ok(worldArea('russia') > worldArea('belgium') * 15, '大きさの ちがいが はっきり（ロシアは ベルギーの 15ばい いじょうの 広さに 見える）');
+  // 小さい 国も 小さすぎない（v0.17.45: オランダ などが 小さすぎたので 面積の 0.28→0.24じょうに）
+  for (const id of ['netherlands', 'belgium', 'switzerland', 'denmark', 'estonia', 'bhutan']) {
+    const b = boundsOf(WORLD_PIECES[id]);
+    assert.ok(Math.max(b.w, b.h) >= 20, `${id} が 小さすぎない（${b.w.toFixed(0)}x${b.h.toFixed(0)}）`);
+  }
+  for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico'], ['romania', 'hungary'], ['bolivia', 'paraguay'], ['sudan', 'uganda']]) {
     assert.ok(worldArea(big) > worldArea(small), `${big} は ${small} より 大きい`);
   }
   assert.strictEqual(fieldOf('easy', 'toString'), fieldOf('easy', 'shape'), 'へんな なまえは かたちの床');
@@ -452,7 +457,10 @@ function makeRng(values) {
     }
     const drift = Math.abs(body.position.x - W / 2);
     assert.ok(body.position.y < groundY, `${id} が床の上にいる（y=${body.position.y.toFixed(0)}）`);
-    assert.ok(drift < 30, `${id} が ころがって行かない（ずれ ${drift.toFixed(0)}px）`);
+    // 背の 高い 子は たおれて 横に なる だけで 重心が 背の 半分くらい 動くので、それは ころがりに かぞえない（v0.17.45: タイ 縦59）
+    const box = boundsOf(piece);
+    const limit = Math.max(30, Math.max(box.h, box.w) * 0.6);
+    assert.ok(drift < limit, `${id} が ころがって行かない（ずれ ${drift.toFixed(0)}px / ${limit.toFixed(0)}px）`);
     assert.ok(body.isSleeping, `${id} が10びょう以内に止まる`);
   }
 }
