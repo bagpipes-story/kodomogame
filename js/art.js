@@ -134,6 +134,8 @@ const body = {
 // ---------- ホームのゲームアイコン（白い線画寄り。テーマ色の四角の上に載せる） ----------
 const W = `fill="#ffffff" ${S}`;
 const games = {
+  guess: `<path d="M18 58 Q22 34 46 32 Q58 20 70 30 Q86 30 88 48 Q92 62 80 70 Q60 80 38 74 Q26 80 16 72 Q22 66 18 58 Z" fill="#2f2a26" ${S}/>
+    <text x="54" y="64" text-anchor="middle" font-size="34" font-weight="800" fill="#ffffff" font-family="sans-serif">?</text>`,
   tictactoe: `<circle cx="34" cy="34" r="16" fill="none" stroke="#ffffff" stroke-width="8"/>
     <path d="M54 54 L82 82 M82 54 L54 82" fill="none" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>`,
   memory: `<rect x="16" y="24" width="38" height="52" rx="6" ${W}/>

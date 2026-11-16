@@ -16,6 +16,8 @@ const PRAISE_PRIORITY = [
   'aimed_hit',
   'beat_robot',
   'one_listen',
+  'all_first_try',
+  'early_guess',
   'comeback',
   'remembered_pair',
   'combo',
@@ -45,6 +47,7 @@ const SKILL_MAP = {
   enword: ['english'],                    // 音と文字と意味を結ぶ（別冊04§3）
   abc: ['numberLetter', 'english'],       // アルファベット順序・頭文字（別冊04§4）
   listen: ['english'],                    // 2語・3語の聞き取り（別冊04§5）
+  guess: ['numberLetter', 'shapeBalance'], // なまえ（語彙）と かたちの みきわめ（v0.18 なまえあて）
 };
 
 let events = new Set();

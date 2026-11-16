@@ -6,7 +6,7 @@
 //   タップで skipWaiting → controllerchange で再読み込み（ゲーム途中に勝手に入れ替わらない）。
 // 外部通信は一切しない（同一オリジンのGETだけ扱う）。
 
-const VERSION = 'v0.17.46';
+const VERSION = 'v0.18';
 const CACHE_NAME = `kgb-${VERSION}`;
 
 // プリキャッシュ一覧（相対パス。tests/sw.test.js が「存在する」「漏れがない」を検査する）
@@ -26,6 +26,7 @@ const PRECACHE = [
   './css/games/flash.css',
   './css/games/korinto.css',
   './css/games/listen.css',
+  './css/games/guess.css',
   './css/games/maze.css',
   './css/games/memory.css',
   './css/games/mole.css',
@@ -62,6 +63,7 @@ const PRECACHE = [
   './js/games/balance/game.js',
   './js/games/balance/kit.js',
   './js/games/balance/mapPiece.js',
+  './js/games/balance/pieceSets.js',
   './js/games/balance/pref.js',
   './js/games/balance/sea.js',
   './js/games/balance/ui.js',
@@ -73,6 +75,8 @@ const PRECACHE = [
   './js/games/korinto/game.js',
   './js/games/korinto/physics.js',
   './js/games/korinto/ui.js',
+  './js/games/guess/game.js',
+  './js/games/guess/ui.js',
   './js/games/listen/game.js',
   './js/games/listen/ui.js',
   './js/games/maze/game.js',

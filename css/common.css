@@ -24,6 +24,7 @@
   --kgb-color-enword: #7bc4c4;    /* あおみどり */
   --kgb-color-abc: #e58fb8;       /* こいピンク */
   --kgb-color-listen: #9bb6e8;    /* うすあお */
+  --kgb-color-guess: #e6a57e;     /* もも（なまえあて v0.18） */
 
   /* 選択中・スタートボタンなどの強調色 */
   --kgb-accent: #f28b3b;
@@ -173,6 +174,7 @@ html, body {
 .kgb-theme-enword { background: var(--kgb-color-enword); }
 .kgb-theme-abc { background: var(--kgb-color-abc); }
 .kgb-theme-listen { background: var(--kgb-color-listen); }
+.kgb-theme-guess { background: var(--kgb-color-guess); }
 
 .kgb-home-footer {
   margin-top: auto;

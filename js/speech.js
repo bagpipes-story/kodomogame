@@ -1,4 +1,4 @@
-// speech.js — 英語音声（別冊04§2.2）
+// speech.js — 英語音声（別冊04§2.2）と 日本語の よびかけ（v0.18 なまえあて: 「おなまえ な〜んだ？」・こたえの 名前）
 // 方針: 同梱音声（assets/audio/en/<id>.mp3）があればそれを再生、なければ
 // iPhone内蔵の読み上げ（Web Speech API）。ゲーム側は say('apple') だけ呼ぶ。
 // iOSの制約: speak()はタップ等のユーザー操作の中でしか鳴らない → 出題音声はタップ起点で呼ぶこと。
@@ -12,6 +12,7 @@ const RATE = 0.8;            // 子ども向けにゆっくり
 const LANG = 'en-US';
 
 let voice = null;
+let jaVoice = null; // 日本語（v0.18）
 let voicesLoaded = false;
 
 function synth() {
@@ -25,6 +26,8 @@ function pickVoice() {
   const voices = s.getVoices();
   if (!voices.length) return;
   voicesLoaded = true;
+  const japanese = voices.filter((v) => /^ja[-_]/i.test(v.lang));
+  jaVoice = japanese.find((v) => v.localService) ?? japanese[0] ?? null;
   const english = voices.filter((v) => /^en[-_]/i.test(v.lang));
   voice =
     english.find((v) => v.lang.replace('_', '-') === LANG && v.localService) ??
@@ -90,6 +93,37 @@ export function say(textOrId) {
       s.speak(utter);
       // 端末によってendが来ないことがあるので保険（単語1つは2秒あれば読み終わる）
       setTimeout(done, Math.max(1500, textOrId.length * 120 + 800));
+    } catch {
+      resolve();
+    }
+  });
+}
+
+// 日本語の よびかけ（v0.18）。こたえの 名前（ひらがな・カタカナ）や「おなまえ なーんだ？」を 読む。
+// 日本語の 声が ない 端末では 鳴らさずに すぐ resolve（文字の 表示だけで あそべる）
+export function sayJa(phrase) {
+  return new Promise((resolve) => {
+    const s = synth();
+    if (isMuted() || !s || (voicesLoaded && !jaVoice)) {
+      resolve();
+      return;
+    }
+    try {
+      const utter = new SpeechSynthesisUtterance(phrase);
+      utter.lang = 'ja-JP';
+      utter.rate = 0.95;
+      utter.pitch = 1.15; // こどもに よびかける ように すこし たかく
+      if (jaVoice) utter.voice = jaVoice;
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      utter.addEventListener('end', done);
+      utter.addEventListener('error', done);
+      s.speak(utter);
+      setTimeout(done, Math.max(1500, phrase.length * 200 + 800));
     } catch {
       resolve();
     }

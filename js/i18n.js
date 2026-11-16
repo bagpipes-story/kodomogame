@@ -553,6 +553,17 @@ export const text = {
   balanceBlocksDino: 'きょうりゅう',
   balanceBlocksPref: 'とどうふけん',
   balanceBlocksWorld: 'せかいのくに',
+  // なまえあて（v0.18）: バランスゲームの 絵の 黒い かげから 名前を あてる
+  guessSetLabel: 'なかま',
+  guessCall: 'おなまえ な〜んだ？',
+  guessCallSpeak: 'おなまえ なーんだ？', // 読み上げ用（「〜」は へんに 読まれるので のばし棒）
+  guessCorrect: 'せいかい！',
+  guessEarly: 'すこし みえた だけで わかったね！',
+  guessWrong: 'おしい！ もういちど よく みてね',
+  guessLook: 'よーく みて えらんでね',
+  guessEarlyLabel: 'はやわかり',
+  guessTimesSuffix: 'かい！',
+  guessResultSuffix: 'もん クリア！',
   balanceBlocksLabel: 'つみき',
   balanceBlocksShape: 'かたち',
   balanceBlocksSea: 'うみの いきもの',
@@ -709,6 +720,8 @@ export const text = {
     exact_hit: 'ぴったり 100に できたね！',
     beat_robot: 'ロボくんより はやく こたえられたね！',
     one_listen: 'いっかい きいただけで わかったね！',
+    early_guess: 'すこし みえた だけで わかったね！',      // なまえあて（v0.18）
+    all_first_try: 'まちがえずに ぜんぶ あてられたね！',   // なまえあて（v0.18）
   },
   draw: 'ひきわけ！',
   playAgainTone: 'またあそぼう！',
@@ -782,7 +795,7 @@ export const parentText = {
 // ホームの並び（v0.17.1）: あそびの種類ごとに見出しを付けて並べる
 export const homeGroups = [
   { label: 'かんがえる', ids: ['tictactoe', 'othello', 'sevens', 'oldmaid'] },
-  { label: 'おぼえる・かず', ids: ['memory', 'flash'] },
+  { label: 'おぼえる・かず', ids: ['memory', 'flash', 'guess'] },
   { label: 'えいご', ids: ['enword', 'abc', 'listen'] },
   { label: 'うごかす', ids: ['balance', 'rollcatch', 'korinto', 'maze', 'mole'] },
 ];
@@ -796,6 +809,7 @@ export const games = [
   { id: 'abc', name: 'ABCタッチ', icon: '🔤' },
   { id: 'listen', name: 'きいてタッチ', icon: '👂' },
   { id: 'flash', name: 'すうじフラッシュ', icon: '🔢' },
+  { id: 'guess', name: 'なまえあて', icon: '❓' },
   { id: 'othello', name: 'オセロ', icon: '⚫' },
   { id: 'sevens', name: 'しちならべ', icon: '7' },
   { id: 'oldmaid', name: 'ばばぬき', icon: '🃏' },

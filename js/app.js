@@ -23,8 +23,9 @@ import { mount as mountKorinto } from './games/korinto/ui.js';
 import { mount as mountEnword } from './games/enword/ui.js';
 import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
+import { mount as mountGuess } from './games/guess/ui.js';
 
-const APP_VERSION = 'v0.17.46';
+const APP_VERSION = 'v0.18';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -42,6 +43,7 @@ const gameMounters = {
   enword: mountEnword,
   abc: mountAbc,
   listen: mountListen,
+  guess: mountGuess,
 };
 
 const screens = {
@@ -69,6 +71,14 @@ const LEVEL_OPTIONS = [
 const CATEGORY_OPTIONS = [['all', text.catAll], ['animal', text.catAnimal], ['fruit', text.catFruit], ['color', text.catColor], ['number', text.catNumber], ['shape', text.catShape], ['body', text.catBody]];
 
 const setupConfigs = {
+  guess: {
+    // なまえあて（v0.18）: バランスゲームの 図形いがいの つみきの 絵。むずかしさで 顔ぶれと 見えて くる はやさが かわる
+    defaults: { set: 'sea', difficulty: 'easy' },
+    groups: [
+      { key: 'set', label: text.guessSetLabel, options: [['sea', text.balanceBlocksSea], ['animal', text.balanceBlocksAnimal], ['bird', text.balanceBlocksBird], ['fresh', text.balanceBlocksFresh], ['insect', text.balanceBlocksInsect], ['deep', text.balanceBlocksDeep], ['dino', text.balanceBlocksDino], ['pref', text.balanceBlocksPref], ['world', text.balanceBlocksWorld]] },
+      { key: 'difficulty', label: text.difficultyLabel, options: [['easy', text.sizeEasy], ['normal', text.sizeNormal], ['hard', text.sizeHard], ['adult', text.sizeAdult]] },
+    ],
+  },
   abc: {
     // じゅんばんABC（タイム）／はじめのもじ（頭文字3択）。ことばは はじめのもじ のときだけ意味がある
     defaults: { game: 'order', mode: 'solo', difficulty: 'easy', category: 'all' },

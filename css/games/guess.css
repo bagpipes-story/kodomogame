@@ -1,0 +1,200 @@
+/* guess.css — なまえあて（v0.18） */
+/* アニメーションは transform/opacity のみ（§9）。かげと モザイクは キャンバスの 中だけで 描く */
+
+.kgb-guess {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  flex: 1;
+}
+
+.kgb-guess-banner {
+  width: 100%;
+  margin-bottom: 0;
+  font-size: 20px;
+  white-space: nowrap;
+}
+
+/* まんなかの 絵（キャンバスの 上に よびかけ・名前を かさねる） */
+.kgb-guess-stage {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 220px;
+  max-height: 340px;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  overflow: hidden;
+}
+
+.kgb-guess-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.25s ease;
+}
+
+/* 正解で 絵が ぽんっと すこし 大きく */
+.kgb-guess-stage.is-pop .kgb-guess-canvas {
+  transform: scale(1.06);
+}
+
+/* 「おなまえ な〜んだ？」: ふわっと 出て、見えはじめると 消える */
+.kgb-guess-call {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  margin: 0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 24px;
+  font-weight: bold;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, -8px) scale(0.9);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.kgb-guess-call.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* 正解の 名前 */
+.kgb-guess-name {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  margin: 0;
+  padding: 4px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--kgb-text);
+  font-size: 28px;
+  font-weight: bold;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+}
+
+.kgb-guess-name.is-on {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.kgb-guess-next-hint {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 18px;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.kgb-guess-stage.is-done .kgb-guess-next-hint {
+  opacity: 1;
+}
+
+.kgb-guess-status {
+  min-height: 28px;
+  margin: 0;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* 4たく（2×2） */
+.kgb-guess-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.kgb-guess-choice {
+  min-height: var(--kgb-tap-min);
+  padding: 6px 4px;
+  border: 3px solid transparent;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  word-break: keep-all;
+  transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.kgb-guess-choice.is-mid {
+  font-size: 18px;
+}
+
+.kgb-guess-choice.is-long {
+  font-size: 15px;
+}
+
+.kgb-guess-choice:active {
+  transform: scale(0.96);
+}
+
+.kgb-guess-choice:disabled {
+  cursor: default;
+}
+
+.kgb-guess-choice.is-wrong {
+  opacity: 0.35;
+}
+
+.kgb-guess-choice.is-correct {
+  border-color: var(--kgb-accent);
+  background: #fff1e4;
+  transform: scale(1.04);
+}
+
+.kgb-guess-next {
+  min-height: var(--kgb-tap-min);
+  width: 100%;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-next[hidden] {
+  display: none;
+}
+
+/* 背の ひくい 画面（320×568 など）: 「つぎ！」まで 画面に おさまる ように 絵の ばしょを ひくく（ボタンの 大きさは そのまま） */
+@media (max-height: 620px) {
+  .kgb-guess-stage {
+    min-height: 150px;
+  }
+
+  .kgb-guess-status {
+    min-height: 22px;
+    font-size: 17px;
+  }
+
+  .kgb-guess {
+    gap: 6px;
+  }
+}
