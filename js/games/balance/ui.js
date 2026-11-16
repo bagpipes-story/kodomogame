@@ -6,7 +6,7 @@
 
 import {
   BLOCK_LIMIT,
-  ACTIVE_LIMIT,
+  activeLimitOf,
   createGame,
   continueRun,
   nextShape,
@@ -582,13 +582,14 @@ export function mount(root, config, { onExit }) {
     spawnPreview();
   }
 
-  // 性能規定: 動くブロックは ACTIVE_LIMIT こまで。超えたら古い順に、止まっている（スリープ中の）ものを
+  // 性能規定: 動くブロックは ACTIVE_LIMIT こま（おとなは 2ばい。activeLimitOf）まで。超えたら古い順に、止まっている（スリープ中の）ものを
   // 固定する。古いブロックは塔の下のほうで上の重みで落ち着いているので、固定しても遊びはほぼ変わらない。
   // まだ動いているものは固定しない（次に積んだときにまた試す）
   function freezeOldBlocks() {
+    const limit = activeLimitOf(config.difficulty);
     let active = placedBodies.filter((b) => !b.isStatic).length;
     for (const body of placedBodies) {
-      if (active <= ACTIVE_LIMIT) break;
+      if (active <= limit) break;
       if (body.isStatic || !body.isSleeping) continue;
       M.Sleeping.set(body, false); // static にする前に起こしておく（スリープのまま固定すると状態が残る）
       M.Body.setStatic(body, true);

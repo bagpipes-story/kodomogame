@@ -6,6 +6,11 @@ export const BLOCK_MAX = 99;   // きろく ちょうせん の終わり（表�
 // 性能規定: 動くブロックは30こまで。それより古くて止まっている（スリープ中の）ブロックは
 // ui.js が固定（static）にして、物理計算の数を増やさない
 export const ACTIVE_LIMIT = 30;
+// おとなは 2ばいの 60こ（v0.17.41）。たかく 積むと 下の ほうが 固定されて くずれなく なり、
+// かんたん すぎたため（下の ほうも 上の おもさで ずれたり かたむいたり する）
+export function activeLimitOf(difficulty) {
+  return difficulty === 'adult' ? ACTIVE_LIMIT * 2 : ACTIVE_LIMIT;
+}
 
 // かたちの定義（w/hは基準サイズ。labelKeyはi18nのかたち名と対応 = 図形語彙の知育）
 export const SHAPES = {

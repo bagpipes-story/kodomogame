@@ -6,6 +6,7 @@ import {
   BLOCK_LIMIT,
   BLOCK_MAX,
   ACTIVE_LIMIT,
+  activeLimitOf,
   continueRun,
   SHAPES,
   DIFFICULTY,
@@ -105,6 +106,10 @@ function makeRng(values) {
 
 {
   assert.ok(ACTIVE_LIMIT <= 30, '動くブロックは30こまで（性能規定）');
+  // おとなは 2ばい（v0.17.41）: 下の ほうが すぐ 固定されると くずれなく なり かんたん すぎた
+  for (const d of ['easy', 'normal', 'hard']) assert.strictEqual(activeLimitOf(d), ACTIVE_LIMIT, `${d} は 30こ`);
+  assert.strictEqual(activeLimitOf('adult'), ACTIVE_LIMIT * 2, 'おとなは 60こ');
+  assert.strictEqual(activeLimitOf('toString'), ACTIVE_LIMIT, 'へんな なまえは 30こ');
   const place = (state) => { dropStarted(state); return confirmPlaced(state); };
   const state = createGame({ mode: 'solo' });
   assert.strictEqual(continueRun(state), false, 'クリア前は つづけられない（遊んでいる途中）');
