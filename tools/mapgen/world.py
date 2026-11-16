@@ -11,6 +11,15 @@ from shapely.ops import unary_union
 from common import polys_of, tf, clean_ring, convex_parts, pts_of
 
 P_EXP = float(sys.argv[3]) if len(sys.argv) > 3 else 0.24
+# 国ごとの とくべつな きまり（v0.17.46 パラオ: とても 小さい 島国。そのままだと 5×11 の 点に なり、南の 島も 入らなかった）
+#   near … 入れる 島の きょり（いちばん 大きい 島の 大きさの なんばいまで）
+#   big_min … 当たり判定に 入れる 島の 広さ（px²）、small_near … 絵だけの 島の きょり（大きさの なんばいまで）
+#   min_size … これより 小さければ ここまで 大きく（いちばん 小さい ままなので 大きさの じゅんは かわらない）
+#   coll_tol … 当たり判定の りんかくを かんたんに する こまかさ（px）、part_min … 当たり判定に する 島の 広さの 下限（px²）
+DEFAULT_RULE = dict(near=0.5, big_min=24, small_near=0.12, min_size=0, coll_tol=1.4, part_min=6)
+RULES = {'palau': dict(near=2.0, big_min=2, small_near=0.6, min_size=26, coll_tol=0.5, part_min=1.5)}  # バベルダオブ〜コロール〜ペリリュー〜アンガウル
+def rule(cid, key):
+    return RULES.get(cid, {}).get(key, DEFAULT_RULE[key])
 MAX_W, MAX_H = 148, 86  # つみきの 大きさの 上限（v0.17.43。大きい 国を ほかの つみきより 大きく して 大きさの ちがいを はっきり。テストは 150×88）
 
 # id: Natural Earth の ADM0_A3
@@ -30,7 +39,9 @@ COUNTRIES = {
     'romania': 'ROU', 'hungary': 'HUN', 'czechia': 'CZE', 'croatia': 'HRV', 'serbia': 'SRB', 'bulgaria': 'BGR',
     'belarus': 'BLR', 'estonia': 'EST', 'angola': 'AGO', 'sudan': 'SDN', 'libya': 'LBY', 'mali': 'MLI',
     'zambia': 'ZMB', 'namibia': 'NAM', 'uganda': 'UGA', 'coteDIvoire': 'CIV', 'cameroon': 'CMR', 'ecuador': 'ECU',
-    'bolivia': 'BOL', 'paraguay': 'PRY', 'uruguay': 'URY', 'panama': 'PAN', 'costaRica': 'CRI', 'papuaNewGuinea': 'PNG',
+    'bolivia': 'BOL', 'uruguay': 'URY', 'panama': 'PAN', 'costaRica': 'CRI', 'papuaNewGuinea': 'PNG',
+    # v0.17.46: パラグアイの かわりに パラオ（ちいさい 島国。日本と つながりの ふかい 国）
+    'palau': 'PLW',
 }
 GROUP = {'Asia': 'asia', 'Europe': 'europe', 'Africa': 'africa', 'North America': 'northAmerica',
          'South America': 'southAmerica', 'Oceania': 'oceania'}
@@ -95,29 +106,30 @@ for cid, code in COUNTRIES.items():
     mi = max(range(len(polys)), key=lambda i: true_area[i])
     M = merc[mi]
     size = max(M.bounds[2] - M.bounds[0], M.bounds[3] - M.bounds[1])
-    keep = [i for i in range(len(polys)) if i == mi or merc[i].distance(M) <= 0.5 * size]
+    near = rule(cid, 'near')
+    keep = [i for i in range(len(polys)) if i == mi or merc[i].distance(M) <= near * size]
     info[cid] = dict(group=GROUP[f['properties']['CONTINENT']], ll=[polys[i] for i in keep], merc=[merc[i] for i in keep],
                      true=sum(true_area[i] for i in keep), merc_area=sum(merc[i].area for i in keep))
 
 def scale_for(I, K):
     return math.sqrt(K * I['true'] ** (2 * P_EXP) / I['merc_area'])
 
-def select(I, s):
+def select(I, s, cid=None):
     """その 大きさで つみきに 入れる 島（当たり判定あり=big、絵だけ=small）を えらぶ（メルカトルの 単位で かえす）"""
-    big = [q for q in I['merc'] if q.area * s * s >= 24]  # 当たり判定に 入れる 島（ちいさい 島が 多い カナダ・ロシアで 部品が ふえすぎない ように）
+    big = [q for q in I['merc'] if q.area * s * s >= rule(cid, 'big_min')]  # 当たり判定に 入れる 島（ふつうは 24px²。ちいさい 島が 多い カナダ・ロシアで 部品が ふえすぎない ように）
     if not big:
         big = [max(I['merc'], key=lambda q: q.area)]
     core = unary_union(big)
     b = core.bounds
     size = max(b[2] - b[0], b[3] - b[1]) * s
-    small = [q for q in I['merc'] if q not in big and q.area * s * s >= 0.8 and q.distance(core) * s <= 0.12 * size]
+    small = [q for q in I['merc'] if q not in big and q.area * s * s >= 0.8 and q.distance(core) * s <= rule(cid, 'small_near') * size]
     return big, small
 
-def fit(I, s):
+def fit(I, s, cid=None):
     # えらんだ 島で はかる（入れない 北極の ちいさい 島などで ちぢまない ように）。島えらびが かわるので 2かい くりかえす
     k = 1.0
     for _ in range(3):
-        big, small = select(I, s * k)
+        big, small = select(I, s * k, cid)
         b = unary_union(big + small).bounds
         k = min(1.0, MAX_W / ((b[2] - b[0]) * s), MAX_H / ((b[3] - b[1]) * s))
     return k
@@ -137,10 +149,19 @@ K = s_r ** 2 * R0['merc_area'] / R0['true'] ** (2 * P_EXP)
 out = {}
 for cid, I in info.items():
     s0 = scale_for(I, K)
-    shrink = fit(I, s0)
+    shrink = fit(I, s0, cid)
     s = s0 * shrink
+    # とても 小さい 国（パラオ）は かたちが わかる 大きさ（長い ほうが min_size）までは 大きく する。
+    # それでも いちばん 小さい ままなので 大きさの じゅんは かわらない
+    for _ in range(3):
+        bigm, smallm = select(I, s, cid)
+        bb0 = unary_union(bigm + smallm).bounds
+        longest = max(bb0[2] - bb0[0], bb0[3] - bb0[1]) * s
+        if longest >= rule(cid, 'min_size'):
+            break
+        s *= rule(cid, 'min_size') / longest
     sc = lambda g: shapely.affinity.scale(g, s, s, origin=(0, 0))
-    bigm, smallm = select(I, s)
+    bigm, smallm = select(I, s, cid)
     big = [sc(q) for q in bigm]
     small = [sc(q) for q in smallm]
     core = unary_union(big)
@@ -162,15 +183,15 @@ for cid, I in info.items():
                     draw.append(clean_ring(list(hole.coords)))
     parts = []
     for q in big:
-        q2 = q.simplify(1.4, preserve_topology=True).buffer(0)
+        q2 = q.simplify(rule(cid, 'coll_tol'), preserve_topology=True).buffer(0)
         for qq in polys_of(q2):
-            if qq.area < 6:
+            if qq.area < rule(cid, 'part_min'):
                 continue
             for cp in convex_parts(Polygon(qq.exterior)):
-                if cp.area < 2.5:
+                if cp.area < min(2.5, rule(cid, 'part_min')):
                     continue
                 r = pts_of(cp)
-                if len(r) >= 3 and Polygon(r).area > 2:
+                if len(r) >= 3 and Polygon(r).area > min(2, rule(cid, "part_min") * 0.6):
                     parts.append(r)
     # 湖: 国に かさなる 大きな 湖（国の 中だけ。国境の 湖も 国の ぶんだけ）
     lakes = []

@@ -539,7 +539,7 @@ export const text = {
     cameroon: 'カメルーン',
     ecuador: 'エクアドル',
     bolivia: 'ボリビア',
-    paraguay: 'パラグアイ',
+    palau: 'パラオ', // v0.17.46: パラグアイの かわりに
     uruguay: 'ウルグアイ',
     panama: 'パナマ',
     costaRica: 'コスタリカ',

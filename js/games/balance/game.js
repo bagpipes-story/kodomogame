@@ -166,7 +166,7 @@ export const BLOCK_SETS = {
     normal: WORLD_NORMAL,
     hard: WORLD_HARD,
     adult: [...WORLD_HARD, 'austria', 'denmark', 'poland', 'ukraine', 'belgium', 'kazakhstan', 'pakistan', 'cambodia', 'nigeria', 'ethiopia', 'ghana', 'tanzania', 'algeria', 'peru', 'venezuela',
-      'laos', 'uzbekistan', 'oman', 'serbia', 'bulgaria', 'belarus', 'estonia', 'sudan', 'mali', 'zambia', 'namibia', 'uganda', 'coteDIvoire', 'cameroon', 'paraguay'],
+      'laos', 'uzbekistan', 'oman', 'serbia', 'bulgaria', 'belarus', 'estonia', 'sudan', 'mali', 'zambia', 'namibia', 'uganda', 'coteDIvoire', 'cameroon', 'palau'],
   },
 };
 

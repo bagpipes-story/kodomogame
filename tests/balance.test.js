@@ -358,6 +358,7 @@ function makeRng(values) {
     for (const id of world[order9[i - 1]]) assert.ok(world[order9[i]].includes(id), `せかいのくに ${order9[i]} にも ${id}`);
   }
   assert.ok(world.easy.includes('japan'), 'かんたんに にほん');
+  assert.ok(world.adult.includes('palau') && !world.adult.includes('paraguay'), 'パラグアイの かわりに パラオ（v0.17.46）');
   const worldArea = (id) => WORLD_PIECES[id].parts.reduce((sum, part) => {
     let a = 0;
     for (let i = 0; i < part.points.length; i++) {
@@ -369,13 +370,14 @@ function makeRng(values) {
   }, 0);
   // 大きさの じゅんは ほんとうの 面積と 同じ（ロシアが いちばん 大きい・小さい 国は 大きい 国より 小さい）
   for (const id of Object.keys(WORLD_PIECES)) if (id !== 'russia') assert.ok(worldArea('russia') > worldArea(id), `ロシアは ${id} より 大きい`);
+  for (const id of Object.keys(WORLD_PIECES)) if (id !== 'palau') assert.ok(worldArea(id) > worldArea('palau'), `パラオが いちばん 小さい（${id} より）`);
   assert.ok(worldArea('russia') > worldArea('belgium') * 15, '大きさの ちがいが はっきり（ロシアは ベルギーの 15ばい いじょうの 広さに 見える）');
   // 小さい 国も 小さすぎない（v0.17.45: オランダ などが 小さすぎたので 面積の 0.28→0.24じょうに）
   for (const id of ['netherlands', 'belgium', 'switzerland', 'denmark', 'estonia', 'bhutan']) {
     const b = boundsOf(WORLD_PIECES[id]);
     assert.ok(Math.max(b.w, b.h) >= 20, `${id} が 小さすぎない（${b.w.toFixed(0)}x${b.h.toFixed(0)}）`);
   }
-  for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico'], ['romania', 'hungary'], ['bolivia', 'paraguay'], ['sudan', 'uganda']]) {
+  for (const [big, small] of [['china', 'japan'], ['japan', 'southKorea'], ['brazil', 'argentina'], ['france', 'belgium'], ['india', 'sriLanka'], ['australia', 'newZealand'], ['usa', 'mexico'], ['romania', 'hungary'], ['bolivia', 'uruguay'], ['sudan', 'uganda']]) {
     assert.ok(worldArea(big) > worldArea(small), `${big} は ${small} より 大きい`);
   }
   assert.strictEqual(fieldOf('easy', 'toString'), fieldOf('easy', 'shape'), 'へんな なまえは かたちの床');
@@ -403,7 +405,9 @@ function makeRng(values) {
     // 大きさ: いままでの かたち（46〜78px）と同じくらい。落とす前の表示（上から52px）に収まる
     const box = boundsOf(piece);
     if (pieces === WORLD_PIECES) { // せかいのくに（v0.17.43）: 大きさの ちがいを はっきり させる ため 大きい 国は ほかの つみきより 大きい（150×88まで）
-      assert.ok(box.w <= 150 && box.h <= 88 && Math.max(box.w, box.h) >= 18 && Math.min(box.w, box.h) >= 12, `${id} の大きさ ${box.w}x${box.h}`);
+      // パラオ（v0.17.46）は とても 小さい 島国なので ほそくて 小さい（かたちが わかる 長さ16は ある）
+      const [minLong, minShort] = id === 'palau' ? [15, 6] : [18, 12];
+      assert.ok(box.w <= 150 && box.h <= 88 && Math.max(box.w, box.h) >= minLong && Math.min(box.w, box.h) >= minShort, `${id} の大きさ ${box.w}x${box.h}`);
     } else if (pieces === PREF_PIECES) { // とどうふけんは ほんとうの 大きさの じゅんに するので 小さい 県は 小さい（見える 大きさは のこす）
       assert.ok(box.w <= 100 && box.h <= 80 && Math.max(box.w, box.h) >= 24 && Math.min(box.w, box.h) >= 14, `${id} の大きさ ${box.w}x${box.h}`);
     } else {
