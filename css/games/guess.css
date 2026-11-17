@@ -238,10 +238,10 @@
   z-index: 3;
   display: block;
   will-change: transform, opacity;
-  top: 50%;
-  margin-top: -32px;
-  font-size: 54px;
-  line-height: 64px;
+  /* v0.18.3: 絵の 真横では なく、空いている 下の すみに 大きく */
+  bottom: 6px;
+  font-size: 80px;
+  line-height: 84px;
   font-weight: 900;
   opacity: 0;
   transform: scale(0.6);
@@ -250,12 +250,12 @@
 }
 
 .kgb-guess-q.is-left {
-  left: 8px;
+  left: 16px;
   color: #f28b3b;
 }
 
 .kgb-guess-q.is-right {
-  right: 8px;
+  right: 16px;
   color: #4a90d9;
 }
 
@@ -402,4 +402,13 @@
   font-size: 22px;
   font-weight: bold;
   box-shadow: 0 4px 0 var(--kgb-shadow);
+}
+
+/* 背の ひくい 画面: 絵の ばしょが 小さいので「？」も すこし 小さく（絵に かぶらない ように） */
+@media (max-height: 620px) {
+  .kgb-guess-q {
+    bottom: 2px;
+    font-size: 48px;
+    line-height: 52px;
+  }
 }

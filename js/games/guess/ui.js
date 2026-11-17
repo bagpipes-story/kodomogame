@@ -46,6 +46,7 @@ const ROUND_END_MS = 1500; // さいごの 問題の あと 結果を 出すま�
 const SHADOW = '#2f2a26';  // かげの 色（まっくろより すこし やわらかく）
 const FIT = 0.84;          // 絵を キャンバスの 何わりの 大きさに 描くか
 const HURRY_LAST_MS = 3000; // のこり この 時間で「？」が はやく なる
+const BOTTOM_BAND = 0.2;   // 絵の 下に あける わりあい（「？」と 名前の ばしょ。v0.18.3）
 const THUMB = 64;          // ずかんの 絵の 大きさ（px）
 
 // ずかんの 見出し（メニューと 同じ なまえ）
@@ -217,13 +218,16 @@ export function mount(root, config, { onExit }) {
     const pad = piece.pad ?? 8;
     const fullW = box.w + pad * 2;
     const fullH = box.h + pad * 2;
-    // 小さい 国も 大きい 子も キャンバスに あわせて 同じくらいの 大きさに 描く
-    const scale = Math.min((cw * FIT) / fullW, (ch * FIT) / fullH) * dpr;
+    // 小さい 国も 大きい 子も キャンバスに あわせて 同じくらいの 大きさに 描く。
+    // 下の すみに「？」と 名前を 出すので、絵は 下を すこし あけて 上よりに（v0.18.3）
+    const band = ch * BOTTOM_BAND;
+    const scale = Math.min((cw * FIT) / fullW, ((ch - band) * 0.92) / fullH) * dpr;
     const cx = box.minX + box.w / 2;
     const cy = box.minY + box.h / 2;
+    const midY = ((ch - band) / 2) * dpr;
     colorCtx.setTransform(1, 0, 0, 1, 0, 0);
     colorCtx.clearRect(0, 0, W, H);
-    colorCtx.setTransform(scale, 0, 0, scale, W / 2 - cx * scale, H / 2 - cy * scale);
+    colorCtx.setTransform(scale, 0, 0, scale, W / 2 - cx * scale, midY - cy * scale);
     piece.draw(colorCtx, piece);
     colorCtx.setTransform(1, 0, 0, 1, 0, 0);
 
@@ -237,7 +241,7 @@ export function mount(root, config, { onExit }) {
 
     // かげを おおう はんい（絵の はこ）を GRID×GRID の マスに わける
     const x0 = W / 2 - (fullW / 2) * scale;
-    const y0 = H / 2 - (fullH / 2) * scale;
+    const y0 = midY - (fullH / 2) * scale;
     const tw = (fullW * scale) / GRID;
     const th = (fullH * scale) / GRID;
     const times = tileRevealTimes(GRID * GRID, state.rng);
@@ -346,16 +350,19 @@ export function mount(root, config, { onExit }) {
     timerFill.style.transform = 'scaleX(1)';
   }
 
+  // 左右の「？」を 出す（よびかけと 同時。v0.18.3）。どの むずかしさでも 出す（v0.18.2）。
+  // かんたん・ふつうは ゆっくり やさしく、しょうぶは はやく
+  function showQuestionMarks() {
+    stage.classList.add('is-hurry');
+    if (!strict) stage.classList.add('is-gentle');
+  }
+
+  // 時間の バー（しょうぶ）: 見えはじめと 同時に へりはじめる
   function startHurry() {
-    // 左右の「？」: どの むずかしさでも 出す（v0.18.2）。かんたん・ふつうは ゆっくり やさしく、しょうぶは はやく
-    if (!strict) {
-      stage.classList.add('is-hurry', 'is-gentle');
-      return;
-    }
+    if (!strict) return;
     void timerFill.getBoundingClientRect(); // transition の リセットを 確定させる
     timerFill.style.transition = `transform ${rule.limitMs}ms linear`;
     timerFill.style.transform = 'scaleX(0)';
-    stage.classList.add('is-hurry');
     later(() => {
       if (phase !== 'ask') return;
       stage.classList.add('is-last');
@@ -412,6 +419,7 @@ export function mount(root, config, { onExit }) {
     preparePicture(q.answer);
     drawFrame(0, null); // まっくろな かげ
     callEl.classList.add('is-on');
+    showQuestionMarks();
     sayJa(text.guessCallSpeak);
     later(() => {
       if (phase !== 'call' && phase !== 'ask') return;
