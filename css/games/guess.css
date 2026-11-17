@@ -33,6 +33,7 @@
 
 .kgb-guess-canvas {
   position: absolute;
+  z-index: 0;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -47,6 +48,7 @@
 /* 「おなまえ な〜んだ？」: ふわっと 出て、見えはじめると 消える */
 .kgb-guess-call {
   position: absolute;
+  z-index: 4;
   left: 50%;
   top: 14px;
   margin: 0;
@@ -71,6 +73,7 @@
 /* 正解の 名前 */
 .kgb-guess-name {
   position: absolute;
+  z-index: 4;
   left: 50%;
   bottom: 10px;
   margin: 0;
@@ -94,6 +97,7 @@
 
 .kgb-guess-next-hint {
   position: absolute;
+  z-index: 4;
   right: 12px;
   top: 12px;
   padding: 4px 12px;
@@ -226,9 +230,14 @@
   background: #e76f51;
 }
 
-/* 左右の「？」: 色ちがいで かわりばんこに 大きく・小さく（transform／opacity だけ） */
+/* 左右の「？」: 色ちがいで かわりばんこに 大きく・小さく（transform／opacity だけ）
+   v0.18.2: iPhone（Safari）で 出なかった。Safari は キャンバスを べつの 層で 描くので、重なりの じゅんを
+   はっきり 書かないと 後から かさねた 文字が キャンバスの 下に かくれる ことが ある → z-index と 自分の 層（will-change） */
 .kgb-guess-q {
   position: absolute;
+  z-index: 3;
+  display: block;
+  will-change: transform, opacity;
   top: 50%;
   margin-top: -32px;
   font-size: 54px;
@@ -258,6 +267,15 @@
 /* 右は 半分 ずらして かわりばんこに */
 .kgb-guess-stage.is-hurry .kgb-guess-q.is-right {
   animation-delay: -0.55s;
+}
+
+/* かんたん・ふつう: ゆっくり やさしく（あせらせない） */
+.kgb-guess-stage.is-gentle .kgb-guess-q {
+  animation-duration: 1.8s;
+}
+
+.kgb-guess-stage.is-gentle .kgb-guess-q.is-right {
+  animation-delay: -0.9s;
 }
 
 /* のこり 3びょう: はやく */

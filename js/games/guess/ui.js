@@ -122,7 +122,7 @@ export function mount(root, config, { onExit }) {
   const nextHint = document.createElement('span');
   nextHint.className = 'kgb-guess-next-hint';
   nextHint.textContent = text.ewNext;
-  // 左右の「？」（しょうぶ）: 色ちがいで かわりばんこに 大きく・小さく（あせりの 演出。CSS animation）
+  // 左右の「？」: 色ちがいで かわりばんこに 大きく・小さく（あせりの 演出。CSS animation。v0.18.2 から どの むずかしさでも）
   const qLeft = document.createElement('span');
   qLeft.className = 'kgb-guess-q is-left';
   qLeft.textContent = '?';
@@ -340,14 +340,18 @@ export function mount(root, config, { onExit }) {
   // ---------- 時間の バーと「？」（しょうぶ） ----------
 
   function resetHurry() {
-    stage.classList.remove('is-hurry', 'is-last');
+    stage.classList.remove('is-hurry', 'is-gentle', 'is-last');
     timerBar.classList.remove('is-last');
     timerFill.style.transition = 'none';
     timerFill.style.transform = 'scaleX(1)';
   }
 
   function startHurry() {
-    if (!strict) return;
+    // 左右の「？」: どの むずかしさでも 出す（v0.18.2）。かんたん・ふつうは ゆっくり やさしく、しょうぶは はやく
+    if (!strict) {
+      stage.classList.add('is-hurry', 'is-gentle');
+      return;
+    }
     void timerFill.getBoundingClientRect(); // transition の リセットを 確定させる
     timerFill.style.transition = `transform ${rule.limitMs}ms linear`;
     timerFill.style.transform = 'scaleX(0)';
@@ -363,7 +367,7 @@ export function mount(root, config, { onExit }) {
   // こたえが きまったら 止める（バーは その 位置で とめる。1回だけ 位置を 読む）
   function stopHurry() {
     clearLimit();
-    stage.classList.remove('is-hurry', 'is-last');
+    stage.classList.remove('is-hurry', 'is-gentle', 'is-last');
     if (!strict) return;
     const rect = timerFill.getBoundingClientRect();
     const full = timerBar.getBoundingClientRect().width || 1;

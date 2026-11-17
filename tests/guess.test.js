@@ -41,7 +41,7 @@ function makeRng(seed = 1) {
   }
   assert.deepStrictEqual(poolOf('shape', 'easy'), poolOf('sea', 'easy'), 'へんな なかまは うみ');
   assert.deepStrictEqual(poolOf('sea', 'toString'), poolOf('sea', 'easy'), 'へんな むずかしさは かんたん');
-  assert.ok(DIFFICULTY.easy.revealMs < DIFFICULTY.normal.revealMs && DIFFICULTY.hard.revealMs < DIFFICULTY.adult.revealMs, 'むずかしいほど ゆっくり 見えて くる');
+  assert.ok(DIFFICULTY.easy.revealMs < DIFFICULTY.normal.revealMs, 'ふつうは かんたんより ゆっくり 見えて くる');
 }
 
 // ---------- 10問ラウンド: 4たく・正解が 1つ・かさならない ----------
@@ -114,6 +114,12 @@ for (const set of GUESS_SETS) {
   assert.strictEqual(DIFFICULTY.easy.limitMs, null, 'かんたんは 時間ぎれ なし');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.hard.limitMs, 'おとなは 時間が みじかい');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.adult.revealMs, 'おとなは 見えきる まえに 時間ぎれ');
+  assert.strictEqual(DIFFICULTY.hard.limitMs, 8000, 'むずかしいは 8びょう（v0.18.2）');
+  assert.strictEqual(DIFFICULTY.adult.limitMs, 6000, 'おとなは 6びょう（v0.18.2）');
+  for (const d of ['hard', 'adult']) {
+    const seen = revealProgress(DIFFICULTY[d].limitMs, DIFFICULTY[d].revealMs);
+    assert.ok(seen >= 0.75 && seen < 1, `${d}: 時間ぎれまでに 8わりくらい 見える（${seen.toFixed(2)}）`);
+  }
 
   const state = createGame({ set: 'dino', difficulty: 'hard', rng: makeRng(9) });
   const q1 = nextQuestion(state);

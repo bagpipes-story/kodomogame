@@ -19,8 +19,10 @@ export const GUESS_SETS = ['sea', 'animal', 'bird', 'fresh', 'insect', 'deep', '
 export const DIFFICULTY = {
   easy: { revealMs: 8000, strict: false, limitMs: null },
   normal: { revealMs: 10000, strict: false, limitMs: null },
-  hard: { revealMs: 12000, strict: true, limitMs: 12000 },  // ちょうど 見えきる ころに 時間ぎれ
-  adult: { revealMs: 15000, strict: true, limitMs: 10000 }, // 見えきる まえに 時間ぎれ（3わりは かげの まま）
+  // v0.18.2: 時間せいげんを 12→8びょう・10→6びょうに。見えて くる はやさも あわせて はやく
+  // （そのままだと おとなは 時間ぎれの とき 4わりしか 見えず あてられないので、時間ぎれまでに 8〜9わり 見える ように）
+  hard: { revealMs: 9000, strict: true, limitMs: 8000 },   // 時間ぎれの とき 9わり 見えている
+  adult: { revealMs: 7500, strict: true, limitMs: 6000 },  // 時間ぎれの とき 8わり（モザイクも まだ すこし あらい）
 };
 
 // この わりあいより 前に あてたら「はやわかり」（モザイクが サーっと とける 演出・ほめ）
