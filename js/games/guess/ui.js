@@ -1,4 +1,4 @@
-// ui.js — なまえあての描画・入力（v0.18）
+// ui.js — なまえあての描画・入力（v0.18。v0.18.1 で しょうぶ・ずかん）
 // まんなかに 黒い かげ。時間が たつと マスごとに かげが うすく なり、下から モザイクの 絵が 見えて くる
 // （モザイクは だんだん こまかく なり、さいごは もとの 絵）。下の 4つから 名前を えらぶ。
 // 早く あてると のこりの かげが 上から サーっと とけて、くっきりした 絵に なる。
@@ -6,16 +6,24 @@
 // - 絵は 1問ごとに 1回だけ オフスクリーンに 描いて とっておく（毎フレームは コピーと マスの 消しこみだけ）
 // - 毎フレーム 書きかえるのは まんなかの キャンバスだけ。見えて くる あいだ／とける あいだ だけ rAF を 回し、おわったら 止める
 // - えらぶ ボタンは 4つを 最初に 作って 使いまわす（テキストと class の 差分更新のみ）
-// - 記録の 保存は さいごの 1回だけ（recordPlay）
+// - 記録の 保存は さいごの 1回だけ（recordPlay）。ずかんは 新しく 正解した ときだけ（storage.js 経由）
+// - 時間の バーと 左右の「？」は CSS の transition／animation（毎フレームの JS 更新なし）
 // iOSの制約: 読み上げは タップを きっかけに 鳴らす（スタート／つぎ！／こたえの タップの 中で sayJa）。
+// v0.18.1: むずかしい いじょうは しょうぶ（まちがい・時間ぎれで その問題は おわり）。左右の「？」で あせりを 演出、
+//          正解すると なかまごとの ずかんに のる
 
 import {
   QUESTIONS_PER_ROUND,
   OPTIONS,
   GUESS_SETS,
+  DIFFICULTY,
   createGame,
   nextQuestion,
   answerAt,
+  timeUp,
+  addToZukan,
+  zukanAll,
+  zukanProgress,
   revealProgress,
   tileRevealTimes,
   mosaicSize,
@@ -26,6 +34,7 @@ import { text } from '../../i18n.js';
 import { playTap, playMatch, playFlutter } from '../../sound.js';
 import { sayJa, cancelSpeech } from '../../speech.js';
 import { resetPraise, emitPraise, recordPlay } from '../../praise.js';
+import { loadStats, saveStats } from '../../storage.js';
 import { showResult, hideResult } from '../../resultView.js';
 
 const CALL_MS = 1400;      // 「おなまえ な〜んだ？」を 見せてから かげが うすく なりはじめる まで
@@ -36,13 +45,23 @@ const NEXT_WAIT_MS = 900;  // 正解の あと「つぎ！」を 出すまで
 const ROUND_END_MS = 1500; // さいごの 問題の あと 結果を 出すまで
 const SHADOW = '#2f2a26';  // かげの 色（まっくろより すこし やわらかく）
 const FIT = 0.84;          // 絵を キャンバスの 何わりの 大きさに 描くか
+const HURRY_LAST_MS = 3000; // のこり この 時間で「？」が はやく なる
+const THUMB = 64;          // ずかんの 絵の 大きさ（px）
+
+// ずかんの 見出し（メニューと 同じ なまえ）
+const SET_LABEL = {
+  sea: 'balanceBlocksSea', animal: 'balanceBlocksAnimal', bird: 'balanceBlocksBird', fresh: 'balanceBlocksFresh',
+  insect: 'balanceBlocksInsect', deep: 'balanceBlocksDeep', dino: 'balanceBlocksDino', pref: 'balanceBlocksPref', world: 'balanceBlocksWorld',
+};
 
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
   const timers = new Set();
 
   const set = GUESS_SETS.includes(config.set) ? config.set : 'sea';
-  const difficulty = config.difficulty ?? 'easy';
+  const difficulty = Object.prototype.hasOwnProperty.call(DIFFICULTY, config.difficulty) ? config.difficulty : 'easy';
+  const rule = DIFFICULTY[difficulty];
+  const strict = rule.strict; // しょうぶ（むずかしい いじょう）
   const pieceSet = PIECE_SETS[set];
 
   let state = null;
@@ -52,6 +71,9 @@ export function mount(root, config, { onExit }) {
   let dissolveStart = 0; // サーっと とけはじめた 時刻（0 = まだ）
   let dissolveFrom = 0;  // とけはじめた ときの 見えぐあい
   let tiles = [];        // { x, y, w, h, t, delay }
+  let limitTimer = 0;    // 時間ぎれの タイマー（しょうぶ）
+  let newInZukan = 0;    // この ラウンドで ずかんに のった かず
+  let completedZukan = false;
 
   function later(fn, ms) {
     const id = setTimeout(() => {
@@ -59,6 +81,14 @@ export function mount(root, config, { onExit }) {
       fn();
     }, ms);
     timers.add(id);
+    return id;
+  }
+
+  function clearLimit() {
+    if (!limitTimer) return;
+    clearTimeout(limitTimer);
+    timers.delete(limitTimer);
+    limitTimer = 0;
   }
 
   function clearAllTimers() {
@@ -92,7 +122,24 @@ export function mount(root, config, { onExit }) {
   const nextHint = document.createElement('span');
   nextHint.className = 'kgb-guess-next-hint';
   nextHint.textContent = text.ewNext;
-  stage.append(canvas, callEl, nameEl, nextHint);
+  // 左右の「？」（しょうぶ）: 色ちがいで かわりばんこに 大きく・小さく（あせりの 演出。CSS animation）
+  const qLeft = document.createElement('span');
+  qLeft.className = 'kgb-guess-q is-left';
+  qLeft.textContent = '?';
+  qLeft.setAttribute('aria-hidden', 'true');
+  const qRight = document.createElement('span');
+  qRight.className = 'kgb-guess-q is-right';
+  qRight.textContent = '?';
+  qRight.setAttribute('aria-hidden', 'true');
+  stage.append(canvas, qLeft, qRight, callEl, nameEl, nextHint);
+
+  // 時間の バー（しょうぶ）: CSS transition の scaleX で へっていく
+  const timerBar = document.createElement('div');
+  timerBar.className = 'kgb-guess-timer';
+  timerBar.hidden = !strict;
+  const timerFill = document.createElement('div');
+  timerFill.className = 'kgb-guess-timer-fill';
+  timerBar.append(timerFill);
 
   const statusEl = document.createElement('p');
   statusEl.className = 'kgb-guess-status';
@@ -124,14 +171,21 @@ export function mount(root, config, { onExit }) {
   const startSub = document.createElement('p');
   startSub.className = 'kgb-handover-sub';
   startSub.textContent = text.handoverTap;
-  startOverlay.append(startTitle, startSub);
+  const startZukan = document.createElement('button');
+  startZukan.type = 'button';
+  startZukan.className = 'kgb-guess-zukan-open';
+  startOverlay.append(startTitle, startSub, startZukan);
+
+  const zukanOverlay = document.createElement('div');
+  zukanOverlay.className = 'kgb-guess-zukan';
+  zukanOverlay.hidden = true;
 
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(banner, stage, statusEl, choices, nextButton);
-  root.append(container, startOverlay, resultOverlay);
+  container.append(banner, stage, timerBar, statusEl, choices, nextButton);
+  root.append(container, startOverlay, resultOverlay, zukanOverlay);
 
   // ---------- キャンバス（オフスクリーンは 最初に 作って 使いまわす） ----------
 
@@ -279,7 +333,42 @@ export function mount(root, config, { onExit }) {
   // ---------- 表示の差分更新 ----------
 
   function updateBanner() {
-    banner.textContent = `${state.questionIndex} / ${QUESTIONS_PER_ROUND}${text.ewQuestionSuffix}`;
+    const counter = `${state.questionIndex} / ${QUESTIONS_PER_ROUND}${text.ewQuestionSuffix}`;
+    banner.textContent = strict ? `${counter}　${text.ewCorrectLabel} ${state.scores[0]}` : counter;
+  }
+
+  // ---------- 時間の バーと「？」（しょうぶ） ----------
+
+  function resetHurry() {
+    stage.classList.remove('is-hurry', 'is-last');
+    timerBar.classList.remove('is-last');
+    timerFill.style.transition = 'none';
+    timerFill.style.transform = 'scaleX(1)';
+  }
+
+  function startHurry() {
+    if (!strict) return;
+    void timerFill.getBoundingClientRect(); // transition の リセットを 確定させる
+    timerFill.style.transition = `transform ${rule.limitMs}ms linear`;
+    timerFill.style.transform = 'scaleX(0)';
+    stage.classList.add('is-hurry');
+    later(() => {
+      if (phase !== 'ask') return;
+      stage.classList.add('is-last');
+      timerBar.classList.add('is-last');
+    }, rule.limitMs - HURRY_LAST_MS);
+    limitTimer = later(onTimeUp, rule.limitMs);
+  }
+
+  // こたえが きまったら 止める（バーは その 位置で とめる。1回だけ 位置を 読む）
+  function stopHurry() {
+    clearLimit();
+    stage.classList.remove('is-hurry', 'is-last');
+    if (!strict) return;
+    const rect = timerFill.getBoundingClientRect();
+    const full = timerBar.getBoundingClientRect().width || 1;
+    timerFill.style.transition = 'none';
+    timerFill.style.transform = `scaleX(${Math.min(rect.width / full, 1)})`;
   }
 
   function setStatus(message) {
@@ -314,6 +403,8 @@ export function mount(root, config, { onExit }) {
     stage.classList.remove('is-pop', 'is-done');
     nextButton.hidden = true;
     setStatus('');
+    clearLimit();
+    resetHurry();
     preparePicture(q.answer);
     drawFrame(0, null); // まっくろな かげ
     callEl.classList.add('is-on');
@@ -324,31 +415,60 @@ export function mount(root, config, { onExit }) {
       if (phase === 'call') phase = 'ask';
       revealStart = performance.now();
       startLoop();
+      startHurry();
     }, CALL_MS);
   }
 
   function handleChoice(index) {
     if (phase !== 'ask' && phase !== 'call') return;
-    const q = state.current;
     const now = performance.now();
     const elapsed = revealStart ? now - revealStart : 0;
     const result = answerAt(state, index, elapsed);
     if (!result.ok) return;
     const button = choiceEls[index];
-    if (!result.correct) {
-      // まちがい: その ボタンを 灰色に（えらびなおせる。かげは そのまま 見えつづける）
+    if (!result.correct && !result.final) {
+      // まちがい（かんたん・ふつう）: その ボタンを 灰色に（えらびなおせる。かげは そのまま 見えつづける）
       button.classList.add('is-wrong');
       button.disabled = true;
       playFlutter();
       setStatus(text.guessWrong);
       return;
     }
-    phase = 'done';
-    callEl.classList.remove('is-on');
+    if (!result.correct) {
+      // まちがい（しょうぶ）: その問題は おわり。正解を 見せて つぎへ
+      button.classList.add('is-wrong');
+      playFlutter();
+      endQuestion(result, now, elapsed, `${text.guessAnswerIs}${pieceSet.names[state.current.answer]}${text.guessAnswerSuffix}`);
+      return;
+    }
     button.classList.add('is-correct');
-    for (const b of choiceEls) b.disabled = true;
     playMatch();
-    // のこりの かげを サーっと とかす（見えはじめる 前に あてても 同じ）
+    if (result.early) emitPraise('early_guess');
+    let message = result.early ? text.guessEarly : text.guessCorrect;
+    if (strict && recordZukan(state.current.answer)) message = `${message}　${text.guessZukanNew}`;
+    endQuestion(result, now, elapsed, message);
+  }
+
+  // 時間ぎれ（しょうぶ）: その問題は おわり。正解を 見せて つぎへ
+  function onTimeUp() {
+    limitTimer = 0;
+    if (phase !== 'ask') return;
+    const result = timeUp(state);
+    if (!result.ok) return;
+    playFlutter();
+    const now = performance.now();
+    endQuestion(result, now, now - revealStart, `${text.guessTimeUp}${text.guessAnswerIs}${pieceSet.names[state.current.answer]}${text.guessAnswerSuffix}`);
+  }
+
+  // 問題の おわり（正解・まちがい・時間ぎれ 共通）: のこりの かげを サーっと とかして 名前を 出す
+  function endQuestion(result, now, elapsed, message) {
+    const q = state.current;
+    phase = 'done';
+    stopHurry();
+    callEl.classList.remove('is-on');
+    for (const b of choiceEls) b.disabled = true;
+    if (q.winner === null) choiceEls[q.correctIndex].classList.add('is-reveal'); // 正解の ボタンを おしえる
+    // のこりの かげを サーっと とかす（見えはじめる 前に こたえても 同じ）
     dissolveFrom = revealStart ? revealProgress(elapsed, state.revealMs) : 0;
     if (!revealStart) revealStart = now;
     dissolveStart = now;
@@ -358,8 +478,7 @@ export function mount(root, config, { onExit }) {
     nameEl.classList.add('is-on');
     stage.classList.add('is-pop');
     sayJa(name);
-    if (result.early) emitPraise('early_guess');
-    setStatus(result.early ? text.guessEarly : text.guessCorrect);
+    setStatus(message);
     updateBanner();
     if (result.roundOver) {
       later(finishGame, ROUND_END_MS);
@@ -371,21 +490,125 @@ export function mount(root, config, { onExit }) {
     }, NEXT_WAIT_MS);
   }
 
+  // ---------- ずかん（v0.18.1） ----------
+
+  function loadZukan() {
+    return loadStats().guess?.zukan ?? {};
+  }
+
+  // しょうぶで 正解した 子を ずかんに 入れる。新しい ときだけ 保存（イベントの 区切り。§9）
+  function recordZukan(id) {
+    const stats = loadStats();
+    stats.guess ??= { plays: 0 };
+    const result = addToZukan(stats.guess.zukan ?? {}, set, id);
+    if (!result.isNew) return false;
+    stats.guess.zukan = result.zukan;
+    saveStats(stats);
+    newInZukan += 1;
+    if (result.complete) completedZukan = true;
+    return true;
+  }
+
+  function zukanButtonLabel() {
+    const { found, total } = zukanProgress(loadZukan(), set);
+    return `${text.guessZukan}  ${found} / ${total}`;
+  }
+
+  // ずかんの 1まいの 絵（見つけた 子は いろ、まだの 子は 黒い かげ）
+  function drawThumb(id, found) {
+    const piece = pieceSet.pieces[id];
+    const ratio = Math.min(globalThis.devicePixelRatio || 1, 3);
+    const c = document.createElement('canvas');
+    c.className = 'kgb-guess-zukan-pic';
+    c.width = THUMB * ratio;
+    c.height = THUMB * ratio;
+    const g = c.getContext('2d');
+    const box = boundsOf(piece);
+    const pad = piece.pad ?? 8;
+    const scale = Math.min(THUMB / (box.w + pad * 2), THUMB / (box.h + pad * 2)) * 0.92 * ratio;
+    g.setTransform(scale, 0, 0, scale, c.width / 2 - (box.minX + box.w / 2) * scale, c.height / 2 - (box.minY + box.h / 2) * scale);
+    piece.draw(g, piece);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (!found) {
+      g.globalCompositeOperation = 'source-in';
+      g.fillStyle = SHADOW;
+      g.fillRect(0, 0, c.width, c.height);
+    }
+    return c;
+  }
+
+  // ずかんを ひらく（ひらいた ときに 1回だけ 作る。とじたら すてる）
+  function openZukan() {
+    const zukan = loadZukan();
+    const found = new Set(zukan[set] ?? []);
+    const { found: count, total } = zukanProgress(zukan, set);
+    const head = document.createElement('div');
+    head.className = 'kgb-guess-zukan-head';
+    const title = document.createElement('p');
+    title.className = 'kgb-guess-zukan-title';
+    title.textContent = `${text[SET_LABEL[set]]} ${text.guessZukan}`;
+    const progress = document.createElement('p');
+    progress.className = 'kgb-guess-zukan-count';
+    progress.textContent = count === total ? `${count} / ${total}　${text.guessZukanComplete}` : `${count} / ${total}`;
+    const note = document.createElement('p');
+    note.className = 'kgb-guess-zukan-note';
+    note.textContent = text.guessZukanNote;
+    head.append(title, progress, note);
+    const grid = document.createElement('div');
+    grid.className = 'kgb-guess-zukan-grid';
+    const fragment = document.createDocumentFragment();
+    for (const id of zukanAll(set)) {
+      const has = found.has(id);
+      const cell = document.createElement('div');
+      cell.className = `kgb-guess-zukan-cell${has ? ' is-found' : ''}`;
+      const name = document.createElement('span');
+      name.className = 'kgb-guess-zukan-name';
+      name.textContent = has ? pieceSet.names[id] : text.guessZukanUnknown;
+      cell.append(drawThumb(id, has), name);
+      fragment.append(cell);
+    }
+    grid.append(fragment);
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'kgb-guess-zukan-close';
+    close.textContent = text.guessZukanClose;
+    close.addEventListener('click', () => {
+      playTap();
+      zukanOverlay.hidden = true;
+      zukanOverlay.replaceChildren();
+    }, { signal: abort.signal });
+    zukanOverlay.replaceChildren(head, grid, close);
+    zukanOverlay.scrollTop = 0;
+    zukanOverlay.hidden = false;
+  }
+
   // ---------- 終了処理（保存はここで1回だけ。§9） ----------
 
   function finishGame() {
     phase = 'result';
     stopLoop();
+    stopHurry();
     emitPraise('finished_game');
     if (state.firstTryCorrect === QUESTIONS_PER_ROUND) emitPraise('all_first_try');
     recordPlay('guess');
-    const detail = state.early > 0
-      ? `${text.guessEarlyLabel} ${state.early}${text.guessTimesSuffix}`
-      : text.playAgainTone;
+    const score = state.scores[0];
+    let title;
+    let detail;
+    let celebrate = true; // かんたん・ふつうは 10問 さいごまで できたら いつでも おいわい
+    if (strict) {
+      title = `${score} / ${QUESTIONS_PER_ROUND} ${text.guessScoreSuffix}`; // 「3 / 10 せいかい！」（みじかく）
+      if (completedZukan) detail = text.guessZukanComplete;
+      else if (newInZukan > 0) detail = `${text.guessZukanAdded}${newInZukan}${text.guessZukanAddedSuffix}`;
+      else detail = text.playAgainTone;
+      celebrate = score >= 7 || newInZukan > 0;
+    } else {
+      title = `${QUESTIONS_PER_ROUND}${text.guessResultSuffix}`;
+      detail = state.early > 0 ? `${text.guessEarlyLabel} ${state.early}${text.guessTimesSuffix}` : text.playAgainTone;
+    }
     showResult(resultOverlay, {
-      title: `${QUESTIONS_PER_ROUND}${text.guessResultSuffix}`,
+      title,
       detail,
-      celebrate: true, // 10問 さいごまで できたら いつでも おいわい
+      celebrate,
       signal: abort.signal,
       onReplay: () => {
         playTap();
@@ -396,6 +619,16 @@ export function mount(root, config, { onExit }) {
         onExit();
       },
     });
+    // ずかんを 見る ボタン（結果の ボタンの ならびに たす）
+    const zukanButton = document.createElement('button');
+    zukanButton.type = 'button';
+    zukanButton.className = 'kgb-dialog-button kgb-guess-zukan-result';
+    zukanButton.textContent = zukanButtonLabel();
+    zukanButton.addEventListener('click', () => {
+      playTap();
+      openZukan();
+    }, { signal: abort.signal });
+    resultOverlay.querySelector('.kgb-dialog-buttons')?.after(zukanButton);
   }
 
   function restart() {
@@ -408,6 +641,11 @@ export function mount(root, config, { onExit }) {
     phase = 'idle';
     revealStart = 0;
     dissolveStart = 0;
+    newInZukan = 0;
+    completedZukan = false;
+    clearLimit();
+    resetHurry();
+    startZukan.textContent = zukanButtonLabel();
     for (const b of choiceEls) {
       b.textContent = '';
       b.className = 'kgb-guess-choice';
@@ -425,6 +663,12 @@ export function mount(root, config, { onExit }) {
   }
 
   // ---------- 入力 ----------
+
+  startZukan.addEventListener('click', (event) => {
+    event.stopPropagation(); // スタートの タップに しない
+    playTap();
+    openZukan();
+  }, { signal: abort.signal });
 
   startOverlay.addEventListener('click', () => {
     if (phase !== 'idle') return;
@@ -454,6 +698,7 @@ export function mount(root, config, { onExit }) {
   return {
     destroy() {
       clearAllTimers(); // §9: 画面遷移時にタイマー・rAF・読み上げを必ず解除
+      limitTimer = 0;
       stopLoop();
       cancelSpeech();
       abort.abort();

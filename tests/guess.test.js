@@ -11,6 +11,10 @@ import {
   nextQuestion,
   answerAt,
   revealProgress,
+  timeUp,
+  zukanAll,
+  addToZukan,
+  zukanProgress,
   tileRevealTimes,
   mosaicSize,
   MOSAIC_MAX,
@@ -101,6 +105,61 @@ for (const set of GUESS_SETS) {
   assert.strictEqual(mosaicSize(0), MOSAIC_MAX);
   assert.strictEqual(mosaicSize(1), 1, 'さいごは もとの 絵');
   for (let p = 0; p < 1; p += 0.05) assert.ok(mosaicSize(p + 0.05) <= mosaicSize(p), 'モザイクは だんだん こまかく');
+}
+
+// ---------- しょうぶ（v0.18.1。むずかしい いじょう）: まちがえたら おわり・時間せいげん ----------
+{
+  assert.ok(!DIFFICULTY.easy.strict && !DIFFICULTY.normal.strict, 'かんたん・ふつうは えらびなおせる');
+  assert.ok(DIFFICULTY.hard.strict && DIFFICULTY.adult.strict, 'むずかしい いじょうは しょうぶ');
+  assert.strictEqual(DIFFICULTY.easy.limitMs, null, 'かんたんは 時間ぎれ なし');
+  assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.hard.limitMs, 'おとなは 時間が みじかい');
+  assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.adult.revealMs, 'おとなは 見えきる まえに 時間ぎれ');
+
+  const state = createGame({ set: 'dino', difficulty: 'hard', rng: makeRng(9) });
+  const q1 = nextQuestion(state);
+  const wrong = answerAt(state, (q1.correctIndex + 1) % OPTIONS, 500);
+  assert.ok(wrong.ok && !wrong.correct && wrong.final, 'まちがえたら その問題は おわり');
+  assert.strictEqual(answerAt(state, q1.correctIndex, 600).ok, false, 'えらびなおせない');
+  assert.strictEqual(timeUp(state).ok, false, 'おわった 問題は 時間ぎれに ならない');
+  const q2 = nextQuestion(state);
+  assert.ok(q2, 'つぎの 問題へ すすめる');
+  const up = timeUp(state);
+  assert.ok(up.ok && state.current.timedOut, '時間ぎれで おわり');
+  assert.strictEqual(answerAt(state, q2.correctIndex, 99999).ok, false, '時間ぎれの あとは こたえられない');
+  for (let i = 2; i < QUESTIONS_PER_ROUND; i++) {
+    const q = nextQuestion(state);
+    const r = answerAt(state, q.correctIndex, 100);
+    if (i === QUESTIONS_PER_ROUND - 1) assert.ok(r.roundOver, '10問めで おわり');
+  }
+  assert.strictEqual(state.scores[0], 8, '正解は 8問（まちがい1・時間ぎれ1）');
+  const last = createGame({ set: 'sea', difficulty: 'adult', rng: makeRng(2) });
+  for (let i = 0; i < QUESTIONS_PER_ROUND - 1; i++) answerAt(last, nextQuestion(last).correctIndex, 0);
+  nextQuestion(last);
+  assert.ok(timeUp(last).roundOver, 'さいごの 問題が 時間ぎれでも ラウンドは おわる');
+  const easy = createGame({ set: 'sea', difficulty: 'easy' });
+  nextQuestion(easy);
+  assert.strictEqual(timeUp(easy).ok, false, 'かんたんは 時間ぎれ しない');
+}
+
+// ---------- ずかん（v0.18.1） ----------
+{
+  for (const set of GUESS_SETS) assert.deepStrictEqual(zukanAll(set), BLOCK_SETS[set].adult, `${set} の ずかんは ぜんぶの 子`);
+  let zukan = {};
+  assert.deepStrictEqual(zukanProgress(zukan, 'sea'), { found: 0, total: BLOCK_SETS.sea.adult.length });
+  let r = addToZukan(zukan, 'sea', 'whale');
+  assert.ok(r.isNew, 'はじめての 子は とうろく');
+  zukan = r.zukan;
+  r = addToZukan(zukan, 'sea', 'whale');
+  assert.ok(!r.isNew, '2かいめは とうろく しない');
+  assert.strictEqual(zukanProgress(r.zukan, 'sea').found, 1);
+  assert.ok(!addToZukan(zukan, 'sea', 'tyrannosaurus').isNew, 'ちがう なかまの 子は のらない');
+  assert.deepStrictEqual(zukanProgress({ sea: 'こわれた' }, 'sea').found, 0, 'こわれた 保存データでも うごく');
+  assert.ok(!('whale' in {}) && zukan.sea.length === 1, 'もとの ずかんは かえない');
+  let all = {};
+  let complete = false;
+  for (const id of BLOCK_SETS.dino.adult) ({ zukan: all, complete } = addToZukan(all, 'dino', id));
+  assert.ok(complete, 'ぜんぶ あつめたら コンプリート');
+  assert.deepStrictEqual(zukanProgress(all, 'dino'), { found: 30, total: 30 });
 }
 
 console.log('guess.test.js: すべてのテストに合格');

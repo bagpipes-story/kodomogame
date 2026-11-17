@@ -1,4 +1,4 @@
-// game.js — なまえあての純ロジック（v0.18）
+// game.js — なまえあての純ロジック（v0.18。v0.18.1 で しょうぶ・ずかん）
 // バランスゲームの いきもの・地図の つみき（図形いがい）の 絵を つかって、黒い かげから 名前を 4つから えらぶ。
 // DOM非依存（Nodeテスト可能）。出題・回答判定・10問ラウンド・「見えて くる」ぐあいの 計算だけを 持つ。
 // 絵の 描画・モザイク・音声は ui.js。
@@ -14,11 +14,13 @@ export const GUESS_SETS = ['sea', 'animal', 'bird', 'fresh', 'insect', 'deep', '
 
 // むずかしさ: 出る 顔ぶれは バランスゲームと 同じ（かんたん=よく 知られた 子 → おとな=ぜんぶ）。
 // revealMs = 黒い かげが すっかり 見える までの 時間。むずかしいほど ゆっくり 見えて くる
+// strict = しょうぶ（v0.18.1。むずかしい いじょう）: まちがえたら その問題は おわり（えらびなおせない）・時間せいげん limitMs・
+//          正解すると ずかんに のる。かんたん・ふつうは 小さい 子むけに えらびなおせて 時間ぎれも ない
 export const DIFFICULTY = {
-  easy: { revealMs: 8000 },
-  normal: { revealMs: 10000 },
-  hard: { revealMs: 12000 },
-  adult: { revealMs: 15000 },
+  easy: { revealMs: 8000, strict: false, limitMs: null },
+  normal: { revealMs: 10000, strict: false, limitMs: null },
+  hard: { revealMs: 12000, strict: true, limitMs: 12000 },  // ちょうど 見えきる ころに 時間ぎれ
+  adult: { revealMs: 15000, strict: true, limitMs: 10000 }, // 見えきる まえに 時間ぎれ（3わりは かげの まま）
 };
 
 // この わりあいより 前に あてたら「はやわかり」（モザイクが サーっと とける 演出・ほめ）
@@ -47,6 +49,8 @@ export function createGame({ set = 'sea', difficulty = 'easy', rng = Math.random
     set: safeSet,
     difficulty: safeDifficulty,
     revealMs: DIFFICULTY[safeDifficulty].revealMs,
+    strict: DIFFICULTY[safeDifficulty].strict,
+    limitMs: DIFFICULTY[safeDifficulty].limitMs,
     rng,
     asked: [],  // この ラウンドで 出た id（10問の 中で かさならない ように。顔ぶれが 10より 少なければ 出しきってから もう1しゅう）
     early: 0,   // はやわかりの かず
@@ -72,14 +76,56 @@ export function nextQuestion(state) {
   return beginQuestion(state, { answer: answerId, options, correctIndex: options.indexOf(answerId) });
 }
 
+function roundOverOf(state) {
+  return state.questionIndex >= QUESTIONS_PER_ROUND ? { scores: state.scores.slice(), winner: null } : null;
+}
+
 // 子どもの 回答。elapsedMs = 見えはじめて からの 時間（はやわかりの 判定に つかう）
+// しょうぶ（strict）では まちがえたら その問題は おわり（final: true。正解を 見せて つぎへ）
 export function answerAt(state, optionIndex, elapsedMs) {
   const q = state.current;
   const result = quizAnswer(state, 0, optionIndex);
+  if (result.ok && !result.correct && state.strict) {
+    q.done = true;
+    return { ...result, early: false, final: true, roundOver: roundOverOf(state) };
+  }
   if (!result.ok || !result.correct) return { ...result, early: false };
   const early = q.wrong.size === 0 && elapsedMs < state.revealMs * EARLY_RATIO;
   if (early) state.early += 1;
   return { ...result, early };
+}
+
+// 時間ぎれ（しょうぶの とき）。その問題は 正解なしで おわり
+export function timeUp(state) {
+  const q = state.current;
+  if (!q || q.done || !state.limitMs) return { ok: false };
+  q.done = true;
+  q.timedOut = true;
+  state.combo = 0;
+  return { ok: true, roundOver: roundOverOf(state) };
+}
+
+// ---------- ずかん（v0.18.1）: しょうぶで 正解した 子を なかまごとに あつめる ----------
+// zukan = { sea: ['whale', ...], ... }（保存は ui.js が storage.js 経由で 正解の ときだけ）
+
+// その なかまの ぜんぶ（ずかんの ページ。バランスゲームの おとなの 顔ぶれ）
+export function zukanAll(set) {
+  return poolOf(set, 'adult');
+}
+
+// 正解した 子を ずかんに 入れる。もとの ずかんは かえずに 新しい ずかんを かえす
+export function addToZukan(zukan, set, id) {
+  const all = zukanAll(set);
+  const found = Array.isArray(zukan?.[set]) ? zukan[set].filter((x) => all.includes(x)) : [];
+  if (!all.includes(id) || found.includes(id)) return { zukan: { ...zukan, [set]: found }, isNew: false };
+  const next = { ...zukan, [set]: [...found, id] };
+  return { zukan: next, isNew: true, complete: next[set].length === all.length };
+}
+
+export function zukanProgress(zukan, set) {
+  const all = zukanAll(set);
+  const found = Array.isArray(zukan?.[set]) ? zukan[set].filter((x) => all.includes(x)) : [];
+  return { found: new Set(found).size, total: all.length };
 }
 
 // どれくらい 見えたか（0=まっくろ、1=すっかり 見えた）

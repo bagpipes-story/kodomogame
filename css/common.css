@@ -494,6 +494,9 @@ html, body {
 .kgb-result-title {
   font-size: 30px;
   margin: 0 0 12px;
+  /* ことばの とちゅうで おりかえさない（「せ／いかい」に ならない ように。v0.18.1）。くぎりが なければ どこでも */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* きょうのすごいところ（具体ほめシステム。仕様§3.4） */
@@ -519,6 +522,8 @@ html, body {
   font-size: 20px;
   margin: 0 0 20px;
   white-space: pre-line; /* めくったかいすう等を改行で並べるため */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- 手番交代オーバーレイ（手札が見えるゲームで必須。仕様§3.3） ---------- */

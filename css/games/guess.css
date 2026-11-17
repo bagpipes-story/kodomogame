@@ -198,3 +198,190 @@
     gap: 6px;
   }
 }
+
+/* ---------- しょうぶ（v0.18.1。むずかしい いじょう） ---------- */
+
+/* 時間の バー: CSS transition の scaleX で へる（毎フレームの JS 更新なし） */
+.kgb-guess-timer {
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(74, 63, 53, 0.12);
+}
+
+.kgb-guess-timer[hidden] {
+  display: none;
+}
+
+.kgb-guess-timer-fill {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  background: #7fc8a9;
+  transform-origin: left center;
+}
+
+.kgb-guess-timer.is-last .kgb-guess-timer-fill {
+  background: #e76f51;
+}
+
+/* 左右の「？」: 色ちがいで かわりばんこに 大きく・小さく（transform／opacity だけ） */
+.kgb-guess-q {
+  position: absolute;
+  top: 50%;
+  margin-top: -32px;
+  font-size: 54px;
+  line-height: 64px;
+  font-weight: 900;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.kgb-guess-q.is-left {
+  left: 8px;
+  color: #f28b3b;
+}
+
+.kgb-guess-q.is-right {
+  right: 8px;
+  color: #4a90d9;
+}
+
+.kgb-guess-stage.is-hurry .kgb-guess-q {
+  opacity: 1;
+  animation: kgb-guess-q-pulse 1.1s ease-in-out infinite;
+}
+
+/* 右は 半分 ずらして かわりばんこに */
+.kgb-guess-stage.is-hurry .kgb-guess-q.is-right {
+  animation-delay: -0.55s;
+}
+
+/* のこり 3びょう: はやく */
+.kgb-guess-stage.is-last .kgb-guess-q {
+  animation-duration: 0.5s;
+}
+
+.kgb-guess-stage.is-last .kgb-guess-q.is-right {
+  animation-delay: -0.25s;
+}
+
+@keyframes kgb-guess-q-pulse {
+  0%, 100% { transform: scale(0.7) rotate(-8deg); }
+  50% { transform: scale(1.3) rotate(8deg); }
+}
+
+/* まちがい・時間ぎれの とき 正解の ボタンを おしえる */
+.kgb-guess-choice.is-reveal {
+  border-color: #7fc8a9;
+  background: #eaf7f1;
+}
+
+/* ---------- ずかん（v0.18.1） ---------- */
+
+.kgb-guess-zukan-open {
+  min-height: var(--kgb-tap-min);
+  padding: 8px 24px;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 20px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-zukan-result {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.kgb-guess-zukan {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  background: var(--kgb-bg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.kgb-guess-zukan[hidden] {
+  display: none;
+}
+
+.kgb-guess-zukan-head {
+  text-align: center;
+}
+
+.kgb-guess-zukan-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.kgb-guess-zukan-count {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: bold;
+  color: var(--kgb-accent);
+}
+
+.kgb-guess-zukan-note {
+  margin: 4px 0 0;
+  font-size: 14px;
+  opacity: 0.75;
+}
+
+.kgb-guess-zukan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.kgb-guess-zukan-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.kgb-guess-zukan-cell.is-found {
+  background: var(--kgb-white);
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-zukan-pic {
+  width: 64px;
+  height: 64px;
+}
+
+.kgb-guess-zukan-name {
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+  word-break: keep-all;
+}
+
+.kgb-guess-zukan-close {
+  position: sticky;
+  bottom: 0;
+  min-height: var(--kgb-tap-min);
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 22px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+}
