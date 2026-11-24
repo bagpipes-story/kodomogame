@@ -114,12 +114,18 @@ for (const set of GUESS_SETS) {
   assert.strictEqual(DIFFICULTY.easy.limitMs, null, 'かんたんは 時間ぎれ なし');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.hard.limitMs, 'おとなは 時間が みじかい');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.adult.revealMs, 'おとなは 見えきる まえに 時間ぎれ');
-  assert.strictEqual(DIFFICULTY.hard.limitMs, 8000, 'むずかしいは 8びょう（v0.18.2）');
-  assert.strictEqual(DIFFICULTY.adult.limitMs, 6000, 'おとなは 6びょう（v0.18.2）');
+  assert.strictEqual(DIFFICULTY.hard.limitMs, 5000, 'むずかしいは 5びょう（v0.18.4）');
+  assert.strictEqual(DIFFICULTY.adult.limitMs, 3000, 'おとなは 3びょう（v0.18.4）');
   for (const d of ['hard', 'adult']) {
     const seen = revealProgress(DIFFICULTY[d].limitMs, DIFFICULTY[d].revealMs);
-    assert.ok(seen >= 0.75 && seen < 1, `${d}: 時間ぎれまでに 8わりくらい 見える（${seen.toFixed(2)}）`);
+    assert.ok(seen >= 0.3 && seen <= 0.6, `${d}: 時間ぎれの とき 4〜5わりしか 見えて いない（${seen.toFixed(2)}）`);
   }
+  // はやわかりは 時間せいげんの 6わりより 前（しょうぶで ぜんぶ はやわかりに ならない）
+  const hs = createGame({ set: 'sea', difficulty: 'hard', rng: makeRng(4) });
+  const hq = nextQuestion(hs);
+  assert.ok(!answerAt(hs, hq.correctIndex, DIFFICULTY.hard.limitMs * 0.7).early, 'むずかしい: 7わりの 時間で あてても はやわかり では ない');
+  const hq2 = nextQuestion(hs);
+  assert.ok(answerAt(hs, hq2.correctIndex, DIFFICULTY.hard.limitMs * 0.5).early, 'むずかしい: 5わりの 時間なら はやわかり');
 
   const state = createGame({ set: 'dino', difficulty: 'hard', rng: makeRng(9) });
   const q1 = nextQuestion(state);

@@ -45,7 +45,7 @@ const NEXT_WAIT_MS = 900;  // 正解の あと「つぎ！」を 出すまで
 const ROUND_END_MS = 1500; // さいごの 問題の あと 結果を 出すまで
 const SHADOW = '#2f2a26';  // かげの 色（まっくろより すこし やわらかく）
 const FIT = 0.84;          // 絵を キャンバスの 何わりの 大きさに 描くか
-const HURRY_LAST_MS = 3000; // のこり この 時間で「？」が はやく なる
+const HURRY_LAST_MS = 2000; // のこり この 時間で「？」が はやく なる（v0.18.4: おとな 3びょうに あわせて 3→2びょう）
 const BOTTOM_BAND = 0.2;   // 絵の 下に あける わりあい（「？」と 名前の ばしょ。v0.18.3）
 const THUMB = 64;          // ずかんの 絵の 大きさ（px）
 
@@ -161,7 +161,7 @@ export function mount(root, config, { onExit }) {
   nextButton.type = 'button';
   nextButton.className = 'kgb-guess-next';
   nextButton.textContent = text.ewNext;
-  nextButton.hidden = true;
+  nextButton.classList.add('is-off'); // ばしょは はじめから とっておく（こたえあわせで 絵が ちぢまない ように。v0.18.4）
 
   const startOverlay = document.createElement('div');
   startOverlay.className = 'kgb-handover';
@@ -412,7 +412,7 @@ export function mount(root, config, { onExit }) {
     nameEl.textContent = '';
     nameEl.classList.remove('is-on');
     stage.classList.remove('is-pop', 'is-done');
-    nextButton.hidden = true;
+    nextButton.classList.add('is-off');
     setStatus('');
     clearLimit();
     resetHurry();
@@ -498,7 +498,7 @@ export function mount(root, config, { onExit }) {
     }
     later(() => {
       stage.classList.add('is-done');
-      nextButton.hidden = false;
+      nextButton.classList.remove('is-off');
     }, NEXT_WAIT_MS);
   }
 
@@ -668,7 +668,7 @@ export function mount(root, config, { onExit }) {
     nameEl.classList.remove('is-on');
     callEl.classList.remove('is-on');
     stage.classList.remove('is-pop', 'is-done');
-    nextButton.hidden = true;
+    nextButton.classList.add('is-off');
     setStatus('');
     updateBanner();
     startOverlay.hidden = false;
@@ -696,7 +696,7 @@ export function mount(root, config, { onExit }) {
   }
   nextButton.addEventListener('click', goNext, { signal: abort.signal });
   stage.addEventListener('click', () => {
-    if (phase === 'done' && !nextButton.hidden) goNext();
+    if (phase === 'done' && !nextButton.classList.contains('is-off')) goNext();
   }, { signal: abort.signal });
 
   choices.addEventListener('click', (event) => {

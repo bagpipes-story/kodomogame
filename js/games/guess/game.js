@@ -19,14 +19,19 @@ export const GUESS_SETS = ['sea', 'animal', 'bird', 'fresh', 'insect', 'deep', '
 export const DIFFICULTY = {
   easy: { revealMs: 8000, strict: false, limitMs: null },
   normal: { revealMs: 10000, strict: false, limitMs: null },
-  // v0.18.2: 時間せいげんを 12→8びょう・10→6びょうに。見えて くる はやさも あわせて はやく
-  // （そのままだと おとなは 時間ぎれの とき 4わりしか 見えず あてられないので、時間ぎれまでに 8〜9わり 見える ように）
-  hard: { revealMs: 9000, strict: true, limitMs: 8000 },   // 時間ぎれの とき 9わり 見えている
-  adult: { revealMs: 7500, strict: true, limitMs: 6000 },  // 時間ぎれの とき 8わり（モザイクも まだ すこし あらい）
+  // v0.18.2: 時間せいげんを 12→8びょう・10→6びょう、見えて くる はやさも はやく。
+  // v0.18.4: 8・6びょうでは かんたん すぎたので 5・3びょうに。見えて くる はやさは そのまま
+  //          （時間ぎれの とき むずかしいは 5わり・おとなは 4わりしか 見えて いない）
+  hard: { revealMs: 9000, strict: true, limitMs: 5000 },
+  adult: { revealMs: 7500, strict: true, limitMs: 3000 },
 };
 
-// この わりあいより 前に あてたら「はやわかり」（モザイクが サーっと とける 演出・ほめ）
+// この わりあいより 前に あてたら「はやわかり」（ほめ）。
+// 見えきる 時間と 時間せいげんの みじかい ほうの 6わり（v0.18.4: しょうぶで ぜんぶ はやわかりに ならない ように）
 export const EARLY_RATIO = 0.6;
+export function earlyLimitMs(state) {
+  return Math.min(state.revealMs, state.limitMs ?? Infinity) * EARLY_RATIO;
+}
 
 function shuffle(list, rng) {
   const out = list.slice();
@@ -92,7 +97,7 @@ export function answerAt(state, optionIndex, elapsedMs) {
     return { ...result, early: false, final: true, roundOver: roundOverOf(state) };
   }
   if (!result.ok || !result.correct) return { ...result, early: false };
-  const early = q.wrong.size === 0 && elapsedMs < state.revealMs * EARLY_RATIO;
+  const early = q.wrong.size === 0 && elapsedMs < earlyLimitMs(state);
   if (early) state.early += 1;
   return { ...result, early };
 }
