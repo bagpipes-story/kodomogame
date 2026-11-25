@@ -30,6 +30,7 @@ import {
 } from './game.js';
 import { PIECE_SETS } from '../balance/pieceSets.js';
 import { boundsOf } from '../balance/kit.js';
+import { hasZukanArt, loadZukanSet } from '../../zukan/registry.js';
 import { text } from '../../i18n.js';
 import { playTap, playMatch, playFlutter } from '../../sound.js';
 import { sayJa, cancelSpeech } from '../../speech.js';
@@ -64,6 +65,19 @@ export function mount(root, config, { onExit }) {
   const rule = DIFFICULTY[difficulty];
   const strict = rule.strict; // しょうぶ（むずかしい いじょう）
   const pieceSet = PIECE_SETS[set];
+  // v0.19.0: ずかん画が ある なかま（むし）は ずかん画で 出す（別冊05）。読みこむ までは スタートを 待つ
+  const needsZukanArt = hasZukanArt(set);
+  let zset = null;
+  // 絵: { minX, minY, w, h, pad, draw(ctx) }。ずかん画が なければ いままでの つみきの 絵
+  function artOf(id) {
+    if (zset) return zset.art(id);
+    const piece = pieceSet.pieces[id];
+    const box = boundsOf(piece);
+    return { minX: box.minX, minY: box.minY, w: box.w, h: box.h, pad: piece.pad ?? 8, draw: (c) => piece.draw(c, piece) };
+  }
+  function nameOf(id) {
+    return zset ? zset.name(id) : pieceSet.names[id];
+  }
 
   let state = null;
   let phase = 'idle'; // idle | call | ask | done | result
@@ -204,7 +218,7 @@ export function mount(root, config, { onExit }) {
 
   // 1問ごとに 1回: キャンバスの 大きさを あわせ、もとの 絵と かげを 描いて とっておく
   function preparePicture(id) {
-    const piece = pieceSet.pieces[id];
+    const art = artOf(id);
     dpr = Math.min(globalThis.devicePixelRatio || 1, 3);
     const cw = canvas.clientWidth || 300;
     const ch = canvas.clientHeight || 230;
@@ -214,8 +228,8 @@ export function mount(root, config, { onExit }) {
       c.width = W;
       c.height = H;
     }
-    const box = boundsOf(piece);
-    const pad = piece.pad ?? 8;
+    const box = art;
+    const pad = art.pad;
     const fullW = box.w + pad * 2;
     const fullH = box.h + pad * 2;
     // 小さい 国も 大きい 子も キャンバスに あわせて 同じくらいの 大きさに 描く。
@@ -228,7 +242,7 @@ export function mount(root, config, { onExit }) {
     colorCtx.setTransform(1, 0, 0, 1, 0, 0);
     colorCtx.clearRect(0, 0, W, H);
     colorCtx.setTransform(scale, 0, 0, scale, W / 2 - cx * scale, midY - cy * scale);
-    piece.draw(colorCtx, piece);
+    art.draw(colorCtx);
     colorCtx.setTransform(1, 0, 0, 1, 0, 0);
 
     shadowCtx.globalCompositeOperation = 'source-over';
@@ -389,7 +403,7 @@ export function mount(root, config, { onExit }) {
   function renderChoices(q) {
     for (let i = 0; i < OPTIONS; i++) {
       const button = choiceEls[i];
-      const name = pieceSet.names[q.options[i]];
+      const name = nameOf(q.options[i]);
       button.textContent = name;
       // ながい 名前（「リュウグウノツカイ」「パプアニューギニア」など）は 文字を 小さく
       button.className = `kgb-guess-choice${name.length >= 9 ? ' is-long' : name.length >= 7 ? ' is-mid' : ''}`;
@@ -450,7 +464,7 @@ export function mount(root, config, { onExit }) {
       // まちがい（しょうぶ）: その問題は おわり。正解を 見せて つぎへ
       button.classList.add('is-wrong');
       playFlutter();
-      endQuestion(result, now, elapsed, `${text.guessAnswerIs}${pieceSet.names[state.current.answer]}${text.guessAnswerSuffix}`);
+      endQuestion(result, now, elapsed, `${text.guessAnswerIs}${nameOf(state.current.answer)}${text.guessAnswerSuffix}`);
       return;
     }
     button.classList.add('is-correct');
@@ -469,7 +483,7 @@ export function mount(root, config, { onExit }) {
     if (!result.ok) return;
     playFlutter();
     const now = performance.now();
-    endQuestion(result, now, now - revealStart, `${text.guessTimeUp}${text.guessAnswerIs}${pieceSet.names[state.current.answer]}${text.guessAnswerSuffix}`);
+    endQuestion(result, now, now - revealStart, `${text.guessTimeUp}${text.guessAnswerIs}${nameOf(state.current.answer)}${text.guessAnswerSuffix}`);
   }
 
   // 問題の おわり（正解・まちがい・時間ぎれ 共通）: のこりの かげを サーっと とかして 名前を 出す
@@ -485,7 +499,7 @@ export function mount(root, config, { onExit }) {
     if (!revealStart) revealStart = now;
     dissolveStart = now;
     startLoop();
-    const name = pieceSet.names[q.answer];
+    const name = nameOf(q.answer);
     nameEl.textContent = `${name}！`;
     nameEl.classList.add('is-on');
     stage.classList.add('is-pop');
@@ -528,18 +542,18 @@ export function mount(root, config, { onExit }) {
 
   // ずかんの 1まいの 絵（見つけた 子は いろ、まだの 子は 黒い かげ）
   function drawThumb(id, found) {
-    const piece = pieceSet.pieces[id];
+    const art = artOf(id);
     const ratio = Math.min(globalThis.devicePixelRatio || 1, 3);
     const c = document.createElement('canvas');
     c.className = 'kgb-guess-zukan-pic';
     c.width = THUMB * ratio;
     c.height = THUMB * ratio;
     const g = c.getContext('2d');
-    const box = boundsOf(piece);
-    const pad = piece.pad ?? 8;
+    const box = art;
+    const pad = art.pad;
     const scale = Math.min(THUMB / (box.w + pad * 2), THUMB / (box.h + pad * 2)) * 0.92 * ratio;
     g.setTransform(scale, 0, 0, scale, c.width / 2 - (box.minX + box.w / 2) * scale, c.height / 2 - (box.minY + box.h / 2) * scale);
-    piece.draw(g, piece);
+    art.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (!found) {
       g.globalCompositeOperation = 'source-in';
@@ -575,7 +589,7 @@ export function mount(root, config, { onExit }) {
       cell.className = `kgb-guess-zukan-cell${has ? ' is-found' : ''}`;
       const name = document.createElement('span');
       name.className = 'kgb-guess-zukan-name';
-      name.textContent = has ? pieceSet.names[id] : text.guessZukanUnknown;
+      name.textContent = has ? nameOf(id) : text.guessZukanUnknown;
       cell.append(drawThumb(id, has), name);
       fragment.append(cell);
     }
@@ -684,6 +698,7 @@ export function mount(root, config, { onExit }) {
 
   startOverlay.addEventListener('click', () => {
     if (phase !== 'idle') return;
+    if (needsZukanArt && !zset) return; // ずかん画を 読みこみ中（ふつうは 一しゅん）
     playTap();
     startOverlay.hidden = true;
     askQuestion(); // タップ内で よびかけを 鳴らす
@@ -706,6 +721,12 @@ export function mount(root, config, { onExit }) {
   }, { signal: abort.signal });
 
   restart();
+  if (needsZukanArt) {
+    loadZukanSet(set).then((z) => {
+      if (abort.signal.aborted) return; // 読みこむ まえに 画面を とじた
+      zset = z;
+    });
+  }
 
   return {
     destroy() {
