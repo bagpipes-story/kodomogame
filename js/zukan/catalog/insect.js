@@ -1033,86 +1033,201 @@ const slimCicada = {
   },
 };
 
-// トンボ: 4まいの はねを よこに ひろげた 標本の すがた。P.body = からだの ながさの めやす
+// ---------- トンボ（はねを ひろげた 標本の すがた。v0.19.11 で 型を 作りなおし） ----------
+// 前の 型は はねの 脈が はしごの ような 格子、あたまが まる 2つ、あしが なく、かおを 目の うしろに 描いて いた。
+// 図鑑の 絵に ちかづける ため: ①脈は つけねの 幹から うしろの ふちへ おうぎの ように ひろがり、あいだを こまかい 横の 脈が うめる
+// ②あたまは 大きな 複眼＋前へ ふくらむ ひたい＋みじかい 触角 ③とげの ある あし 3つい ④おなかは 本物の ふしの 長さ（1・2・10ばんめが みじかい）と まるみ
+
+// はねの 脈を (u, v) で きめる（u = つけね→さき、v = 前の ふち -1 〜 うしろの ふち +1）。node = 結節（前の ふちの まんなかの くびれ）の 位置
+function odonateVenation(node, hind) {
+  const R1 = [[0, -0.45], [node * 0.5, -0.7], [node, -0.7], [0.8, -0.71], [0.985, -0.62]];
+  const list = [
+    R1,
+    [[0.15, -0.5], [0.5, -0.47], [0.8, -0.38], [0.99, -0.22]],
+    [[node + 0.02, -0.42], [0.75, -0.17], [0.975, 0.2]],
+    [[0.15, -0.43], [0.45, -0.2], [0.75, 0.22], [0.93, 0.66]],
+    [[0.4, -0.12], [0.65, 0.32], [0.84, 0.9]],
+    [[0.15, -0.36], [0.4, 0.04], [0.6, 0.52], [0.74, 0.98]],
+    [[0.2, -0.08], [0.38, 0.32], [0.5, 0.72], [0.6, 1]],
+    [[0.07, -0.05], [0.22, 0.32], [0.36, 0.76], [0.44, 1]],
+    [[0.03, 0.15], [0.12, 0.5], [0.22, 0.86], [0.28, 1]],
+  ];
+  if (hind) list.push([[0.02, 0.45], [0.07, 0.75], [0.12, 1]]); // 後ばねの つけねの ひろい ところ
+  const long = list.map((c) => resample(c, 40));
+  const vAt = (c, u) => {
+    if (u < c[0][0] || u > c[c.length - 1][0]) return null;
+    for (let i = 1; i < c.length; i++) {
+      if (c[i][0] >= u) {
+        const t = (u - c[i - 1][0]) / (c[i][0] - c[i - 1][0] || 1);
+        return c[i - 1][1] + (c[i][1] - c[i - 1][1]) * t;
+      }
+    }
+    return c[c.length - 1][1];
+  };
+  const cross = [];
+  // 前の ふちと 1ばんめの 脈の あいだ: こまかい 横の 脈が ずらりと ならぶ（結節より つけね がわは とくに こまかい）
+  for (let u = 0.035; u < 0.82; u += u < node ? 0.03 : 0.042) cross.push([[u, -1], [u, vAt(long[0], u)]]);
+  // 脈と 脈の あいだ。ひろい ところは まんなかに 細い 脈を 入れて 2れつの へやに する
+  const du = 0.036;
+  for (const parity of [0, 1]) {
+    for (let u = 0.05 + parity * du * 0.5; u < 0.985; u += du) {
+      const vs = long.map((c) => vAt(c, u)).filter((v) => v !== null).sort((a, b) => a - b);
+      vs.push(1);
+      for (let j = 1; j < vs.length; j++) {
+        if (j % 2 !== parity) continue;
+        const [va, vb] = [vs[j - 1], vs[j]];
+        const gap = vb - va;
+        if (gap < 0.035) continue;
+        if (gap > 0.36) {
+          const vm = (va + vb) / 2;
+          cross.push([[u, va], [u + du * 0.3, vm]], [[u + du * 0.3, vm], [u, vb]], [[u - du * 0.25, vm], [u + du * 0.8, vm]]);
+        } else cross.push([[u, va], [u + 0.005, vb]]);
+      }
+    }
+  }
+  return {
+    long, cross, r1At: (u) => vAt(long[0], u),
+    sub: [[0, -0.75], [node * 0.55, -0.86], [node, -0.99]],           // 前の ふちの すぐ 下の 脈（結節で おわる）
+    arculus: [[0.13, -0.52], [0.15, -0.1]],
+    triangle: [[0.17, -0.2], [0.245, -0.12], [0.19, 0.1], [0.17, -0.2]], // 三角室
+  };
+}
+
+function odonateWing(ctx, P, spec, hind) {
+  const W = planform({ x0: 6, ...spec });
+  const node = spec.node ?? (hind ? 0.42 : 0.47);
+  const V = odonateVenation(node, hind);
+  shape(ctx, W.outline, spec.tint ?? P.wingTint, null);
+  within(ctx, W.outline, () => {
+    const [x0, y0, x1, y1] = bbox(W.outline);
+    // まくの てり（ななめに 光る）
+    ctx.fillStyle = hgrad(ctx, x0, x1, ['rgba(255,255,255,0)', 'rgba(255,255,255,0.2)', 'rgba(255,255,255,0)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0)']);
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    if (spec.amber) {
+      // つけねの こはくいろ（アキアカネなど）
+      ctx.fillStyle = hgrad(ctx, 6, 6 + spec.L * 0.22, [spec.amber, 'rgba(0,0,0,0)']);
+      ctx.fillRect(6, y0, spec.L * 0.22, y1 - y0);
+    }
+    // はねの もよう（チョウトンボの こい 色 など）
+    if (spec.paint) spec.paint(ctx, W, spec);
+    for (const c of V.cross) stroke(ctx, mapLine(W, c), P.veins, 0.3, false);
+    for (const c of V.long.slice(1)) stroke(ctx, mapLine(W, c), P.veins, 0.5, false);
+    stroke(ctx, mapLine(W, V.long[0]), P.veins, 0.85, false);
+    stroke(ctx, mapLine(W, V.sub), P.veins, 0.6);
+    stroke(ctx, mapLine(W, V.arculus), P.veins, 0.6, false);
+    stroke(ctx, mapLine(W, V.triangle), P.veins, 0.5, false);
+  });
+  shape(ctx, W.outline, null, P.veins, 0.5);
+  // 前の ふちの 太い 脈 と 結節
+  stroke(ctx, mapLine(W, [[0, -1], [0.25, -1], [0.5, -1], [0.75, -1], [0.96, -1]]), P.costa ?? P.veins, 1.1);
+  stroke(ctx, mapLine(W, [[node, -1], [node, V.r1At(node)]]), P.veins, 1.1, false);
+  // 縁紋（はねの さきの 前の ふちの こい しるし）。ヤンマは ながい。ハグロトンボには ない
+  if (P.stigma) {
+    const [s0, s1] = spec.stigma ?? [0.84, 0.9];
+    shape(ctx, mapLine(W, [[s0, -1], [s1, -1], [s1, V.r1At(s1)], [s0, V.r1At(s0)]]), P.stigma, P.veins, 0.4);
+  }
+}
+
+// トンボ: P.fw・P.hw = はねの 平面形（planform。種類ごとに はばや 後ばねの つけねの かたちが ちがう）、
+// P.thorax = むねの 右半分、P.abdHalf = おなかの はば、P.seg = ふしごとの もよう、P.head = あたまを 描く
 export function dragonfly(ctx, P) {
   const edge = P.edge;
-  // はね（後ばね → 前ばね）。P.fw・P.hw = 平面形（planform）。種類ごとに はばや 後ばねの つけねの かたちが ちがう:
-  // ヤンマの なかまは ほそながく、トンボ科（シオカラ・アカネ）は 後ばねの つけねが 大きく ひろがる。
-  // オニヤンマの オスは 後ばねの つけねが かどばり、ギンヤンマの オスは まるい
+  const tt = P.thorax[0][1];
+  const tw = Math.max(...P.thorax.map((p) => p[0]));
+  const k = tw / 10;
+  // あし（からだの 下に。前あしは あたまの よこへ、中あしは 前の よこへ、後あしは うしろへ。すねに とげ）
+  const legC = P.legColor ?? '#17130f';
+  const lw = [1.35 * k, 0.9 * k, 0.55 * k];
+  const lopt = { tarsi: 3, claw: 1.1 * k, spines: 6, spineLen: 0.9 * k };
   both(ctx, () => {
-    for (const spec of [P.hw, P.fw]) {
-      const W = planform({ x0: 6, ...spec });
-      // 縦の 脈（v の いち, はじまりの u, おわりの u）。前の ふちに こまかい 横の 脈（前縁横脈）が ならぶ
-      const longs = [[-0.84, 0, 0.46], [-0.72, 0, 0.985], [-0.5, 0.28, 0.98], [-0.26, 0.02, 0.96], [0.06, 0.04, 0.93], [0.4, 0.02, 0.8], [0.72, 0.02, 0.5]];
-      const lines = longs.map(([v, u0, u1]) => mapLine(W, [[u0, v * (u0 < 0.05 ? 0.5 : 1)], [(u0 + u1) / 2, v], [u1, v]]));
-      const cross = [];
-      for (let u = 0.04; u < 0.46; u += 0.028) cross.push(mapLine(W, [[u, -1], [u, -0.84]]));
-      for (let k = 1; k < longs.length; k++) {
-        const [va, a0, a1] = longs[k - 1];
-        const [vb, b0, b1] = longs[k];
-        const from = Math.max(a0, b0) + 0.03;
-        const to = Math.min(a1, b1) - 0.02;
-        for (let u = from; u < to; u += 0.045) cross.push(mapLine(W, [[u + (k % 2) * 0.02, va], [u + 0.01 + (k % 2) * 0.02, vb]]));
-      }
-      clearWing(ctx, W.outline, spec.tint ?? P.wingTint, P.veins, [...lines, ...cross], 0.7);
-      // はねの もよう（チョウトンボの こい 色 など。v0.19.10）
-      if (spec.paint) within(ctx, W.outline, () => spec.paint(ctx, W, spec));
-      if (spec.amber) {
-        // つけねの こはくいろ（アキアカネなど）
-        within(ctx, W.outline, () => {
-          ctx.fillStyle = hgrad(ctx, 6, 6 + spec.L * 0.22, [spec.amber, 'rgba(0,0,0,0)']);
-          ctx.fillRect(6, spec.y0 - spec.C, spec.L * 0.22, spec.C * 2.5);
-        });
-      }
-      // 縁紋（はねの さきの 前の ふちの こい しるし）。ヤンマは ながい
-      const [s0, s1] = spec.stigma ?? [0.84, 0.9];
-      if (P.stigma) shape(ctx, mapLine(W, [[s0, -0.99], [s1, -0.99], [s1, -0.74], [s0, -0.74]]), P.stigma, null); // ハグロトンボは 縁紋が ない
-      // 結節（前の ふちの まんなかの くびれ）
-      disc(ctx, ...W.at(0.46, -0.96), 0.9, P.veins);
-    }
+    leg(ctx, [[3 * k, tt + 2 * k], [11.5 * k, tt - 4 * k], [10.5 * k, tt - 12 * k], [8.5 * k, tt - 17 * k]], lw, legC, legC, lopt);
+    leg(ctx, [[5 * k, tt + 8 * k], [15 * k, tt + 3 * k], [19.5 * k, tt - 6 * k], [20.5 * k, tt - 12 * k]], lw, legC, legC, lopt);
+    leg(ctx, [[5 * k, tt + 15 * k], [14 * k, tt + 21 * k], [16.5 * k, tt + 33 * k], [15.5 * k, tt + 40 * k]], lw, legC, legC, lopt);
   });
-  // おなか（ふしに わけて ぬる）
+  // はね（後ばね → 前ばね）
+  both(ctx, () => {
+    odonateWing(ctx, P, P.hw, true);
+    odonateWing(ctx, P, P.fw, false);
+  });
+  // おなか。ふしの 長さは 本物に あわせる（1・2ばんめと 10ばんめが みじかく、3〜7ばんめが ながい）
   const segs = P.segs;
   const abdTop = P.abdTop;
   const abdLen = P.abdLen;
-  const abd = sym([[0, abdTop], ...P.abdHalf.map(([w, t]) => [w, abdTop + abdLen * t]), [0, abdTop + abdLen]]);
-  fill3d(ctx, abd, P.abdTone, edge, 0.7, [0.3, 0.1]);
+  const end = abdTop + abdLen;
+  const FR = [0, 0.05, 0.13, 0.27, 0.41, 0.55, 0.68, 0.8, 0.89, 0.96, 1];
+  const fr = (i) => (segs === 10 ? FR[i] : i / segs);
+  const abd = sym([[0, abdTop], ...P.abdHalf.map(([w, t]) => [w, abdTop + abdLen * t]), [0, end]]);
+  // 尾の さきの 付属器（オスが メスを つかむ ところ）
+  const ew = P.abdHalf[P.abdHalf.length - 1][0];
+  const tailC = P.tailColor ?? edge;
+  both(ctx, () => shape(ctx, [[ew * 0.25, end - 1.5], [ew * 0.95, end - 0.5], [ew, end + ew * 1.3], [ew * 0.55, end + ew * 2.1, 1], [ew * 0.3, end + ew * 0.9]], tailC, null));
+  shape(ctx, [[-ew * 0.22, end - 1], [ew * 0.22, end - 1], [0, end + ew, 1]], tailC, null);
+  fill3d(ctx, abd, P.abdTone, edge, 0.6, [0.3, 0.1]);
   within(ctx, abd, () => {
-    for (let i = 0; i < segs; i++) {
-      const y0 = abdTop + (abdLen * i) / segs;
-      const y1 = abdTop + (abdLen * (i + 1)) / segs;
-      P.seg?.(ctx, i, y0, y1);
-      if (i > 0) stroke(ctx, [[-8, y0], [8, y0]], 'rgba(0,0,0,0.5)', 0.5, false);
+    const mw = Math.max(...P.abdHalf.map((p) => p[0])) + 2;
+    for (let i = 0; i < segs; i++) P.seg?.(ctx, i, abdTop + abdLen * fr(i), abdTop + abdLen * fr(i + 1));
+    // まるみ（左が 明るく、両はしが くらい）
+    ctx.fillStyle = hgrad(ctx, -mw, mw, ['rgba(0,0,0,0.45)', 'rgba(255,255,255,0.24)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.12)', 'rgba(0,0,0,0.5)']);
+    ctx.fillRect(-mw, abdTop, mw * 2, abdLen);
+    for (let i = 1; i < segs; i++) {
+      const y = abdTop + abdLen * fr(i);
+      stroke(ctx, [[-mw, y], [mw, y]], 'rgba(0,0,0,0.6)', 0.6, false);
+      stroke(ctx, [[-mw, y + 0.8], [mw, y + 0.8]], 'rgba(255,255,255,0.2)', 0.4, false);
     }
-    stroke(ctx, [[0, abdTop + 2], [0, abdTop + abdLen - 2]], 'rgba(0,0,0,0.25)', 0.5, false);
+    stroke(ctx, [[0, abdTop + 2], [0, end - 2]], 'rgba(0,0,0,0.28)', 0.5, false);
   });
-  // 尾の さきの 付属器
-  both(ctx, () => stroke(ctx, [[1, abdTop + abdLen - 1], [2.6, abdTop + abdLen + 3.5]], edge, 1.1));
-  // むね
+  // むね: 前胸（あたまとの あいだの 小さな ふし）→ 大きな むね
   const thorax = sym(P.thorax);
-  fill3d(ctx, thorax, P.thoraxTone, edge);
+  oval(ctx, 0, tt + 0.6 * k, tw * 0.42, 2 * k, P.thoraxTone[1], edge, 0.5);
+  fill3d(ctx, thorax, P.thoraxTone, edge, 0.6);
   P.thoraxDetail?.(ctx, thorax);
-  // あたま（大きな 複眼）
+  within(ctx, thorax, () => {
+    stroke(ctx, [[0, tt + 2 * k], [0, P.fw.y0 - 2 * k]], 'rgba(0,0,0,0.4)', 0.6, false); // せなかの まんなかの すじ
+    const mid = (P.fw.y0 + P.hw.y0) / 2;
+    stroke(ctx, [[-tw, mid + 1], [0, mid - 0.5], [tw, mid + 1]], 'rgba(0,0,0,0.3)', 0.6);
+  });
+  // はねの つけねの 板
+  both(ctx, () => {
+    for (const y of [P.fw.y0, P.hw.y0]) {
+      oval(ctx, tw * 0.74, y, 2 * k, 1.3 * k, 'rgba(0,0,0,0.26)');
+      oval(ctx, tw * 0.72, y - 0.4 * k, 1.1 * k, 0.6 * k, 'rgba(255,255,255,0.2)');
+    }
+  });
+  gloss(ctx, thorax, -tw * 0.35, tt + 6 * k, tw * 0.8, 0.25);
   P.head(ctx);
 }
 
-// トンボの あたま: 複眼の つきかた（'point' = 1点で つく・'seam' = ながく くっつく・'meet' = みじかく くっつく）
+// トンボの あたま（上から。あたまが 上＝かおは 上がわ）: 大きな 複眼、前へ ふくらむ ひたい、みじかい 触角。
+// 複眼の つきかた: 'point' = 1点で つく（オニヤンマ）・'seam' = ながく くっつく（ヤンマ）・'meet' = みじかく くっつく（トンボ科）
 export function dragonHead(ctx, y, r, eyeTone, faceColor, style) {
-  const gap = style === 'point' ? 0.1 : 0;
-  const ex = style === 'seam' ? r * 0.78 : r * 0.88;
-  // 顔（前の ほう）
-  oval(ctx, 0, y + r * 0.62, r * 0.9, r * 0.5, faceColor, 'rgba(0,0,0,0.6)', 0.6);
-  both(ctx, () => {
-    const pts = ell(ex + gap, y, r, r * 0.95, 28);
-    fill3d(ctx, pts, eyeTone, 'rgba(0,0,0,0.55)', 0.6, [0.4, 0.25]);
+  const ex = style === 'seam' ? r * 0.74 : style === 'point' ? r * 0.98 : r * 0.86;
+  oval(ctx, 0, y + r * 0.7, r * 0.6, r * 0.3, '#15120e'); // うしろあたま
+  // ひたい・かお
+  const face = sym([[0, y - r * 1.14], [r * 0.5, y - r * 1.08], [r * 0.84, y - r * 0.74], [r * 0.72, y - r * 0.3], [0, y - r * 0.2]]);
+  shape(ctx, face, faceColor, 'rgba(0,0,0,0.6)', 0.5);
+  within(ctx, face, () => {
+    ctx.fillStyle = rgrad(ctx, -r * 0.3, y - r * 0.95, r * 1.1, ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)', 'rgba(0,0,0,0.3)']);
+    ctx.fillRect(-r, y - r * 1.2, r * 2, r * 1.1);
+    stroke(ctx, [[-r * 0.6, y - r * 0.72], [0, y - r * 0.8], [r * 0.6, y - r * 0.72]], 'rgba(0,0,0,0.35)', 0.5);
   });
-  if (style === 'seam') stroke(ctx, [[0, y - r * 0.75], [0, y + r * 0.5]], 'rgba(0,0,0,0.45)', 0.6, false);
+  both(ctx, () => stroke(ctx, [[r * 0.26, y - r * 1.02], [r * 0.4, y - r * 1.5]], '#15120e', 0.5, false)); // 触角
+  both(ctx, () => {
+    const pts = ell(ex, y, r, r * 0.93, 30);
+    fill3d(ctx, pts, eyeTone, 'rgba(0,0,0,0.6)', 0.5, [0.36, 0.3]);
+    within(ctx, pts, () => {
+      // 上は 明るく、うしろ（下）は くらい。こまかい 個眼の つや
+      ctx.fillStyle = vgrad(ctx, y - r, y + r, ['rgba(255,255,255,0.14)', 'rgba(0,0,0,0)', 'rgba(0,0,0,0.34)']);
+      ctx.fillRect(ex - r, y - r, r * 2, r * 2);
+      oval(ctx, ex - r * 0.3, y - r * 0.38, r * 0.34, r * 0.18, 'rgba(255,255,255,0.3)', null, 0, -0.5);
+    });
+  });
+  if (style !== 'point') stroke(ctx, [[0, y - r * (style === 'seam' ? 0.7 : 0.35)], [0, y + r * 0.45]], 'rgba(0,0,0,0.5)', 0.6, false);
 }
 
 // オニヤンマ: くろに きいろの しま。みどりの めが 上で 1点だけ つく。いちばん 大きい
 const goldenRinged = {
   group: 'dragonfly', level: 1, similar: ['emperorDragonfly', 'skimmer'],
-  box: [-126, -66, 126, 106],
+  box: [-128, -78, 128, 112],
   draw(ctx) {
     const yellow = '#f0d23a';
     dragonfly(ctx, {
@@ -1148,7 +1263,7 @@ const goldenRinged = {
 // ギンヤンマ（オス）: むねが きみどり。おなかの つけねが みずいろ、その さきは ちゃいろ。めは ながく くっつく
 const emperorDragonfly = {
   group: 'dragonfly', level: 1, similar: ['goldenRinged', 'skimmer'],
-  box: [-108, -56, 108, 84],
+  box: [-110, -67, 110, 90],
   draw(ctx) {
     dragonfly(ctx, {
       edge: '#14200a',
@@ -1166,6 +1281,11 @@ const emperorDragonfly = {
         } else if (i === 1) {
           c.fillStyle = '#6ac8ec';
           c.fillRect(-8, y0, 16, y1 - y0);
+        } else if (i === 2) {
+          // こしの みずいろは 3ばんめの はじめまで つづく
+          c.fillStyle = '#6ac8ec';
+          c.fillRect(-8, y0, 16, (y1 - y0) * 0.3);
+          shape(c, [[-1.2, y0 + (y1 - y0) * 0.4], [1.2, y0 + (y1 - y0) * 0.4], [2.4, y1 - 1], [-2.4, y1 - 1]], 'rgba(40,20,6,0.6)', null);
         } else {
           // ちゃいろの ふしに こい せすじの もよう
           shape(c, [[-1.2, y0 + 1], [1.2, y0 + 1], [2.4, y1 - 1], [-2.4, y1 - 1]], 'rgba(40,20,6,0.6)', null);
@@ -1183,7 +1303,7 @@ const emperorDragonfly = {
 // シオカラトンボ（オス）: おなかは しろっぽい みずいろの こな、さきは くろ。むねは くろっぽい。おなかが ひらたく ふとめ
 const skimmer = {
   group: 'dragonfly', level: 1, similar: ['greatSkimmer', 'redDragonfly', 'emperorDragonfly'],
-  box: [-90, -48, 90, 62],
+  box: [-92, -59, 92, 67],
   draw(ctx) {
     dragonfly(ctx, {
       edge: '#0a1014',
@@ -1195,7 +1315,7 @@ const skimmer = {
       abdHalf: [[6, 0.03], [5.4, 0.12], [5, 0.3], [4.6, 0.6], [3.8, 0.85], [3.2, 0.95]],
       abdTone: ['#e0ecf4', '#9ab4c8', '#4a6070'],
       seg(c, i, y0, y1) {
-        if (i >= 7) {
+        if (i >= 6) {
           c.fillStyle = '#141618';
           c.fillRect(-8, y0, 16, y1 - y0 + 1);
         }
@@ -1215,7 +1335,7 @@ const skimmer = {
 // アキアカネ（オス）: あきに おなかが まっか。むねは ちゃいろに くろい すじ。はねは すきとおる
 const redDragonfly = {
   group: 'dragonfly', level: 1, similar: ['scarletSkimmer', 'skimmer', 'goldenRinged'],
-  box: [-82, -44, 82, 60],
+  box: [-84, -54, 84, 63],
   draw(ctx) {
     dragonfly(ctx, {
       edge: '#2a0a04',
@@ -1462,30 +1582,6 @@ export function farSide(ctx, fn, dx = 3, dy = -1.5) {
   ctx.restore();
 }
 
-// バッタ型の うしろあし: もも（ふとく 矢羽の もよう）→ すね（とげ 2列）→ あしさき
-export function hopperHind(ctx, P, far) {
-  const f = P.femur;
-  const col = far ? P.farColor : P.legColor;
-  fill3d(ctx, f, far ? [P.farColor, P.farColor, '#000'] : P.femurTone, P.edge, 0.7, [0.4, 0.2]);
-  if (!far && P.femurPattern) within(ctx, f, () => P.femurPattern(ctx));
-  const [k, a, t] = P.hindJoints;
-  limb(ctx, k, a, P.tibiaW, P.tibiaW * 0.8, far ? P.farColor : P.tibiaColor ?? col, P.edge, 0.6);
-  // すねの とげ（うしろがわ）
-  const n = P.spines ?? 8;
-  for (let i = 1; i <= n; i++) {
-    const tt = i / (n + 1);
-    const x = k[0] + (a[0] - k[0]) * tt;
-    const y = k[1] + (a[1] - k[1]) * tt;
-    stroke(ctx, [[x + 0.8, y], [x + 2.6, y + 1.6]], P.edge, 0.6, false);
-  }
-  leg(ctx, [a, a, a, t], [0.1, 0.1, P.tarsusW ?? 1.6], col, P.edge, { tarsi: 3, claw: 1.2 });
-}
-
-// 前・中の あし（よこから）: つけね → ひざ → あしくび → さき
-export function sideLeg(ctx, joints, w, color, edge, opt = {}) {
-  leg(ctx, joints, w, color, edge, { tarsi: 3, claw: 1.2, ...opt });
-}
-
 // ながい 糸のような 触角（v0.19.1）: ねもとから さきへ だんだん ほそく。bands = [いろ1, いろ2, ながさ, どこまで] で しまもよう
 // （スズムシの 白と くろの まだら）。キリギリス・スズムシ・コオロギは 長さ・むき・太さ・色で 描きわける
 export function threadAntenna(ctx, pts, w0, w1, color, { bands = null, alpha = 1 } = {}) {
@@ -1532,143 +1628,379 @@ export function threadAntenna(ctx, pts, w0, w1, color, { bands = null, alpha = 1
   ctx.restore();
 }
 
-// トノサマバッタ: 大きな からだ（みどり）。はねは ちゃいろの まだら。うしろあしの ももが ふとく、すねは あかっぽい
+// ---------- よこから 見た むしの 部品 その2（v0.19.11。バッタ・コオロギ・カマキリの 描きなおし） ----------
+// 前の 絵は あたまや ももが 豆の ような まるい 形で、あしは 同じ 太さの 折れ線、細部が なく 線も 太かった。
+// 図鑑の 絵に ちかづける ため、板の 立体感・あしの つくり（もも・すね・とげ・あしさき）・はねの 脈・おなかの ふしを 部品に した
+
+// からだの 板（あたま・むね など）: まるみの ぬり＋左上の ふちの 光＋右下の ふちの かげ。ふちの 線は ほそく
+export function plate(ctx, pts, tone, edge, { w = 0.55, rim = 0.2, shade = 0.2, light = [0.32, 0.25] } = {}) {
+  fill3d(ctx, pts, tone, edge, w, light);
+  within(ctx, pts, () => {
+    ctx.save();
+    ctx.translate(0.7, 0.9);
+    shape(ctx, pts, null, `rgba(255,255,255,${rim})`, 1.3);
+    ctx.restore();
+    ctx.save();
+    ctx.translate(-0.5, -1);
+    shape(ctx, pts, null, `rgba(0,0,0,${shade})`, 1.5);
+    ctx.restore();
+  });
+}
+
+// a→b の 線の 上がわ（画面の 上）に ほそい 光の 線
+function topLight(ctx, a, b, off, width, alpha = 0.34) {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = Math.hypot(dx, dy) || 1;
+  let nx = -dy / len;
+  let ny = dx / len;
+  if (ny > 0) [nx, ny] = [-nx, -ny];
+  stroke(ctx, [[a[0] + nx * off, a[1] + ny * off], [b[0] + nx * off * 0.8, b[1] + ny * off * 0.8]], `rgba(255,255,255,${alpha})`, width, false);
+}
+
+// 細い あし（前・中あし）: もも（つけねが ふとく ひざへ ほそく）→ すね（うしろがわに 小さな とげ）→ あしさき（ふし＋つめ）
+export function slimLeg(ctx, [a, b, c, d], w, color, edge, { spines = 3, tarsi = 3, shade = true, spineLen = 1.3, tarsusColor = color } = {}) {
+  limb(ctx, a, b, w[0], w[0] * 0.6, color, edge, 0.5);
+  limb(ctx, b, c, w[1] * 0.9, w[1] * 0.7, color, edge, 0.5);
+  if (shade) {
+    topLight(ctx, a, b, w[0] * 0.22, w[0] * 0.2);
+    topLight(ctx, b, c, w[1] * 0.2, w[1] * 0.2);
+  }
+  if (spines > 0) {
+    const dx = c[0] - b[0];
+    const dy = c[1] - b[1];
+    const len = Math.hypot(dx, dy) || 1;
+    let nx = -dy / len;
+    let ny = dx / len;
+    if (nx < 0) [nx, ny] = [-nx, -ny]; // うしろ（右）がわ
+    for (let i = 1; i <= spines; i++) {
+      const t = 0.2 + (0.7 * i) / spines;
+      const x = b[0] + dx * t + nx * w[1] * 0.35;
+      const y = b[1] + dy * t + ny * w[1] * 0.35;
+      stroke(ctx, [[x, y], [x + nx * spineLen + (dx / len) * spineLen * 0.6, y + ny * spineLen + (dy / len) * spineLen * 0.6]], edge, 0.5, false);
+    }
+  }
+  leg(ctx, [c, c, c, d], [0.1, 0.1, w[2]], tarsusColor, edge, { tarsi, claw: w[2] * 1.1 });
+  disc(ctx, b[0], b[1], w[1] * 0.5, color, edge, 0.4); // ひざ
+}
+
+// とぶ ための うしろあし（バッタ・キリギリス・コオロギ）。
+// H = { femur（ももの 外形）, axis（つけね→ひざの 芯）, halfW（つけねの 太さの 半分）, knee, ankle, toe, tibiaW, spines,
+//       femurTone, tibiaColor, tarsusColor, farColor, edge, pattern(c)（ももの もよう）, chevron（矢羽の すじの 色。なければ 描かない） }
+export function jumpLeg(ctx, H, far) {
+  const edge = H.edge;
+  if (far) {
+    shape(ctx, H.femur, H.farColor, edge, 0.5);
+    limb(ctx, H.knee, H.ankle, H.tibiaW, H.tibiaW * 0.75, H.farColor, edge, 0.5);
+    leg(ctx, [H.ankle, H.ankle, H.ankle, H.toe], [0.1, 0.1, H.tarsusW ?? 1.4], H.farColor, edge, { tarsi: 3, claw: 1.3 });
+    return;
+  }
+  plate(ctx, H.femur, H.femurTone, edge, { light: [0.3, 0.15] });
+  const [[hx, hy], [kx, ky]] = H.axis;
+  const ax = kx - hx;
+  const ay = ky - hy;
+  const alen = Math.hypot(ax, ay) || 1;
+  const ux = ax / alen;
+  const uy = ay / alen;
+  const nx = -uy;
+  const ny = ux;
+  within(ctx, H.femur, () => {
+    H.pattern?.(ctx);
+    if (H.chevron) {
+      // 矢羽（やばね）の すじ: ももの 外がわの 筋肉の もよう。ひざへ むかう V字が ならぶ
+      for (let t = 0.1; t < 0.8; t += 0.065) {
+        const h = H.halfW * (1 - t) ** 0.75 * 0.78;
+        const px = hx + ax * t;
+        const py = hy + ay * t;
+        const back = 2.6 * (1 - t * 0.5);
+        stroke(ctx, [[px - ux * back + nx * h, py - uy * back + ny * h], [px, py], [px - ux * back - nx * h, py - uy * back - ny * h]], H.chevron, 0.5, false);
+      }
+      // 上と 下の ふちに そう すじ（稜）
+      stroke(ctx, [[hx + nx * H.halfW * 0.1, hy + ny * H.halfW * 0.1], [kx, ky]], H.chevron, 0.45, false);
+    }
+  });
+  // すね: ほそく まっすぐ。うしろがわに とげが 2れつ（さきが くろい）
+  const { knee, ankle } = H;
+  const tibC = H.tibiaColor ?? H.femurTone[1];
+  limb(ctx, knee, ankle, H.tibiaW, H.tibiaW * 0.72, tibC, edge, 0.5);
+  topLight(ctx, knee, ankle, H.tibiaW * 0.18, H.tibiaW * 0.2, 0.3);
+  const dx = ankle[0] - knee[0];
+  const dy = ankle[1] - knee[1];
+  const len = Math.hypot(dx, dy) || 1;
+  let sx = -dy / len;
+  let sy = dx / len;
+  if (sx < 0) [sx, sy] = [-sx, -sy];
+  const n = H.spines ?? 9;
+  const sl = H.spineLen ?? 2.2;
+  for (let i = 1; i <= n; i++) {
+    const t = 0.16 + (0.8 * i) / (n + 0.5);
+    const x = knee[0] + dx * t + sx * H.tibiaW * 0.3;
+    const y = knee[1] + dy * t + sy * H.tibiaW * 0.3;
+    const tip = [x + sx * sl + (dx / len) * sl * 0.9, y + sy * sl + (dy / len) * sl * 0.9];
+    stroke(ctx, [[x, y], tip], H.spineColor ?? '#f2ead0', 0.7, false);
+    stroke(ctx, [[(x + tip[0]) / 2, (y + tip[1]) / 2], tip], '#1a1408', 0.6, false);
+  }
+  // ひざ（こい 色の 半月）
+  oval(ctx, knee[0] - ux * 0.5, knee[1] - uy * 0.5, H.tibiaW * 0.95, H.tibiaW * 0.7, H.kneeColor ?? 'rgba(52,40,18,0.8)', edge, 0.4, Math.atan2(uy, ux));
+  oval(ctx, knee[0] - ux * 0.8 - nx * 0.4, knee[1] - uy * 0.8 - ny * 0.4, H.tibiaW * 0.42, H.tibiaW * 0.24, 'rgba(255,255,255,0.3)', null, 0, Math.atan2(uy, ux));
+  leg(ctx, [ankle, ankle, ankle, H.toe], [0.1, 0.1, H.tarsusW ?? 1.5], H.tarsusColor ?? tibC, edge, { tarsi: 3, claw: 1.4 });
+}
+
+// たたんだ 前ばね（よこから）: 外形＋たての 脈（top と bottom の あいだに n本）＋こまかい 横の 脈
+export function tegmen(ctx, pts, tone, edge, { top, bottom, n = 5, cross = 12, vein = 'rgba(40,30,10,0.45)', light = [0.3, 0.1] } = {}) {
+  fill3d(ctx, pts, tone, edge, 0.55, light);
+  if (!top) return;
+  const T = resample(top, 24);
+  const B = resample(bottom, 24);
+  within(ctx, pts, () => {
+    const all = [T];
+    for (let i = 1; i < n; i++) {
+      const f = i / n;
+      all.push(T.map((p, j) => [p[0] + (B[j][0] - p[0]) * f, p[1] + (B[j][1] - p[1]) * f]));
+    }
+    all.push(B);
+    for (const l of all.slice(1, -1)) stroke(ctx, l, vein, 0.45, false);
+    const step = Math.max(1, Math.round(24 / cross));
+    for (let i = 1; i < all.length; i++) {
+      for (let j = 1 + (i % 2); j < 23; j += step) stroke(ctx, [all[i - 1][j], all[i][Math.min(23, j + 1)]], vein, 0.28, false);
+    }
+  });
+}
+
+// おなか（よこから）: ななめの ふしの 線、背中がわと 腹がわの さかい、腹がわは あかるい
+export function sideAbdomen(ctx, pts, tone, edge, { x0, x1, n = 7, slant = 1.5, line = 'rgba(0,0,0,0.35)' } = {}) {
+  plate(ctx, pts, tone, edge);
+  const [, y0, , y1] = bbox(pts);
+  within(ctx, pts, () => {
+    ctx.fillStyle = vgrad(ctx, y0, y1, ['rgba(0,0,0,0.1)', 'rgba(0,0,0,0)', 'rgba(255,255,255,0.22)', 'rgba(0,0,0,0.16)']);
+    ctx.fillRect(x0 - 12, y0, x1 - x0 + 24, y1 - y0);
+    for (let i = 1; i < n; i++) {
+      const x = x0 + ((x1 - x0) * i) / n;
+      stroke(ctx, [[x - slant, y0], [x + slant, y1]], line, 0.55, false);
+      stroke(ctx, [[x - slant + 0.8, y0], [x + slant + 0.8, y1]], 'rgba(255,255,255,0.2)', 0.35, false);
+    }
+    stroke(ctx, [[x0 - 6, y0 + (y1 - y0) * 0.6], [x1 + 6, y0 + (y1 - y0) * 0.64]], line, 0.4, false);
+  });
+}
+
+// 口の ひげ（みじかい ふしの ある ひげが たれる）
+export function palps(ctx, list, color, w = 0.9) {
+  for (const pts of list) antenna(ctx, pts, w, w * 0.7, color, { beads: 2 });
+}
+
+// トノサマバッタ（オス）: 大きな からだ（みどり）。むねの せなかが 弓の ように もりあがり、うしろへ とがる。
+// はねは ながく ちゃいろの まだら（おなかの さきより ながい）。うしろあしの ももが ふとく 矢羽の もよう、すねは あかっぽい
 const locust = {
   group: 'grasshopper', level: 1, similar: ['longHeadGrasshopper', 'katydid'],
-  box: [-76, -36, 70, 25],
+  box: [-74, -36, 70, 25],
   draw(ctx) {
-    const edge = '#1a2a10';
-    const green = ['#b8e08a', '#6aa848', '#2a5a1c'];
-    const P = {
-      edge, legColor: '#6aa848', farColor: '#3a6a28', femurTone: green, tibiaColor: '#c87a5a', tibiaW: 2.6,
-      femur: [[-18, -2], [-6, -8], [12, -12.5], [26, -12.5], [28.5, -9.5], [16, -5], [-4, 2], [-16, 4]],
-      femurPattern(c) {
-        for (let x = -10; x < 26; x += 4) stroke(c, [[x, -10], [x + 3, -6], [x + 1, -1]], 'rgba(40,70,20,0.45)', 0.8);
+    const edge = '#22361a';
+    const green = ['#c4e294', '#74aa4a', '#2e5e20'];
+    const far = '#44702e';
+    const H = {
+      edge, farColor: far, femurTone: green,
+      femur: [[-19, -4], [-10, -9.5], [4, -13.5], [18, -15], [27, -15], [31, -15.6], [33.6, -14.4], [33.8, -11.4], [31.4, -10.2], [26, -10.8], [14, -8], [2, -3.5], [-8, 1.5], [-15, 4], [-19.5, 2]],
+      axis: [[-17, 0], [31, -13]], halfW: 5.6, chevron: 'rgba(36,70,24,0.5)',
+      knee: [32.2, -12.8], ankle: [7, 20.2], toe: [-5, 22],
+      tibiaW: 2.3, tibiaColor: '#cf8660', tarsusColor: '#b08a52', spines: 9,
+      pattern(c) {
+        // ももの 上がわの くらい 帯（2つ）と、下の ふちの あかるい すじ
+        oval(c, -2, -10, 7, 3, 'rgba(40,60,24,0.35)', null, 0, -0.3);
+        oval(c, 15, -14, 6, 2.4, 'rgba(40,60,24,0.35)', null, 0, -0.2);
+        stroke(c, [[-16, 3], [-2, -1.5], [14, -7], [28, -10.4]], 'rgba(236,240,190,0.55)', 1.1);
       },
-      hindJoints: [[27.5, -10.5], [7, 20], [-6, 22]],
-      spines: 9,
     };
-    farSide(ctx, (far) => {
-      sideLeg(ctx, [[-34, 3], [-29, 13], [-36, 21], [-42, 22]], [2.4, 1.8, 1.2], P.farColor, edge);
-      sideLeg(ctx, [[-23, 4], [-16, 13], [-22, 21], [-28, 22]], [2.4, 1.8, 1.2], P.farColor, edge);
-      hopperHind(ctx, P, far);
+    const foreJ = [[-35, 2.5], [-41.5, 10.5], [-40, 19.8], [-46.5, 22]];
+    const midJ = [[-27, 4], [-20.5, 12], [-24.5, 20], [-31.5, 22]];
+    const lw = [2.6, 1.7, 1.2];
+    // むこうがわの 触角・あし
+    antenna(ctx, [[-52.5, -12.5], [-57, -20], [-61, -27], [-63.5, -33.5]], 1.1, 0.7, '#4a5e30', { beads: 14, beadColor: '#3a4c24' });
+    farSide(ctx, () => {
+      slimLeg(ctx, foreJ, lw, far, edge, { shade: false });
+      slimLeg(ctx, midJ, lw, far, edge, { shade: false });
+      jumpLeg(ctx, H, true);
     });
-    // おなか → はね
-    fill3d(ctx, [[-24, -6], [0, -4], [30, -3], [42, 0], [40, 4], [20, 6], [-10, 6], [-24, 4]], ['#c8e098', '#8ab858', '#3a6a28'], edge);
-    const wing = [[-26, -15], [10, -14.5], [50, -11.5], [67, -7.5], [65, -3.5], [40, -2.5], [0, -3.5], [-24, -5]];
-    fill3d(ctx, wing, ['#c8b48a', '#9a7a4e', '#5a4024'], edge, 0.7, [0.3, 0.1]);
+    // おなか（はねの 下に 見える。きいろっぽい）と、オスの おしり（上へ そる）
+    sideAbdomen(ctx, [[-24, -6], [-6, -5], [20, -4], [40, -3], [50, -1.5], [54, 0.5], [53, 3], [48, 5], [36, 6.5], [14, 7.5], [-8, 7.5], [-24, 5.5]], ['#dce8a4', '#a8bc62', '#506826'], edge, { x0: -18, x1: 52, n: 8 });
+    // ながい 前ばね（ちゃいろの まだら。せなかがわの ふちは みどり）
+    const wing = [[-23, -15.5], [-8, -16.5], [20, -15.5], [46, -12.5], [60, -9.5], [66.5, -6.5], [65, -3.5], [56, -2.5], [36, -2.5], [10, -3.5], [-10, -4.5], [-22, -5.5]];
+    tegmen(ctx, wing, ['#d2bc92', '#a08052', '#5c4226'], edge, {
+      top: [[-23, -15.5], [-8, -16.5], [20, -15.5], [46, -12.5], [60, -9.5], [66.5, -6.5]],
+      bottom: [[-22, -5.5], [-10, -4.5], [10, -3.5], [36, -2.5], [56, -2.5], [65, -3.5]],
+      n: 5, cross: 16, vein: 'rgba(60,40,16,0.5)',
+    });
     within(ctx, wing, () => {
       const rnd = seeded(111);
-      for (let i = 0; i < 40; i++) oval(ctx, -20 + rnd() * 84, -13 + rnd() * 9, 1 + rnd() * 2.2, 0.8 + rnd() * 1.2, 'rgba(70,46,20,0.55)');
-      stroke(ctx, [[-24, -12], [20, -10.5], [62, -7]], 'rgba(60,40,20,0.5)', 0.6);
-      stroke(ctx, [[-24, -8], [20, -7], [60, -5]], 'rgba(60,40,20,0.4)', 0.5);
+      for (let i = 0; i < 46; i++) oval(ctx, -18 + rnd() * 82, -14 + rnd() * 10, 0.9 + rnd() * 2.4, 0.7 + rnd() * 1.3, 'rgba(66,42,18,0.55)', null, 0, rnd() * PI);
+      for (let i = 0; i < 12; i++) oval(ctx, -14 + rnd() * 76, -13 + rnd() * 8, 1.2 + rnd() * 1.4, 0.8 + rnd(), 'rgba(240,226,190,0.4)');
+      shape(ctx, [[-23, -16.5], [-8, -17.5], [20, -16.5], [42, -13.8], [22, -13.6], [-8, -14.4], [-22, -13.2]], 'rgba(112,170,72,0.8)');
     });
     // 手前の あし
-    sideLeg(ctx, [[-36, 2], [-31, 12], [-38, 20.5], [-45, 22]], [2.6, 2, 1.3], P.legColor, edge, { spines: 3, spineLen: 1 });
-    sideLeg(ctx, [[-25, 3], [-18, 12.5], [-24, 20.5], [-31, 22]], [2.6, 2, 1.3], P.legColor, edge, { spines: 3, spineLen: 1 });
-    hopperHind(ctx, P, false);
-    // むね（せの すじが 弓の ように もりあがる）
-    const pron = [[-42, -15], [-34, -18.5], [-24, -17], [-21.5, -9], [-23.5, 2], [-33, 4], [-40, 2]];
-    fill3d(ctx, pron, green, edge);
-    stroke(ctx, [[-42, -14.5], [-33, -18], [-24, -16.5]], 'rgba(255,255,255,0.35)', 0.8);
-    stroke(ctx, [[-40, -6], [-30, -7], [-23, -5]], 'rgba(40,70,20,0.4)', 0.6);
-    // あたま
-    const head = [[-56, -14], [-50, -18], [-43, -16], [-39, -8], [-40, 2], [-46, 7], [-54, 5], [-58, -4]];
-    fill3d(ctx, head, green, edge);
-    shape(ctx, [[-57, 3], [-52, 4], [-50, 8], [-55, 9]], '#5a7a3a', edge, 0.5); // 口
-    compoundEye(ctx, -49, -10, 3.4, 4.4, '#7a6a4a', 0.2);
-    stroke(ctx, [[-52, -6.5], [-47, -4]], 'rgba(60,40,20,0.6)', 0.8); // めの 下の すじ
-    antenna(ctx, [[-54, -15], [-60, -22], [-66, -28], [-72, -33], [-76, -35]], 1.2, 0.8, '#5a6a3a', { beads: 14, beadColor: '#4a5a2a' });
+    slimLeg(ctx, foreJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge);
+    slimLeg(ctx, midJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge);
+    jumpLeg(ctx, H, false);
+    // むね: せなかの すじが 弓なりに もりあがり、うしろは はねの つけねへ とがる
+    const pron = [[-41.5, -17.5], [-37, -20.5], [-31, -21.5], [-25, -20], [-19.5, -16.5, 1], [-21.5, -10], [-22.5, -3], [-24, 2.5], [-30, 4], [-36, 4], [-40, 2.5], [-40.5, -8]];
+    plate(ctx, pron, green, edge);
+    within(ctx, pron, () => {
+      stroke(ctx, [[-41, -16.8], [-37, -19.6], [-31, -20.6], [-25, -19.2], [-20.5, -16.2]], 'rgba(255,255,255,0.4)', 0.8); // せなかの 稜
+      for (const x of [-36.5, -33.2, -30]) stroke(ctx, [[x, -19.6], [x + 0.6, -12], [x + 0.2, -7.6]], 'rgba(30,60,20,0.5)', 0.55); // よこの みぞ
+      stroke(ctx, [[-40, -7], [-31, -8.2], [-22.2, -6.6]], 'rgba(30,60,20,0.4)', 0.55);
+      shape(ctx, [[-41.5, -21.5], [-19, -21.5], [-19.5, -17.4], [-25, -18.6], [-31, -19.8], [-37, -18.8], [-41.5, -15.8]], 'rgba(120,96,56,0.35)'); // せなかは ちゃいろがかる
+    });
+    // あたま: おでこは まるく、かおは たてに まっすぐ
+    const head = [[-52, -17], [-47, -19.5], [-42, -18.5], [-39.5, -14], [-39, -4], [-40, 3], [-43, 7.5], [-47.5, 9.5], [-51.5, 8], [-54, 3], [-55.5, -4], [-55.5, -11]];
+    plate(ctx, head, green, edge);
+    within(ctx, head, () => {
+      stroke(ctx, [[-49.6, -7.4], [-48.6, -1], [-47.4, 6]], 'rgba(30,60,20,0.55)', 0.6);  // 目の 下の みぞ
+      stroke(ctx, [[-54.4, -12], [-54.2, -3], [-53.4, 3.6]], 'rgba(255,255,255,0.35)', 0.7); // かおの まんなかの 稜
+      stroke(ctx, [[-46, -17.4], [-43, -13], [-42.4, -6]], 'rgba(30,60,20,0.3)', 0.5);
+    });
+    shape(ctx, [[-54.2, 5], [-51.2, 6], [-51, 9.4], [-53.4, 10], [-54.8, 7.6]], '#86a64e', edge, 0.45);   // うわくちびる
+    shape(ctx, [[-51, 6], [-47.6, 6.6], [-47.8, 9.2], [-50.8, 9.8]], '#5c7a34', edge, 0.45);               // 大あご
+    palps(ctx, [[[-52, 9.8], [-52.8, 12.4], [-51.8, 14]], [[-49, 9.4], [-48.6, 12], [-47.4, 13.2]]], '#6e8e3e', 0.75);
+    compoundEye(ctx, -49.5, -11.6, 2.7, 3.9, '#8a7450', 0.15);
+    // 手前の 触角（糸の ように ほそく、ふしが ならぶ）
+    disc(ctx, -53.6, -12.2, 1.1, '#5c7a34', edge, 0.4);
+    antenna(ctx, [[-53.8, -12.6], [-59.5, -20], [-65, -26.5], [-70, -32]], 1.2, 0.7, '#5a6e3a', { beads: 16, beadColor: '#44582a' });
   },
 };
 
-// ショウリョウバッタ: あたまが とがって ほそながい（さきに め）。ひらたく みじかい 触角。からだが ほそく うしろあしが とても ながい
+// ショウリョウバッタ（オス）: あたまが 前の 上へ ながく とがり、さきの ほうに め。触角は ひらたい 剣の 形。
+// からだが ほそく、はねは おなかより ながく とがる。うしろあしが とても ほそながい
 const longHeadGrasshopper = {
   group: 'grasshopper', level: 1, similar: ['onbuGrasshopper', 'locust', 'katydid'],
-  box: [-100, -26, 82, 25],
+  box: [-102, -30, 84, 25],
   draw(ctx) {
-    const edge = '#1a3010';
-    const green = ['#c8f09a', '#78c050', '#2c6420'];
-    const P = {
-      edge, legColor: '#78c050', farColor: '#3a7028', femurTone: green, tibiaW: 1.6,
-      femur: [[-26, -1], [-8, -6], [20, -11], [40, -12.5], [42, -10], [20, -6.5], [-8, 0], [-24, 2.5]],
-      femurPattern(c) {
-        stroke(c, [[-24, 0.5], [10, -6], [41, -11]], 'rgba(255,255,255,0.35)', 0.8);
+    const edge = '#1e3414';
+    const green = ['#ccf09c', '#7cc054', '#2e6422'];
+    const far = '#3e7029';
+    const H = {
+      edge, farColor: far, femurTone: green,
+      femur: [[-29, -2.5], [-14, -6.5], [10, -10], [30, -11.8], [41, -12.4], [44, -11.6], [44.2, -9.4], [42, -8.6], [30, -8.4], [10, -5.5], [-12, 0], [-26, 3], [-29.5, 1.5]],
+      axis: [[-27, 0.5], [42.5, -10.6]], halfW: 3.2, chevron: 'rgba(36,80,24,0.4)',
+      knee: [43, -10.4], ankle: [5, 20.4], toe: [-9, 22],
+      tibiaW: 1.5, tibiaColor: '#7cc054', tarsusW: 1.2, spines: 11, spineLen: 1.7,
+      kneeColor: 'rgba(60,90,30,0.8)',
+      pattern(c) {
+        stroke(c, [[-27, 1], [-10, -3], [12, -7.6], [40, -11]], 'rgba(255,255,255,0.4)', 0.8);
       },
-      hindJoints: [[41, -11.5], [6, 21], [-8, 22]],
-      spines: 11, tarsusW: 1.3,
     };
-    farSide(ctx, (far) => {
-      sideLeg(ctx, [[-44, 2], [-40, 12], [-46, 21], [-52, 22]], [1.8, 1.4, 1], P.farColor, edge);
-      sideLeg(ctx, [[-30, 3], [-24, 12], [-30, 21], [-36, 22]], [1.8, 1.4, 1], P.farColor, edge);
-      hopperHind(ctx, P, far);
+    const foreJ = [[-44, 2], [-48.5, 10.5], [-47, 19.8], [-53, 22]];
+    const midJ = [[-31, 3], [-25.5, 11], [-29.5, 20], [-36, 22]];
+    const lw = [1.9, 1.3, 0.9];
+    const sword = [[-81, -13.6], [-90, -20.5], [-99, -27, 1], [-98.5, -24], [-89, -16], [-80.5, -10.8]];
+    ctx.save();
+    ctx.translate(2.5, -1.4);
+    shape(ctx, sword, far, edge, 0.5); // むこうがわの 触角
+    ctx.restore();
+    farSide(ctx, () => {
+      slimLeg(ctx, foreJ, lw, far, edge, { shade: false, spines: 2 });
+      slimLeg(ctx, midJ, lw, far, edge, { shade: false, spines: 2 });
+      jumpLeg(ctx, H, true);
     });
-    fill3d(ctx, [[-30, -4], [10, -3], [50, -2], [62, 0], [58, 3.5], [20, 4], [-20, 4.5], [-30, 3]], green, edge);
-    const wing = [[-32, -10], [20, -10], [66, -6], [80, -2.5, 1], [64, -1.5], [20, -2.5], [-30, -3]];
-    fill3d(ctx, wing, ['#b8e090', '#70b048', '#2c5a1c'], edge, 0.7, [0.3, 0.1]);
-    within(ctx, wing, () => {
-      stroke(ctx, [[-30, -7], [30, -6.5], [74, -3]], 'rgba(30,60,20,0.45)', 0.6);
-      stroke(ctx, [[-30, -4.5], [30, -4.2], [70, -2.2]], 'rgba(255,255,255,0.3)', 0.6);
+    sideAbdomen(ctx, [[-32, -4], [10, -3], [46, -1.5], [58, 0.5], [60, 2], [52, 4], [20, 4.5], [-18, 5], [-32, 3.5]], ['#d8f0a8', '#98c868', '#3e6a28'], edge, { x0: -24, x1: 58, n: 9, slant: 1 });
+    const wing = [[-33, -10.5], [0, -11], [40, -8.5], [66, -5], [82, -2, 1], [66, -0.5], [30, -1.5], [-6, -2.5], [-31, -3.5]];
+    tegmen(ctx, wing, ['#c4ec98', '#78b850', '#2e5e1e'], edge, {
+      top: [[-33, -10.5], [0, -11], [40, -8.5], [66, -5], [82, -2]],
+      bottom: [[-31, -3.5], [-6, -2.5], [30, -1.5], [66, -0.5], [82, -2]],
+      n: 4, cross: 20, vein: 'rgba(30,70,20,0.45)',
     });
-    sideLeg(ctx, [[-46, 1], [-42, 11.5], [-48, 20.5], [-55, 22]], [2, 1.6, 1.1], P.legColor, edge);
-    sideLeg(ctx, [[-32, 2], [-26, 11.5], [-32, 20.5], [-39, 22]], [2, 1.6, 1.1], P.legColor, edge);
-    hopperHind(ctx, P, false);
-    const pron = [[-50, -10], [-40, -11.5], [-31, -10.5], [-29, -4], [-31, 3], [-40, 4], [-48, 3]];
-    fill3d(ctx, pron, green, edge);
-    stroke(ctx, [[-50, -5], [-40, -5.5], [-31, -4.5]], 'rgba(255,255,255,0.45)', 0.9);
-    // とがった あたま（さきに め と 触角）
-    const head = [[-84, -11.5, 1], [-70, -14], [-56, -12.5], [-48, -9], [-48, 1], [-54, 4], [-66, -1], [-78, -6]];
-    fill3d(ctx, head, green, edge);
-    stroke(ctx, [[-82, -9], [-66, -6], [-49, -4]], 'rgba(255,255,255,0.45)', 0.9);
-    compoundEye(ctx, -72, -10.5, 2.4, 3.4, '#8a9a5a', -0.3);
-    // 剣のような ひらたい 触角
-    fill3d(ctx, [[-83, -13], [-97, -21.5, 1], [-99, -20], [-85, -10.5]], ['#a8d880', '#68a840', '#2a5a1c'], edge, 0.6);
+    within(ctx, wing, () => stroke(ctx, [[-31, -5], [10, -4.6], [50, -2.8], [78, -1.8]], 'rgba(255,255,255,0.45)', 0.9)); // よこの しろい すじ
+    slimLeg(ctx, foreJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge, { spines: 2 });
+    slimLeg(ctx, midJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge, { spines: 2 });
+    jumpLeg(ctx, H, false);
+    const pron = [[-49, -11], [-41, -12.2], [-33, -11.5], [-29.5, -9, 1], [-30.5, -3], [-32, 3], [-40, 4.2], [-47, 3.2], [-48, -4]];
+    plate(ctx, pron, green, edge);
+    within(ctx, pron, () => {
+      stroke(ctx, [[-49, -5.4], [-40, -5.8], [-30.5, -5]], 'rgba(255,255,255,0.5)', 0.9);
+      for (const x of [-44, -40.6]) stroke(ctx, [[x, -11.6], [x + 0.4, -6.4]], 'rgba(30,70,20,0.45)', 0.5, false);
+    });
+    // ながく とがった あたま（かおは ななめ うしろへ さがる）
+    const head = [[-48, -11], [-58, -13], [-72, -14.5], [-84, -13.5], [-87, -12], [-86.5, -10], [-80, -7], [-70, -2.5], [-60, 2], [-54, 5], [-50, 4.5], [-48, 1]];
+    plate(ctx, head, green, edge);
+    within(ctx, head, () => {
+      stroke(ctx, [[-85, -11.4], [-72, -8.6], [-60, -6.6], [-48, -5.4]], 'rgba(255,255,255,0.5)', 0.9);
+      stroke(ctx, [[-84, -12.6], [-70, -13.4], [-56, -12], [-48, -10.4]], 'rgba(30,70,20,0.3)', 0.5);
+    });
+    shape(ctx, [[-57.4, 3], [-53.6, 5.2], [-54.4, 7.8], [-57.6, 6.4]], '#5e8e3c', edge, 0.45);
+    palps(ctx, [[[-55.6, 6.6], [-56.8, 9.4], [-55.8, 11.2]], [[-53, 5.6], [-53, 8.6], [-51.8, 10]]], '#5e8e3c', 0.7);
+    compoundEye(ctx, -76, -10.7, 3.4, 2.2, '#9aa860', -0.2);
+    fill3d(ctx, sword, ['#b0e088', '#6cae44', '#2c5e1e'], edge, 0.5);
+    stroke(ctx, [[-82, -12.4], [-90, -18.6], [-97.4, -24.8]], 'rgba(30,70,20,0.4)', 0.5);
   },
 };
 
-// キリギリス: しょっかくが とても ながい（からだより ながい）。はねは みじかく くろい てんが ならぶ。からだは みどり
+// キリギリス（オス）: がっしりした からだ。触角は からだの 2ばい ちかく ながく ほそい。はねは みじかく、くろい てんが ならぶ。
+// まえあしの すねに とげ（虫を つかまえる）と 耳（こまく）。おしりに 産卵管は ない（オス）
 const katydid = {
   group: 'grasshopper', level: 2, similar: ['giantKatydid', 'locust', 'bellCricket'],
   box: [-62, -63, 136, 25],
   draw(ctx) {
-    const edge = '#1a2a10';
-    const green = ['#c8e890', '#74b04a', '#2a5a1c'];
-    const P = {
-      edge, legColor: '#74b04a', farColor: '#3a6a28', femurTone: green, tibiaW: 1.8,
-      femur: [[-14, 0], [0, -5], [20, -9], [36, -9.5], [37.5, -7], [20, -3.5], [0, 3], [-12, 4]],
-      hindJoints: [[37, -8.5], [14, 21], [2, 22]],
-      spines: 12, tarsusW: 1.5,
+    const edge = '#20301a';
+    const green = ['#c8e894', '#76b04c', '#2c5a1e'];
+    const far = '#3e6a2a';
+    const brown = '#7a5632';
+    const H = {
+      edge, farColor: far, femurTone: green,
+      femur: [[-16, -2], [-6, -7.5], [10, -10.5], [26, -10.5], [36, -10.2], [39, -9.4], [39.2, -7.2], [37, -6.6], [26, -6.6], [10, -4.5], [-2, 1], [-11, 5.5], [-16.5, 3.5]],
+      axis: [[-14, 1.5], [37.5, -8.6]], halfW: 4.6, chevron: 'rgba(36,70,24,0.45)',
+      knee: [38, -8.4], ankle: [16, 20.3], toe: [4, 22],
+      tibiaW: 1.8, tibiaColor: '#8aa650', tarsusColor: '#8a7a44', spines: 12, spineLen: 2,
+      pattern(c) {
+        stroke(c, [[-14, 4], [0, -1.6], [14, -5.4], [34, -7.4]], 'rgba(236,240,190,0.5)', 0.9);
+      },
     };
-    // 触角: からだの 2ばい ちかく ながく、ほそい。せなかの うえを 高く 弓なりに こえて うしろへ（2本）
-    threadAntenna(ctx, [[-53, -14], [-49, -30], [-32, -45], [0, -56], [40, -61], [80, -58], [114, -49], [134, -36]], 0.9, 0.35, '#6a7a48', { alpha: 0.6 });
-    threadAntenna(ctx, [[-54, -13], [-52, -26], [-40, -40], [-14, -50], [24, -54], [64, -50], [98, -40], [120, -26], [130, -12]], 1, 0.35, '#5a6a3a');
-    farSide(ctx, (far) => {
-      sideLeg(ctx, [[-36, 4], [-32, 13], [-40, 21], [-46, 22]], [2.2, 1.6, 1.1], P.farColor, edge, { spines: 4, spineLen: 1.2 });
-      sideLeg(ctx, [[-22, 4], [-14, 13], [-20, 21], [-26, 22]], [2.2, 1.6, 1.1], P.farColor, edge, { spines: 3, spineLen: 1 });
-      hopperHind(ctx, P, far);
+    const foreJ = [[-37, 3], [-41.5, 11], [-41, 19.8], [-47.5, 22]];
+    const midJ = [[-24, 4], [-17.5, 12], [-22, 20], [-29, 22]];
+    const lw = [2.6, 1.8, 1.2];
+    // 触角（からだの 2ばい ちかい 長さ。せなかの 上を こえて うしろへ）
+    threadAntenna(ctx, [[-53, -15], [-49, -30], [-32, -45], [0, -56], [40, -61], [80, -58], [114, -49], [134, -36]], 0.9, 0.35, '#6a7a48', { alpha: 0.6 });
+    farSide(ctx, () => {
+      slimLeg(ctx, foreJ, lw, far, edge, { shade: false, spines: 5, spineLen: 1.8 });
+      slimLeg(ctx, midJ, lw, far, edge, { shade: false, spines: 4 });
+      jumpLeg(ctx, H, true);
     });
-    // おなか（はねから はみだす）
-    const abd = [[-22, -7], [6, -8], [26, -6], [38, -2], [40, 3], [30, 7], [6, 8], [-20, 6]];
-    fill3d(ctx, abd, green, edge);
-    within(ctx, abd, () => { for (let x = 0; x < 40; x += 6) stroke(ctx, [[x, -9], [x + 1, 8]], 'rgba(30,60,20,0.3)', 0.6); });
-    // みじかい はね（ちゃいろ・くろい てんの ならび）
-    const wing = [[-24, -12], [0, -12.5], [18, -10], [22, -6], [16, -3], [-4, -3], [-22, -5]];
-    fill3d(ctx, wing, ['#c8a874', '#8e6a3e', '#4a3418'], edge, 0.7, [0.3, 0.1]);
+    sideAbdomen(ctx, [[-22, -8], [-4, -7], [16, -5], [30, -3], [38, 0], [40, 3.5], [34, 7], [16, 9], [-6, 9.5], [-22, 7]], green, edge, { x0: -16, x1: 38, n: 8 });
+    stroke(ctx, [[38.5, 1.2], [43, -0.4], [45.6, -2.6]], '#5a7a3a', 1.4); // オスの 尾の 突起
+    stroke(ctx, [[38.5, 1.2], [43, -0.4], [45.6, -2.6]], edge, 0.4);
+    // みじかい はね（ちゃいろ。くろい てんの ならび。つけねは 音を 出す ところ）
+    const wing = [[-19, -16.5], [-4, -15.5], [12, -12.5], [24, -8.5], [30, -4.5, 1], [22, -2.5], [6, -3], [-10, -4.5], [-19, -7]];
+    tegmen(ctx, wing, ['#ceae7a', '#927042', '#4c361a'], edge, {
+      top: [[-19, -16.5], [-4, -15.5], [12, -12.5], [24, -8.5], [30, -4.5]],
+      bottom: [[-19, -7], [-10, -4.5], [6, -3], [22, -2.5], [30, -4.5]],
+      n: 4, cross: 12, vein: 'rgba(50,34,14,0.5)',
+    });
     within(ctx, wing, () => {
-      for (let i = 0; i < 7; i++) oval(ctx, -18 + i * 5.6, -7.6 + Math.sin(i) * 0.6, 1.3, 1.2, '#1c140a');
-      stroke(ctx, [[-22, -10], [18, -8]], 'rgba(60,40,20,0.5)', 0.6);
+      for (let i = 0; i < 7; i++) oval(ctx, -14.5 + i * 5.6, -9.6 + i * 0.75, 1.4, 1.2, '#1c140a');
+      shape(ctx, [[-20, -17.5], [-4, -16.5], [4, -14.6], [-4, -12.4], [-19, -12]], 'rgba(120,150,70,0.55)');
     });
-    sideLeg(ctx, [[-38, 3], [-34, 12], [-42, 20.5], [-48, 22]], [2.4, 1.8, 1.2], P.legColor, edge, { spines: 4, spineLen: 1.3 });
-    sideLeg(ctx, [[-24, 3], [-16, 12], [-22, 20.5], [-29, 22]], [2.4, 1.8, 1.2], P.legColor, edge, { spines: 3, spineLen: 1.1 });
-    hopperHind(ctx, P, false);
-    // ながい むね（せなかに ちゃいろの おび）
-    const pron = [[-44, -14], [-34, -15], [-22, -14], [-20, -6], [-22, 3], [-34, 4], [-42, 2]];
-    fill3d(ctx, pron, green, edge);
-    within(ctx, pron, () => shape(ctx, [[-46, -16], [-20, -16], [-20, -11.5], [-34, -12], [-46, -11.5]], '#7a5430'));
-    const head = [[-56, -12], [-49, -16], [-43, -14], [-41, -6], [-42, 3], [-48, 8], [-55, 6], [-59, -2]];
-    fill3d(ctx, head, green, edge);
-    shape(ctx, [[-58, 4], [-53, 5], [-51, 9], [-56, 10]], '#5a7a3a', edge, 0.5);
-    compoundEye(ctx, -50, -9, 2.6, 2.8, '#8a7a4a');
+    slimLeg(ctx, foreJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge, { spines: 5, spineLen: 1.9 });
+    oval(ctx, -43.2, 12.8, 0.7, 1.3, '#2a2010', null, 0, 0.1); // 耳（こまく）
+    slimLeg(ctx, midJ.map(([x, y]) => [x - 1.5, y]), lw, green[1], edge, { spines: 4 });
+    jumpLeg(ctx, H, false);
+    // くらの 形の むね（せなかは ちゃいろ。うしろが すこし そりあがる）
+    const pron = [[-42, -16], [-34, -17.5], [-26, -17], [-20, -18.5], [-17.5, -15, 1], [-19, -8], [-21, -1], [-23, 3.5], [-31, 5], [-39, 3.5], [-41.5, -6]];
+    plate(ctx, pron, green, edge);
+    within(ctx, pron, () => {
+      shape(ctx, [[-43, -19], [-17, -20], [-17.5, -13.6], [-26, -13.4], [-34, -13.8], [-43, -12.6]], brown);
+      for (const x of [-36.4, -31.6]) stroke(ctx, [[x, -17], [x + 0.6, -9], [x - 0.4, -3]], 'rgba(30,50,20,0.45)', 0.55);
+      stroke(ctx, [[-41.4, 1.6], [-31, 3.2], [-23.4, 1.6]], 'rgba(255,255,255,0.4)', 0.8);
+    });
+    // 大きな あたま（かおは たてに ながい）
+    const head = [[-55, -13], [-50, -17], [-44, -17], [-41, -13], [-40, -4], [-41, 4], [-45, 9], [-50, 10.5], [-54.5, 8], [-57, 2], [-57.5, -6]];
+    plate(ctx, head, green, edge);
+    within(ctx, head, () => {
+      stroke(ctx, [[-51, -7.2], [-50, 0], [-48.6, 7]], 'rgba(30,60,20,0.5)', 0.6);
+      stroke(ctx, [[-56.4, -8], [-56.2, 0], [-55, 5]], 'rgba(255,255,255,0.35)', 0.7);
+      shape(ctx, [[-56, -15], [-42, -19], [-41, -13.4], [-50, -14.4], [-56, -11.6]], 'rgba(122,86,50,0.5)');
+    });
+    shape(ctx, [[-56, 5], [-52.2, 6.4], [-52, 10], [-55, 10.8], [-56.8, 8]], '#86a64e', edge, 0.45);
+    shape(ctx, [[-52, 5.4], [-47.8, 6.4], [-48.2, 10], [-51.8, 10.6]], '#4e3a1c', edge, 0.45); // 大あご（つよい）
+    palps(ctx, [[[-53.4, 10.4], [-54.6, 13.6], [-53.4, 15.6]], [[-50, 10], [-49.6, 13], [-48.2, 14.4]]], '#6e8e3e', 0.8);
+    compoundEye(ctx, -51, -10.6, 2.4, 3, '#8a7a4a', 0.1);
+    disc(ctx, -54.4, -14.2, 1.1, '#5c7a34', edge, 0.4);
+    threadAntenna(ctx, [[-54.6, -14.6], [-52, -26], [-40, -40], [-14, -50], [24, -54], [64, -50], [98, -40], [120, -26], [130, -12]], 1, 0.35, '#5a6a3a');
   },
 };
 
@@ -1679,43 +2011,52 @@ const bellCricket = {
   group: 'grasshopper', level: 2, similar: ['cricket', 'katydid'],
   box: [-114, -66, 56, 24],
   draw(ctx) {
-    const edge = '#000';
-    const black = ['#4a4640', '#1a1814', '#050403'];
-    const pale = '#d8cca8';
+    const edge = '#0a0806';
+    const black = ['#4e4a44', '#1c1a16', '#050403'];
+    const pale = ['#f4ecd0', '#d4c69c', '#8c7c5a'];
     const bands = ['#f4f0e6', '#1a1814', 3.2, 0.75];
-    const P = {
-      edge: '#3a3020', legColor: pale, farColor: '#a89a78', femurTone: ['#f0e6c8', '#cfc19a', '#8a7a58'], tibiaW: 1.6,
-      femur: [[-10, 1], [2, -4], [16, -6.5], [24, -6], [24.5, -3], [14, -0.5], [0, 4], [-9, 5]],
-      hindJoints: [[24, -4.5], [8, 20], [-2, 22]],
-      spines: 7, tarsusW: 1.3,
+    const legEdge = '#3a3020';
+    const H = {
+      edge: legEdge, farColor: '#a89a78', femurTone: pale,
+      femur: [[-10, 1], [-2, -3], [8, -5.8], [18, -6.6], [22.5, -6.2], [25, -5.4], [25.2, -3.4], [23, -2.8], [14, -1.6], [4, 1.4], [-4, 4.6], [-9.5, 5]],
+      axis: [[-8.5, 3], [23.5, -4.6]], halfW: 3.4, chevron: 'rgba(110,96,60,0.4)',
+      knee: [24, -4.4], ankle: [8, 20.2], toe: [-2, 22],
+      tibiaW: 1.5, tibiaColor: '#b8a880', tarsusColor: '#8c7c5a', tarsusW: 1.2, spines: 7, spineLen: 2.2, spineColor: '#e8dcb8',
+      kneeColor: 'rgba(90,76,48,0.8)',
     };
+    const foreJ = [[-30, 5], [-33.5, 12.5], [-33, 20.2], [-38.5, 22]];
+    const midJ = [[-18, 5], [-12.5, 12.5], [-17, 20.2], [-23, 22]];
+    const lw = [2, 1.4, 1];
     // むこうの 触角（うしろへ。たてた はねの 上を こえる）
     threadAntenna(ctx, [[-44, -8], [-47, -22], [-42, -38], [-26, -52], [-2, -60], [24, -63], [52, -59]], 1, 0.35, '#c8c0a8', { bands, alpha: 0.65 });
-    farSide(ctx, (far) => {
-      sideLeg(ctx, [[-30, 5], [-27, 13], [-33, 21], [-38, 22]], [2, 1.5, 1], P.farColor, P.edge);
-      sideLeg(ctx, [[-18, 5], [-12, 13], [-18, 21], [-24, 22]], [2, 1.5, 1], P.farColor, P.edge);
-      hopperHind(ctx, P, far);
+    farSide(ctx, () => {
+      slimLeg(ctx, foreJ, lw, H.farColor, legEdge, { shade: false, spines: 2 });
+      slimLeg(ctx, midJ, lw, H.farColor, legEdge, { shade: false, spines: 2 });
+      jumpLeg(ctx, H, true);
     });
-    // おしりの 2本の 尾（尾毛）
-    stroke(ctx, [[24, 2], [40, -1], [54, -3]], '#2a2620', 1);
-    stroke(ctx, [[24, 3.5], [40, 3], [52, 3]], '#2a2620', 0.9);
+    // おしりの 2本の ながい 毛（尾毛）
+    threadAntenna(ctx, [[24, 2], [40, -1], [54, -3]], 1.3, 0.3, '#2a2620');
+    threadAntenna(ctx, [[24, 3.6], [40, 3.2], [52, 3]], 1.2, 0.3, '#2a2620');
     // おなか（はねを たてて いるので ふしが 見える）
-    const abd = [[-22, -5], [0, -6], [22, -4], [27, 1], [24, 6], [0, 8], [-20, 6]];
-    fill3d(ctx, abd, black, edge);
-    within(ctx, abd, () => { for (let x = -14; x < 26; x += 5.5) stroke(ctx, [[x, -7], [x + 1, 8]], 'rgba(200,190,170,0.25)', 0.6); });
+    sideAbdomen(ctx, [[-22, -5], [-10, -6], [6, -6], [20, -4.4], [26, -1], [27, 2.5], [23, 6], [8, 8], [-8, 8], [-20, 6]], black, edge, { x0: -16, x1: 26, n: 7, line: 'rgba(214,204,184,0.32)' });
     // たてた 前ばね（むこうの 1まい → てまえの 1まい）。うちわの ような まるい かたち
     const wing = [[-21, -6], [-25, -16], [-22, -29], [-11, -39], [5, -43], [18, -38], [26, -27], [27, -15], [21, -6], [12, -4]];
     const drawWing = (dx, dy, a) => {
       ctx.save();
       ctx.translate(dx, dy);
       const w = wing;
-      shape(ctx, w, `rgba(46,40,32,${a})`, '#14100a', 0.8);
+      shape(ctx, w, `rgba(46,40,32,${a})`, '#14100a', 0.6);
       within(ctx, w, () => {
         ctx.fillStyle = vgrad(ctx, -44, -6, ['rgba(230,220,200,0.32)', 'rgba(230,220,200,0.08)']);
         ctx.fillRect(-30, -46, 60, 44);
         // つけねから ひろがる 脈と、うずのように まがる 脈（ハープと よばれる ところ）
-        for (const [x, y] of [[-24, -20], [-17, -35], [-2, -42], [14, -40], [24, -29], [26, -16]]) stroke(ctx, [[-14, -7], [(x - 14) / 2, (y - 7) / 2 - 3], [x, y]], 'rgba(20,16,10,0.7)', 0.6);
-        for (const r of [10, 17, 24, 31]) stroke(ctx, [[-14 - r * 0.45, -7 - r * 0.4], [-14 + r * 0.05, -7 - r * 0.85], [-14 + r * 0.7, -7 - r * 0.8], [-14 + r * 1.15, -7 - r * 0.3]], 'rgba(20,16,10,0.55)', 0.5);
+        for (const [x, y] of [[-24, -20], [-17, -35], [-2, -42], [14, -40], [24, -29], [26, -16]]) stroke(ctx, [[-14, -7], [(x - 14) / 2, (y - 7) / 2 - 3], [x, y]], 'rgba(20,16,10,0.7)', 0.5);
+        for (const r of [10, 17, 24, 31]) stroke(ctx, [[-14 - r * 0.45, -7 - r * 0.4], [-14 + r * 0.05, -7 - r * 0.85], [-14 + r * 0.7, -7 - r * 0.8], [-14 + r * 1.15, -7 - r * 0.3]], 'rgba(20,16,10,0.55)', 0.45);
+        // こまかい 横の 脈（うずの あいだ）
+        for (let k = 0; k < 16; k++) {
+          const ang = -2.7 + k * 0.17;
+          stroke(ctx, [[-14 + Math.cos(ang) * 17, -7 + Math.sin(ang) * 15], [-14 + Math.cos(ang) * 24, -7 + Math.sin(ang) * 21]], 'rgba(20,16,10,0.4)', 0.3, false);
+        }
         // 鏡（まるく すきとおった ところ）
         oval(ctx, 9, -28, 7.5, 6.5, 'rgba(240,235,220,0.18)', 'rgba(20,16,10,0.6)', 0.5, 0.4);
       });
@@ -1723,152 +2064,255 @@ const bellCricket = {
     };
     drawWing(5, -3, 0.5);
     drawWing(0, 0, 0.62);
-    sideLeg(ctx, [[-32, 4], [-29, 12], [-35, 20.5], [-41, 22]], [2.2, 1.7, 1.1], pale, P.edge);
-    sideLeg(ctx, [[-20, 4], [-14, 12], [-20, 20.5], [-27, 22]], [2.2, 1.7, 1.1], pale, P.edge);
-    hopperHind(ctx, P, false);
-    const pron = [[-34, -11], [-24, -12], [-20, -6], [-21, 4], [-30, 5], [-35, 2]];
-    fill3d(ctx, pron, black, edge);
+    slimLeg(ctx, foreJ.map(([x, y]) => [x - 1.5, y]), lw, pale[1], legEdge, { spines: 2 });
+    slimLeg(ctx, midJ.map(([x, y]) => [x - 1.5, y]), lw, pale[1], legEdge, { spines: 2 });
+    jumpLeg(ctx, H, false);
+    const pron = [[-34, -11], [-28, -12.2], [-23, -11.6], [-20, -6], [-20.6, 0], [-22, 4.4], [-30, 5.4], [-34.6, 2.4], [-35.4, -5]];
+    plate(ctx, pron, black, edge);
+    within(ctx, pron, () => stroke(ctx, [[-34.4, 1.4], [-29, 3.8], [-22, 2.6]], 'rgba(220,206,170,0.5)', 0.9));
     // 小さめの あたま
-    const head = ell(-40, -2, 6.5, 7.5, 22);
-    fill3d(ctx, head, black, edge);
+    const head = ell(-40, -2, 6.5, 7.5, 24);
+    plate(ctx, head, black, edge);
     compoundEye(ctx, -42, -5, 1.8, 2.2, '#3a3428');
     gloss(ctx, head, -42, -6, 5, 0.25);
+    palps(ctx, [[[-44, 4.4], [-46.4, 8.4], [-45.4, 11.4]], [[-41.6, 5], [-42, 9], [-40.6, 11]]], '#d4c69c', 0.8);
     // てまえの 触角（まえへ ながく）
+    disc(ctx, -44.6, -6.6, 1, '#2a2620', edge, 0.4);
     threadAntenna(ctx, [[-45, -7], [-56, -14], [-70, -20], [-86, -22], [-100, -20], [-112, -14]], 1.1, 0.4, '#d8d0b8', { bands });
   },
 };
 
-// エンマコオロギ: あたまが おおきく まるい。めの 上に クリームいろの まゆ。つやの ある こげちゃ
+// エンマコオロギ（オス）: あたまが 大きく まるく、つやの ある こげちゃ。めの 上に クリームいろの まゆ。
+// 触角は ねもとが ふとく、せなかに そって うしろへ。おしりに 2ほんの ながい 毛（尾毛）。うしろあしの すねに ながい とげ
 const cricket = {
   group: 'grasshopper', level: 1, similar: ['bellCricket', 'moleCricket', 'locust'],
-  box: [-60, -40, 90, 24],
+  box: [-60, -40, 90, 25],
   draw(ctx) {
-    const edge = '#0a0604';
-    const brown = ['#6a4a30', '#3a2414', '#100804'];
-    const P = {
-      edge, legColor: '#5a3a20', farColor: '#3a2414', femurTone: ['#8a6440', '#5a3a1e', '#2a1808'], tibiaW: 2,
-      femur: [[-12, 2], [0, -5], [14, -8.5], [24, -8], [25, -5], [14, -1], [0, 5], [-10, 6]],
-      femurPattern(c) {
-        for (let x = -6; x < 24; x += 4) stroke(c, [[x, -6], [x + 2.5, -3], [x + 1, 2]], 'rgba(20,10,4,0.4)', 0.7);
-      },
-      hindJoints: [[24.5, -6], [9, 20], [-2, 22]],
-      spines: 7, tarsusW: 1.5,
+    const edge = '#0c0704';
+    const brown = ['#74523a', '#3c2616', '#100804'];
+    const far = '#2a1a0e';
+    const legT = ['#96704a', '#5e3e20', '#2a1808'];
+    const H = {
+      edge, farColor: far, femurTone: legT,
+      femur: [[-14, -1], [-6, -7], [6, -10], [16, -9.5], [21, -8.6], [24, -7.8], [24.2, -5.6], [22, -5], [14, -4.6], [4, -1.5], [-4, 3.5], [-10, 6.5], [-14.5, 4.5]],
+      axis: [[-12, 2.5], [22.5, -7]], halfW: 5, chevron: 'rgba(24,12,4,0.5)',
+      knee: [23, -6.6], ankle: [8, 20.2], toe: [-3, 22],
+      tibiaW: 2, tibiaColor: '#5e3e20', tarsusColor: '#5e3e20', spines: 6, spineLen: 3.2, spineColor: '#c8a878',
     };
-    // 触角: こげちゃで ねもとが ふとい。からだの 1.5ばいほど、せなかに そって ひくく うしろへ（2本）
+    const foreJ = [[-34, 6], [-37, 13], [-37, 20], [-43, 22]];
+    const midJ = [[-23, 6], [-17.5, 13], [-21.5, 20.2], [-28, 22]];
+    const lw = [2.6, 1.9, 1.2];
     threadAntenna(ctx, [[-51, -11], [-47, -23], [-34, -32], [-10, -37], [22, -38], [54, -35], [84, -29]], 1.6, 0.45, '#24160a', { alpha: 0.6 });
-    threadAntenna(ctx, [[-52, -10], [-50, -19], [-41, -26], [-20, -29], [10, -29], [40, -25], [66, -19], [88, -13]], 1.8, 0.45, '#2a1a0c');
-    farSide(ctx, (far) => {
-      sideLeg(ctx, [[-34, 6], [-31, 14], [-37, 21], [-42, 22]], [2.4, 1.8, 1.1], P.farColor, edge);
-      sideLeg(ctx, [[-22, 6], [-16, 14], [-22, 21], [-28, 22]], [2.4, 1.8, 1.1], P.farColor, edge);
-      hopperHind(ctx, P, far);
+    farSide(ctx, () => {
+      slimLeg(ctx, foreJ, lw, far, edge, { shade: false, spines: 2 });
+      slimLeg(ctx, midJ, lw, far, edge, { shade: false, spines: 2 });
+      jumpLeg(ctx, H, true);
     });
-    stroke(ctx, [[24, 1], [42, -2], [56, -4]], '#3a2414', 1.1);
-    stroke(ctx, [[24, 3], [42, 3], [54, 3]], '#3a2414', 1);
-    fill3d(ctx, [[-24, -4], [0, -5], [22, -3], [27, 1], [24, 7], [0, 9], [-22, 7]], brown, edge);
-    const wing = [[-26, -9], [-4, -11], [16, -10], [24, -6], [22, -2.5], [-4, -2.5], [-24, -4]];
-    fill3d(ctx, wing, ['#9a7a54', '#6a4a2a', '#2e1c0c'], edge, 0.7, [0.3, 0.1]);
-    within(ctx, wing, () => {
-      for (const k of [0, 1, 2]) stroke(ctx, [[-22, -8.5 + k * 2], [0, -9 + k * 2], [20, -7 + k * 1.6]], 'rgba(30,16,6,0.5)', 0.6);
+    // おしりの ながい 毛（尾毛）: ねもとが ふとく さきへ ほそく、こまかい 毛
+    threadAntenna(ctx, [[28, 1], [42, -3], [55, -5.5]], 1.6, 0.3, '#3c2616');
+    threadAntenna(ctx, [[28, 3.4], [42, 3.2], [53, 3]], 1.5, 0.3, '#3c2616');
+    for (let i = 0; i < 7; i++) stroke(ctx, [[32 + i * 3, -0.2 - i * 0.75], [32.8 + i * 3, -2.4 - i * 0.75]], 'rgba(60,38,22,0.7)', 0.3, false);
+    sideAbdomen(ctx, [[-24, -4], [-6, -3.5], [14, -3], [26, -1], [30, 2.5], [26, 7], [10, 9.5], [-10, 9.5], [-24, 7.5]], brown, edge, { x0: -18, x1: 28, n: 7, line: 'rgba(0,0,0,0.5)' });
+    // たたんだ 後ばねの さき（前ばねより うしろへ つき出る）
+    shape(ctx, [[24, -7.4], [38, -6.6], [47, -5.4, 1], [38, -4.6], [25, -4.6]], '#b89a70', edge, 0.45);
+    // 前ばね: よこに おれた ところに たての 脈が ならぶ。せなかの ふちは あかるい
+    const wing = [[-23, -11], [-6, -12.5], [14, -12], [26, -9], [30, -5, 1], [22, -2], [4, -1.5], [-12, -2.5], [-23, -4]];
+    tegmen(ctx, wing, ['#a07e56', '#6c4c2c', '#2e1c0c'], edge, {
+      top: [[-23, -11], [-6, -12.5], [14, -12], [26, -9], [30, -5]],
+      bottom: [[-23, -4], [-12, -2.5], [4, -1.5], [22, -2], [30, -5]],
+      n: 6, cross: 5, vein: 'rgba(24,12,4,0.55)',
     });
-    sideLeg(ctx, [[-36, 5], [-33, 13], [-39, 20.5], [-45, 22]], [2.6, 2, 1.2], P.legColor, edge);
-    sideLeg(ctx, [[-24, 5], [-18, 13], [-24, 20.5], [-31, 22]], [2.6, 2, 1.2], P.legColor, edge);
-    hopperHind(ctx, P, false);
-    const pron = [[-38, -11], [-27, -12], [-22, -6], [-23, 6], [-33, 7], [-38, 3]];
-    fill3d(ctx, pron, ['#5a4028', '#2e1c0c', '#0a0604'], edge);
-    // 大きく まるい あたま（めの 上に クリームいろの まゆ）
-    const head = ell(-46, -2, 10, 10.5, 24);
-    fill3d(ctx, head, ['#5a4028', '#24160a', '#060302'], edge);
+    within(ctx, wing, () => stroke(ctx, [[-23, -10], [-6, -11.4], [14, -11], [26, -8.4]], 'rgba(226,196,150,0.5)', 0.9));
+    slimLeg(ctx, foreJ.map(([x, y]) => [x - 1.5, y]), lw, legT[1], edge, { spines: 2 });
+    slimLeg(ctx, midJ.map(([x, y]) => [x - 1.5, y]), lw, legT[1], edge, { spines: 2 });
+    jumpLeg(ctx, H, false);
+    const pron = [[-38, -11.5], [-30, -12.5], [-23, -12], [-21.5, -5], [-22.5, 5], [-30, 7], [-37, 6], [-38.5, -2]];
+    plate(ctx, pron, ['#60442c', '#2e1c0c', '#0a0604'], edge);
+    within(ctx, pron, () => {
+      stroke(ctx, [[-37.6, 4.4], [-30, 5.6], [-22.8, 3.6]], 'rgba(214,180,130,0.5)', 1);
+      speckle(ctx, pron, 60, 0.3, 'rgba(220,190,150,0.2)', 121);
+    });
+    // 大きく まるい あたま（つやつや）
+    const head = ell(-46, -2, 10, 10.5, 28);
+    plate(ctx, head, ['#60442c', '#26180c', '#060302'], edge);
     compoundEye(ctx, -49, -3, 2.6, 3.4, '#2a2018');
-    stroke(ctx, [[-54, -6], [-51, -9], [-46, -9.5], [-41, -7]], '#efe0b0', 1.6);
+    stroke(ctx, [[-54, -6], [-51, -9], [-46, -9.5], [-41, -7]], '#efe0b0', 1.6); // クリームいろの まゆ
     stroke(ctx, [[-50, -10.5], [-44, -11.8]], 'rgba(239,224,176,0.7)', 1);
-    gloss(ctx, head, -49, -7, 8, 0.3);
-    shape(ctx, [[-56, 4], [-51, 5], [-50, 9], [-55, 9.5]], '#3a2414', edge, 0.5);
+    gloss(ctx, head, -49, -7, 8, 0.32);
+    shape(ctx, [[-55.6, 3], [-51.4, 4.4], [-50.6, 8.6], [-54.6, 9.4], [-56.4, 6.4]], '#3a2414', edge, 0.45);
+    palps(ctx, [[[-53.4, 8.8], [-56, 12.4], [-55, 15.4]], [[-50.6, 8], [-50.8, 12], [-49, 14.4]]], '#5e3e20', 0.9);
+    disc(ctx, -52.2, -9.6, 1.3, '#3c2616', edge, 0.4);
+    threadAntenna(ctx, [[-52, -10], [-50, -19], [-41, -26], [-20, -29], [10, -29], [40, -25], [66, -19], [88, -13]], 1.8, 0.45, '#2a1a0c');
   },
 };
 
-// オオカマキリ: まえあしが かま。むね（くびの ように 見える）が ほそながい。三角の あたまに 大きな め
+// カマキリ（よこから・左むき）の 型（v0.19.11）。M = 各部の 外形と 色。
+// かまは つけね（基節）→ もも（下の ふちに とげ）→ すね（ももに そって たたむ。さきに かぎづめ）→ あしさき
+export function mantisSide(ctx, M) {
+  const { edge, tone, far } = M;
+  const legOpt = { tarsi: 5, spines: 0 };
+  threadAntenna(ctx, M.antennae[1], 0.7, 0.25, M.antColor ?? '#5a7a3a', { alpha: 0.6 });
+  farSide(ctx, () => {
+    slimLeg(ctx, M.midJ, M.legW, far, edge, { ...legOpt, shade: false });
+    slimLeg(ctx, M.hindJ, M.legW, far, edge, { ...legOpt, shade: false });
+  });
+  // むこうがわの かま
+  ctx.save();
+  ctx.translate(2.6, -1.2);
+  for (const part of [M.coxa, M.femur]) shape(ctx, part, far, edge, 0.5); // すねは かさなって 見にくいので 描かない
+  ctx.restore();
+  sideAbdomen(ctx, M.abd, M.abdTone ?? tone, edge, M.abdSeg);
+  for (const c of M.cerci) antenna(ctx, c, 0.9, 0.5, tone[1], { beads: 3, beadColor: tone[2] });
+  // はね: 前の ふち（たたむと 下がわ）は こい 色の 帯。ほかは うすく、ななめの 脈が ならぶ
+  tegmen(ctx, M.wing, M.wingTone, edge, { top: M.wingTop, bottom: M.wingBottom, n: 6, cross: 20, vein: M.vein ?? 'rgba(30,60,20,0.4)' });
+  within(ctx, M.wing, () => {
+    shape(ctx, M.costal, M.costalColor ?? 'rgba(84,158,58,0.92)');
+    M.wingDetail?.(ctx);
+  });
+  if (M.meso) plate(ctx, M.meso, tone, edge);
+  slimLeg(ctx, M.midJ.map(([x, y]) => [x - 1.5, y]), M.legW, tone[1], edge, legOpt);
+  slimLeg(ctx, M.hindJ.map(([x, y]) => [x - 1.5, y]), M.legW, tone[1], edge, legOpt);
+  // ほそながい まえの むね
+  plate(ctx, M.pro, tone, edge);
+  within(ctx, M.pro, () => stroke(ctx, M.proLine, 'rgba(255,255,255,0.4)', 0.8));
+  // かま
+  plate(ctx, M.coxa, tone, edge);
+  if (M.tubercles) dots(ctx, M.tubercles, 1.1, '#f2e28a');
+  // もも（下の ふちに 大小の とげ）と、ほそい すね（ももの 下に すこし ひらいて たたむ。うちがわに とげ、さきに かぎづめ）
+  const spineRow = ([[x0, y0], [x1, y1]], [dx, dy], count, long, short) => {
+    for (let i = 0; i < count; i++) {
+      const t = (i + 0.5) / count;
+      const len = i % 2 ? long : short;
+      const x = x0 + (x1 - x0) * t;
+      const y = y0 + (y1 - y0) * t;
+      stroke(ctx, [[x, y], [x + dx * len, y + dy * len]], '#2c3a18', 0.55, false);
+    }
+  };
+  antenna(ctx, M.tarsus, 0.9, 0.6, tone[1], { beads: 4, beadColor: tone[2] });
+  spineRow(M.tibiaSpineLine, M.tibiaSpineDir, 7, 1.5, 1.1);
+  plate(ctx, M.tibia, tone, edge, { rim: 0.3 });
+  stroke(ctx, M.claw, '#3a2a10', 1.1);
+  spineRow(M.spineLine, M.spineDir, M.spineCount, 2.8, 1.7);
+  plate(ctx, M.femur, tone, edge);
+  M.femurDetail?.(ctx);
+  // 三角の あたま（よこから 見ると たてに ながい。上の うしろに 大きな め、口は 下むき）
+  palps(ctx, M.palps, tone[1], 0.7);
+  plate(ctx, M.head, tone, edge);
+  within(ctx, M.head, () => {
+    if (M.faceLine) stroke(ctx, M.faceLine, 'rgba(30,60,20,0.45)', 0.55);
+    if (M.jaw) shape(ctx, M.jaw, '#6a5a2a');
+  });
+  compoundEye(ctx, ...M.eye);
+  if (M.antBase) disc(ctx, M.antBase[0], M.antBase[1], 0.9, tone[2], edge, 0.4);
+  threadAntenna(ctx, M.antennae[0], 0.8, 0.25, M.antColor ?? '#5a7a3a');
+}
+
+// オオカマキリ（オス）: にほんで いちばん 大きい カマキリ。むね（くびの ように 見える ところ）が ほそながい。
+// オスは からだが ほそく、はねが おなかより ながい。触角が ながい
 const mantis = {
   group: 'mantis', level: 1, similar: ['wideMantis', 'stickInsect', 'longHeadGrasshopper'],
-  box: [-70, -48, 78, 25],
+  box: [-80, -56, 82, 25],
   draw(ctx) {
-    const edge = '#1a3010';
-    const green = ['#c8f0a0', '#76b84c', '#2a5a1c'];
-    const legC = '#6aa844';
-    const far = '#3a6a28';
-    // むこうがわの 中・後あし
-    farSide(ctx, () => {
-      sideLeg(ctx, [[-6, 3], [-14, 10], [-22, 21], [-28, 22]], [1.8, 1.4, 1], far, edge);
-      sideLeg(ctx, [[4, 4], [20, 10], [34, 21], [40, 22]], [1.8, 1.4, 1], far, edge);
+    mantisSide(ctx, {
+      edge: '#1c3212', tone: ['#c8f0a0', '#76b84c', '#2a5a1c'], far: '#3c6c28',
+      legW: [2, 1.4, 1],
+      midJ: [[-7, 3], [-19, 10.5], [-25, 20.3], [-34, 22]],
+      hindJ: [[5, 4], [22, 9.5], [38, 20.3], [48, 22]],
+      abd: [[-8, -2], [10, -3], [36, -2.5], [58, -1], [68, 1.5], [70, 3.5], [62, 6], [40, 7], [14, 6.5], [-6, 5]],
+      abdTone: ['#d4eeac', '#96c468', '#3e6a28'],
+      abdSeg: { x0: -2, x1: 66, n: 8 },
+      cerci: [[[68, 1.5], [73, 0], [77, -0.5]], [[68, 3.4], [73, 3.8], [76, 4.8]]],
+      wing: [[-10, -6.5], [8, -8.5], [34, -8.5], [58, -6.5], [74, -3.5], [79, -1.5, 1], [70, 0], [48, -0.5], [20, -1], [-8, -1.5]],
+      wingTop: [[-10, -6.5], [8, -8.5], [34, -8.5], [58, -6.5], [74, -3.5], [79, -1.5]],
+      wingBottom: [[-8, -1.5], [20, -1], [48, -0.5], [70, 0], [79, -1.5]],
+      wingTone: ['#d6e8b4', '#a4bc7a', '#586c38'],
+      costal: [[-9, -3.6], [20, -3.2], [48, -2.6], [70, -1.8], [79, -1.5], [70, 0], [48, -0.5], [20, -1], [-8, -1.5]],
+      meso: [[-15, -4.5], [-8, -7.5], [-5, -2], [-6, 4], [-12, 5.5], [-16, 1]],
+      pro: [[-9, -6], [-18, -11], [-30, -19.5], [-40, -27.5], [-46, -30.5], [-49.5, -29.5], [-50, -26.5], [-45, -22], [-39, -19], [-34, -14], [-24, -6.5], [-14, 0.5], [-10, 1]],
+      proLine: [[-12, -4], [-24, -11.5], [-36, -20.5], [-47, -28.5]],
+      coxa: [[-43.6, -25, 1], [-47, -24], [-52.6, -7], [-51.6, -4, 1], [-48, -5], [-42.6, -21]],
+      femur: [[-49.5, -4, 1], [-54.8, -12.7], [-62.9, -19], [-70.6, -25.2], [-73, -23.6, 1], [-65.8, -15.7], [-58.8, -8.3], [-51.5, -2.6, 1]],
+      spineLine: [[-53.5, -4.4], [-71, -21.5]], spineDir: [-0.67, 0.74], spineCount: 9,
+      tibia: [[-71.7, -24.7, 1], [-66.3, -16.3], [-61, -7.8, 1], [-62.2, -7, 1], [-68.1, -15.1], [-73.9, -23.3, 1]],
+      tibiaSpineLine: [[-70.4, -22.4], [-62, -9.6]], tibiaSpineDir: [0.83, -0.56],
+      claw: [[-61.6, -7.4], [-59.6, -4.8], [-57.6, -4.2]],
+      tarsus: [[-62.6, -8.8], [-66.5, -5], [-69, -1], [-69.5, 3]],
+      // あたま: 上の うしろに 大きな めが はり出し、かおは 下へ ほそく なって 口に つづく
+      head: [[-50.5, -38.5], [-47.5, -37.5], [-45.6, -34], [-46, -30.5], [-47.5, -27], [-50, -23.5], [-52.4, -21.2, 1], [-54.6, -22.4], [-56, -26], [-56, -30.5], [-54.4, -35.4]],
+      faceLine: [[-54.6, -33], [-52.8, -29], [-52.8, -25]],
+      jaw: [[-54.4, -23.6], [-52.4, -21.4, 1], [-50.8, -23.4], [-52.6, -24.8]],
+      palps: [[[-53.6, -22.4], [-55.6, -19.6], [-55, -17.6]], [[-51.6, -22], [-52, -19]]],
+      eye: [-47.6, -34.2, 3.3, 4.4, '#a8cc74', 0.35],
+      antBase: [-54, -35.2],
+      antennae: [[[-54, -35.6], [-59, -42.5], [-67, -47.5], [-77, -49.5]], [[-53, -36.4], [-56, -44.5], [-63, -50.5], [-72, -53.5]]],
     });
-    // おなか と はね（はねは おなかの 上に たたむ）
-    fill3d(ctx, [[-8, -3], [20, -5], [50, -4], [70, 0], [66, 6], [40, 7], [10, 6], [-8, 4]], ['#b8e090', '#6aa848', '#2a5a1c'], edge);
-    const wing = [[-10, -6], [20, -8.5], [52, -7.5], [74, -3, 1], [56, -1], [20, -1], [-8, -1]];
-    fill3d(ctx, wing, ['#c8f0a8', '#7ec058', '#3a6a24'], edge, 0.7, [0.3, 0.1]);
-    within(ctx, wing, () => {
-      stroke(ctx, [[-8, -5], [30, -6.5], [70, -3]], 'rgba(30,60,20,0.45)', 0.6);
-      shape(ctx, [[-10, -7], [40, -9], [72, -3.5], [60, -5.5], [30, -7.5], [-8, -5.5]], 'rgba(110,80,40,0.45)'); // まえの ふちは ちゃいろっぽい
-    });
-    // 手前の 中・後あし
-    sideLeg(ctx, [[-6, 2], [-15, 9], [-24, 20.5], [-31, 22]], [2, 1.5, 1.1], legC, edge);
-    sideLeg(ctx, [[4, 3], [21, 9], [35, 20.5], [43, 22]], [2, 1.5, 1.1], legC, edge);
-    // ほそながい まえの むね（ななめ 上へ）
-    const pro = [[-12, 0], [-14, -5], [-30, -18], [-46, -29], [-50, -26], [-36, -13], [-18, 3]];
-    fill3d(ctx, pro, green, edge);
-    // かま（つけね → もも〔とげ〕→ すね を たたむ）
-    const coxa = [[-42, -24], [-46, -20], [-46, -6], [-41, -4], [-38, -10]];
-    fill3d(ctx, coxa, green, edge);
-    const femur = [[-44, -6], [-48, -9], [-62, -20], [-66, -19], [-58, -9], [-46, -2]];
-    fill3d(ctx, femur, green, edge);
-    for (let i = 0; i < 6; i++) {
-      const x = -47 - i * 3;
-      const y = -4 - i * 2.4;
-      stroke(ctx, [[x, y], [x + 1.6, y + 2.4]], '#2a3a18', 0.7, false);
-    }
-    const tibia = [[-64, -19], [-60, -22], [-48, -12], [-47, -8.5], [-52, -10]];
-    fill3d(ctx, tibia, green, edge);
-    // 三角の あたま（上の かどに 大きな め）
-    const head = [[-56, -38], [-45, -36], [-42, -31], [-46, -25], [-52, -22], [-57, -28]];
-    fill3d(ctx, head, green, edge);
-    compoundEye(ctx, -52, -35, 3.6, 3.6, '#a0c870');
-    stroke(ctx, [[-52, -38], [-60, -44], [-70, -46]], '#5a7a3a', 0.7);
-    stroke(ctx, [[-50, -38], [-56, -45], [-64, -48]], '#5a7a3a', 0.6);
   },
 };
 
-// ナナフシモドキ: えだの ような からだ。はねが ない。触角は まえあしより みじかい（上から 見た すがた・あたまが 左）
+// ナナフシモドキ（上から 見た すがた・あたまが 左）: えだの ような からだ。はねが ない。触角は まえあしより みじかい。
+// オスは めったに 見つからない（メスだけで ふえる）ので、図鑑と 同じく ふだん 見る すがたで 描く
+// v0.19.11: ふしの 長さ（中むねが 長い・おなかの さきの 3ふしが みじかい）、あたまを よけて まがる まえあしの つけね、
+// あしの ふし・あしさきを 図鑑の 絵に あわせて 描きなおした
 const stickInsect = {
   group: 'stick', level: 2, similar: ['mantis', 'longHeadGrasshopper'],
-  box: [-148, -50, 104, 50],
+  box: [-153, -52, 108, 52],
   draw(ctx) {
-    const edge = '#2a3a14';
-    const body = ['#b8cc78', '#7a9440', '#3a4a1c'];
-    const legC = '#7a9440';
-    // 上下（左右の あし）に 同じものを
-    const pair = (fn) => {
-      fn();
-      ctx.save();
-      ctx.scale(1, -1);
-      fn();
-      ctx.restore();
+    const edge = '#2c3a16';
+    const body = ['#cfe096', '#8aa64c', '#405422'];
+    const legC = '#8ca850';
+    const tarC = '#a09454';
+    const lw = [2.2, 1.7, 1.15];
+    // ふちどり つきの 管（まがった ももの つけね）
+    const tube = (pts, w, color) => {
+      stroke(ctx, pts, edge, w + 1);
+      stroke(ctx, pts, color, w);
     };
-    pair(() => {
-      // まえあしは まえへ まっすぐ（触角と そろえる）、中・後あしは ひろげる
-      leg(ctx, [[-88, 1.5], [-104, 4.5], [-136, 4], [-146, 3.5]], [2, 1.4, 1], legC, edge, { tarsi: 4, claw: 1.2 });
-      leg(ctx, [[-44, 1.5], [-36, 22], [-54, 38], [-60, 44]], [2, 1.5, 1], legC, edge, { tarsi: 4, claw: 1.2 });
-      leg(ctx, [[-18, 1.5], [0, 26], [-10, 42], [-14, 48]], [2, 1.5, 1], legC, edge, { tarsi: 4, claw: 1.2 });
-      // みじかい 触角
-      antenna(ctx, [[-100, 1], [-108, 3.2], [-116, 4.8], [-122, 5.6]], 0.9, 0.6, '#5a6a2a', { beads: 8 });
-    });
-    // からだ（ふしごとに すこし ふくらむ）
-    const half = [[-102, 0], [-101, 2.8], [-95, 3], [-92, 2], [-88, 2.6], [-80, 2], [-44, 2.4], [-40, 2], [-16, 2.8], [-12, 2.2], [20, 2.4], [60, 2.2], [90, 1.8], [100, 1.2], [104, 0]];
+    for (const s of [-1, 1]) {
+      const m = (pts) => pts.map(([x, y]) => [x, y * s]);
+      // 中あしは ななめ まえへ、後あしは ななめ うしろへ（木の えだに つかまる かたち）
+      slimLeg(ctx, m([[-23, 2.6], [-35, 25], [-52, 42], [-57.5, 47.5]]), lw, legC, edge, { spines: 0, tarsi: 4, tarsusColor: tarC });
+      slimLeg(ctx, m([[2, 2.8], [21, 25], [42, 41], [48.5, 46.5]]), lw, legC, edge, { spines: 0, tarsi: 4, tarsusColor: tarC });
+      // まえあしは まえへ まっすぐ のばす。ももの つけねは あたまを よけて 外へ まがる
+      limb(ctx, m([[-107, 6.5]])[0], m([[-144.5, 5.7]])[0], 1.55, 1.2, legC, edge, 0.5);
+      leg(ctx, m([[-144.5, 5.7], [-144.5, 5.7], [-144.5, 5.7], [-151, 5.2]]), [0.1, 0.1, 1.1], tarC, edge, { tarsi: 4, claw: 1.2 });
+      tube(m([[-57.5, 2.4], [-60.5, 4.9], [-64.5, 6.3], [-72, 6.6], [-90, 6.6], [-107, 6.5]]), 1.75, legC);
+      stroke(ctx, m([[-66, 6.1 - 0.3 * s], [-105, 6.1 - 0.3 * s]]), 'rgba(255,255,255,0.3)', 0.4, false);
+      disc(ctx, -107, 6.5 * s, 1.05, legC, edge, 0.4);
+      // みじかい 触角（まえあしの ももより みじかい）
+      antenna(ctx, m([[-72.4, 1.3], [-78, 2.3], [-84, 3], [-90.5, 3.3]]), 0.95, 0.5, '#6a7a34', { beads: 9, beadColor: '#4a5a22' });
+      // おしりの 小さな 尾毛
+      stroke(ctx, m([[98, 1.2], [101.5, 1.9], [104.5, 2.1]]), edge, 1.5);
+      stroke(ctx, m([[98, 1.2], [101.5, 1.9], [104.3, 2.1]]), '#7a9040', 0.8);
+    }
+    // からだ: あたま → まえむね（みじかい）→ 中むね（いちばん 長い）→ 後むね → おなか（さきの 3ふしは みじかい）
+    const half = [
+      [-73.2, 0], [-72.8, 1.5], [-71.2, 2.6], [-68.6, 3.2], [-65, 3.1], [-62.6, 2.5], [-61.6, 2.1],
+      [-60.4, 2.6], [-57.5, 2.95], [-55.2, 2.6], [-54.2, 2.2],
+      [-48, 2.15], [-36, 2.35], [-27, 2.9], [-23, 3.5], [-20.6, 3.1], [-19.4, 2.8],
+      [-10, 2.9], [-2, 3.3], [3, 3.7], [5.6, 3.2], [6.8, 3],
+      [16, 3.15], [40, 3.25], [62, 3.05], [72, 2.75], [78, 2.7], [84, 2.95], [91, 3.05], [96, 2.6], [99, 1.5], [100, 0],
+    ];
     const pts = half.concat(half.slice(1, -1).reverse().map(([x, y]) => [x, -y]));
-    fill3d(ctx, pts, body, edge, 0.7, [0.3, 0.2]);
+    fill3d(ctx, pts, body, edge, 0.6, [0.3, 0.2]);
     within(ctx, pts, () => {
-      for (let x = -12; x < 100; x += 10) stroke(ctx, [[x, -3], [x, 3]], 'rgba(40,50,20,0.4)', 0.5, false);
-      stroke(ctx, [[-100, -0.6], [100, -0.6]], 'rgba(255,255,255,0.25)', 0.6, false);
+      // 下がわ（かげ）と 上がわ（光）で 丸い 棒に 見せる
+      stroke(ctx, [[-72, 2.6], [100, 2.6]], 'rgba(40,56,18,0.32)', 1.6, false);
+      stroke(ctx, [[-70, -1.5], [98, -1.5]], 'rgba(255,255,255,0.3)', 0.8, false);
+      stroke(ctx, [[-61, 0], [97, 0]], 'rgba(50,66,24,0.4)', 0.35, false); // せなかの まん中の すじ
+      // ふしの さかい
+      for (const x of [-61.6, -54.2, -19.6, 6.4, 17.5, 28.5, 39.5, 50.5, 61.5, 72.5, 80, 87.5]) {
+        stroke(ctx, [[x, -4], [x + 0.5, 0], [x, 4]], 'rgba(36,50,18,0.6)', 0.5);
+        stroke(ctx, [[x + 0.9, -4], [x + 1.4, 0], [x + 0.9, 4]], 'rgba(255,255,255,0.22)', 0.4);
+      }
     });
-    oval(ctx, -98, -2.2, 1.4, 1.2, '#4a4a2a');
-    oval(ctx, -98, 2.2, 1.4, 1.2, '#4a4a2a');
+    speckle(ctx, pts, 150, 0.22, 'rgba(50,70,24,0.4)', 733); // こまかい つぶつぶ
+    // あたま: 小さな 目が よこに 出る。口は まえ
+    for (const s of [-1, 1]) {
+      disc(ctx, -69.2, 3 * s, 1.25, '#5a4a26', edge, 0.4);
+      disc(ctx, -69.6, 3 * s - 0.4, 0.4, 'rgba(255,255,255,0.6)');
+      stroke(ctx, [[-67.5, 1.5 * s], [-62.5, 1.3 * s]], 'rgba(50,66,24,0.4)', 0.35, false);
+    }
+    stroke(ctx, [[-72.6, -1], [-71.8, 0], [-72.6, 1]], 'rgba(40,50,20,0.6)', 0.4);
   },
 };
 
@@ -1933,12 +2377,12 @@ export const MARK_POINTS = {
   cabbageWhite: [[-30, -18], [52, -37], [27, 4]],
   purpleEmperor: [[30, -16], [-62, -32], [14, 46]],
   honeybee: [[-4, -9], [-4, 20], [44, -22]],
-  locust: [[-32, -6], [30, -9], [14, -7]],
+  locust: [[-32, -6], [30, -9], [-2, -5]],
   longHeadGrasshopper: [[-78, -8], [-92, -16], [24, -8]],
   katydid: [[24, -54], [-4, -8, 1], [-32, -4]],
   bellCricket: [[2, -28], [14, -3], [-84, -21]],
   cricket: [[-42, 4], [-48, -9], [2, -6, 1], [24, -29]],
   mantis: [[-58, -13], [-32, -14], [-50, -30]],
-  stickInsect: [[40, 0], [-30, 0], [-112, 3.5]],
+  stickInsect: [[40, 0], [-38, 0], [-84, 3]],
 };
 for (const [id, pts] of Object.entries(MARK_POINTS)) SPECIES[id].marks = pts;
