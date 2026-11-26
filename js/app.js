@@ -25,7 +25,7 @@ import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 import { mount as mountGuess } from './games/guess/ui.js';
 
-const APP_VERSION = 'v0.19.9';
+const APP_VERSION = 'v0.19.10';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {

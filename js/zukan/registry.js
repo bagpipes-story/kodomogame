@@ -3,9 +3,16 @@
 // 1,000種を こえても はじめの 画面が 重く ならない ように するため。読むのは アプリの 中の ファイルだけ（外部通信では ない）。
 // まだ ずかん画に なって いない なかまは null（なまえあては いままでの つみきの 絵を 使う）。
 
+// むしは 絵の ファイルを 2つに 分けて ある（insect.js = はじめの 30種と 描く 型、insect2.js = v0.19.10 で 足した 30種）
 const LOADERS = {
-  insect: () => Promise.all([import('./catalog/insect.js'), import('../i18n/zukan/insect.js')]),
+  insect: () => Promise.all([import('./catalog/insect.js'), import('./catalog/insect2.js'), import('../i18n/zukan/insect.js')])
+    .then(([a, b, words]) => [mergeCatalogs(a, b), words]),
 };
+
+// 分けた 絵の ファイルを 1つの なかまに まとめる（なかま・目の ならびは 1つめの ファイルの もの）
+export function mergeCatalogs(first, ...rest) {
+  return { GROUPS: first.GROUPS, ORDERS: first.ORDERS, SPECIES: Object.assign({}, first.SPECIES, ...rest.map((m) => m.SPECIES)) };
+}
 
 export function hasZukanArt(set) {
   return Object.prototype.hasOwnProperty.call(LOADERS, set);
