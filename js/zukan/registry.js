@@ -53,6 +53,10 @@ export function makeSet(catalog, words) {
     orderName(order) {
       return words.orders?.[order] ?? '';
     },
+    // 分類の 目の 名前（「コウチュウ」→ 画面で「コウチュウもく」。v0.19.5）
+    taxOrderName(order) {
+      return words.taxOrders?.[order] ?? '';
+    },
     orderOf(group) {
       return (catalog.ORDERS ?? []).find((o) => o.groups.includes(group))?.key ?? null;
     },

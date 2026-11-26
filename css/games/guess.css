@@ -524,6 +524,34 @@ button.kgb-guess-zukan-cell:active {
   font-weight: bold;
 }
 
+.kgb-guess-zukan-tax {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+}
+
+.kgb-guess-zukan-tax li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 「もく」「か」「ぞく」「しゅ」の 小さな ふだ */
+.kgb-guess-zukan-rank {
+  flex: none;
+  min-width: 34px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(74, 63, 53, 0.1);
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+}
+
 .kgb-guess-zukan-marks {
   display: flex;
   flex-direction: column;

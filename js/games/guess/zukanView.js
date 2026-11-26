@@ -200,7 +200,20 @@ export function openZukanView(overlay, opts) {
       li.append(el('span', 'kgb-guess-zukan-num', String(i + 1)), el('span', '', m));
       ol.append(li);
     });
-    const parts = [head, pic, facts, marksHead, ol];
+    const parts = [head, pic, facts];
+    if (d.tax?.length) {
+      // ぶんるい: 目 → 科 → 属 → しゅ を かいだんの ように 1だんずつ ずらす（大きな なかまから 小さな なかまへ）
+      parts.push(el('p', 'kgb-guess-zukan-sub', text.guessZukanTax));
+      const ul = el('ul', 'kgb-guess-zukan-tax');
+      d.tax.forEach(([rank, name], i) => {
+        const li = el('li');
+        li.style.paddingLeft = `${i * 16}px`;
+        li.append(el('span', 'kgb-guess-zukan-rank', rank), el('span', '', name));
+        ul.append(li);
+      });
+      parts.push(ul);
+    }
+    parts.push(marksHead, ol);
     if (d.similar.length) {
       parts.push(el('p', 'kgb-guess-zukan-sub', text.guessZukanSimilar));
       const row = el('div', 'kgb-guess-zukan-grid is-similar');

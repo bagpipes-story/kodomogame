@@ -585,6 +585,11 @@ export const text = {
   guessZukanMarks: 'みわけ ポイント',
   guessZukanSimilar: 'にている なかま',
   guessZukanBack: 'もどる',
+  guessZukanTax: 'ぶんるい',                     // v0.19.5: 詳細ページの 分類（目・科・属・しゅ）
+  guessZukanTaxOrder: 'もく',
+  guessZukanTaxFamily: 'か',
+  guessZukanTaxGenus: 'ぞく',
+  guessZukanTaxSpecies: 'しゅ',
   guessZukanUnknown: '？？？',
   guessZukanClose: 'とじる',
   balanceBlocksLabel: 'つみき',

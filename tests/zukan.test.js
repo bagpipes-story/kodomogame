@@ -51,6 +51,7 @@ function checkSet(set, catalog, words) {
   assert.deepStrictEqual([...inOrders].sort(), [...catalog.GROUPS].sort(), `${set}: 目に 入って いない／2つの 目に 入って いる なかまが ある`);
   for (const o of catalog.ORDERS) {
     assert.ok(words.orders[o.key] && !KANJI.test(words.orders[o.key]), `${set}: 目の 名前 ${o.key}`);
+    assert.ok(/^[ァ-ヶー]+$/.test(words.taxOrders?.[o.key] ?? ''), `${set}: 分類の 目の 名前 ${o.key}`);
     assert.ok(o.groups.some((g) => Object.values(catalog.SPECIES).some((sp) => sp.group === g)), `${set}: 目 ${o.key} に 種類が ない`);
   }
   for (const g of catalog.GROUPS) {
@@ -80,6 +81,9 @@ function checkSet(set, catalog, words) {
       const [bx0, by0, bx1, by1] = sp.box;
       assert.ok(mx >= bx0 && mx <= bx1 && my >= by0 && my <= by1, `${id}: 印 ${mx},${my} が 絵の はこの 外`);
     }
+    // ぶんるい（v0.19.5）: 科・属は カタカナ
+    assert.ok(/^[ァ-ヶー]+$/.test(info.family ?? ''), `${id}: 科 ${info.family}`);
+    assert.ok(/^[ァ-ヶー]+$/.test(info.genus ?? ''), `${id}: 属 ${info.genus}`);
     for (const str of [info.name, info.size, info.where, ...info.marks]) {
       assert.ok(typeof str === 'string' && str.length > 0, `${id}: 文字が からっぽ`);
       assert.ok(!KANJI.test(str), `${id}: 漢字を つかわない「${str}」`);

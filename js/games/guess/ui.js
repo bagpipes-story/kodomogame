@@ -612,6 +612,13 @@ export function mount(root, config, { onExit }) {
         return {
           name: info.name, groupLabel: `${zset.orderName(zset.orderOf(sp.group))} ／ ${zset.groupName(sp.group)}`, size: info.size, where: info.where,
           marks: info.marks, points: sp.marks ?? [], similar: sp.similar ?? [], art: zset.art(id),
+          // ぶんるい（v0.19.5）: 目・科・属・しゅ（図鑑と 同じ じゅん）
+          tax: [
+            [text.guessZukanTaxOrder, `${zset.taxOrderName(zset.orderOf(sp.group))}${text.guessZukanTaxOrder}`],
+            [text.guessZukanTaxFamily, `${info.family}${text.guessZukanTaxFamily}`],
+            [text.guessZukanTaxGenus, `${info.genus}${text.guessZukanTaxGenus}`],
+            [text.guessZukanTaxSpecies, info.name],
+          ],
         };
       };
     }
