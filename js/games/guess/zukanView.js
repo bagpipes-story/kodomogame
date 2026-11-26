@@ -12,7 +12,8 @@ const MARK_R = 11; // 番号の まるの 半径（CSS px）
 
 // opts = {
 //   title, bookLabel, note, ids, found: Set, nameOf(id), thumb(id, found) → canvas,
-//   tabs: null | [{ key, label, ids }],
+//   tabs: null | [{ key, label, ids, sections: [{ label, ids }] }]（v0.19.4: 図鑑と 同じ 2だん。タブ＝目、見出し＝科）,
+//   allSections: 「ぜんぶ」タブの 見出しごとの ならび（目ごと）,
 //   detail: null | (id) → { name, groupLabel, size, where, marks: [文字], points: [[x, y]], similar: [id], art },
 //   onTap(), onClose(), signal
 // }
@@ -76,25 +77,30 @@ export function openZukanView(overlay, opts) {
       el('p', 'kgb-guess-zukan-note', opts.note),
     );
     const parts = [head];
-    let ids = opts.ids;
+    let sections = [{ label: '', ids: opts.ids }];
     if (opts.tabs) {
       const bar = el('div', 'kgb-guess-zukan-tabs');
-      for (const t of [{ key: 'all', label: text.guessZukanAll, ids: opts.ids }, ...opts.tabs]) {
+      for (const t of [{ key: 'all', label: text.guessZukanAll, ids: opts.ids, sections: opts.allSections }, ...opts.tabs]) {
         const b = el('button', `kgb-guess-zukan-tab${t.key === tab ? ' is-on' : ''}`, `${t.label} ${countOf(t.ids)}/${t.ids.length}`);
         b.type = 'button';
         b.dataset.action = 'tab';
         b.dataset.tab = t.key;
         bar.append(b);
-        if (t.key === tab) ids = t.ids;
+        if (t.key === tab) sections = t.sections?.length ? t.sections : [{ label: '', ids: t.ids }];
       }
       parts.push(bar);
     }
-    const grid = el('div', 'kgb-guess-zukan-grid');
-    const fragment = document.createDocumentFragment();
-    for (const id of ids) fragment.append(cell(id, thumbOf(id)));
-    grid.append(fragment);
     if (opts.detail && count > 0) parts.push(el('p', 'kgb-guess-zukan-hint', text.guessZukanTapHint));
-    parts.push(grid, closeButton(text.guessZukanClose, 'close'));
+    // 見出しが 2つ いじょう ある ときだけ 見出しを 出す（1つなら タブの 名前と 同じ なので）
+    for (const sec of sections) {
+      if (sections.length > 1) parts.push(el('p', 'kgb-guess-zukan-section', `${sec.label}  ${countOf(sec.ids)}/${sec.ids.length}`));
+      const grid = el('div', 'kgb-guess-zukan-grid');
+      const fragment = document.createDocumentFragment();
+      for (const id of sec.ids) fragment.append(cell(id, thumbOf(id)));
+      grid.append(fragment);
+      parts.push(grid);
+    }
+    parts.push(closeButton(text.guessZukanClose, 'close'));
     overlay.replaceChildren(...parts);
   }
 

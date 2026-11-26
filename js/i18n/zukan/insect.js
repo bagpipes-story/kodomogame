@@ -4,16 +4,29 @@
 // marks = 見分けポイント（絵は この とおりに 描く。別冊05 §3.3）
 
 export const ZUKAN_TEXT = {
+  // 目（もく）＝ずかんの タブ（v0.19.4）
+  orders: {
+    coleoptera: 'こうちゅう',
+    lepidoptera: 'チョウ',
+    hymenoptera: 'ハチ',
+    hemiptera: 'セミ・カメムシ',
+    odonata: 'トンボ',
+    orthoptera: 'バッタ・コオロギ',
+    mantodea: 'カマキリ',
+    phasmatodea: 'ナナフシ',
+  },
+  // 科（か）くらいの なかま＝タブの 中の 見出し
   groups: {
     kabuto: 'カブトムシの なかま',
     stag: 'クワガタムシの なかま',
-    beetle: 'こうちゅうの なかま',
+    beetle: 'いろいろな こうちゅう',
     cicada: 'セミの なかま',
     dragonfly: 'トンボの なかま',
     butterfly: 'チョウの なかま',
     bee: 'ハチの なかま',
     grasshopper: 'バッタ・コオロギの なかま',
-    mantis: 'カマキリ・ナナフシの なかま',
+    mantis: 'カマキリの なかま',
+    stick: 'ナナフシの なかま',
   },
   species: {
     rhinoBeetle: {

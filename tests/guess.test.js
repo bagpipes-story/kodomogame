@@ -117,8 +117,7 @@ for (const set of GUESS_SETS) {
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.hard.limitMs, 'おとなは 時間が みじかい');
   assert.strictEqual(DIFFICULTY.hard.limitMs, 6000, 'むずかしいは 6びょう（v0.19.1）');
   assert.strictEqual(DIFFICULTY.adult.limitMs, 4000, 'おとなは 4びょう（v0.19.1）');
-  assert.strictEqual(revealProgress(DIFFICULTY.hard.limitMs, DIFFICULTY.hard.revealMs), 1, 'むずかしい: 時間が 0に なった とき ちょうど すっかり 見えて いる（v0.19.2）');
-  assert.ok(revealProgress(DIFFICULTY.hard.limitMs - 500, DIFFICULTY.hard.revealMs) < 1, 'むずかしい: その まえは まだ 見えきって いない');
+  assert.ok(Math.abs(revealProgress(DIFFICULTY.hard.limitMs, DIFFICULTY.hard.revealMs) - 0.9) < 1e-9, 'むずかしい: 時間が 0の とき 9わり 見えて いる（v0.19.4）');
   assert.ok(Math.abs(revealProgress(DIFFICULTY.adult.limitMs, DIFFICULTY.adult.revealMs) - 0.8) < 1e-9, 'おとな: 時間が 0の とき 8わり 見えて いる（v0.19.3）');
   // はやわかりは 時間せいげんの 6わりより 前（しょうぶで ぜんぶ はやわかりに ならない）
   const hs = createGame({ set: 'sea', difficulty: 'hard', rng: makeRng(4) });

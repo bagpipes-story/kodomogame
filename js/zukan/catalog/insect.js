@@ -13,7 +13,19 @@ import {
   vgrad, hgrad, lgrad, rgrad, gloss, limb, leg, antenna, compoundEye, veins, dots, seeded, fill3d, bbox, ribbon, planform, mapLine, resample,
 } from '../draw.js';
 
-export const GROUPS = ['kabuto', 'stag', 'beetle', 'cicada', 'dragonfly', 'butterfly', 'bee', 'grasshopper', 'mantis'];
+// GROUPS = 科（か）くらいの なかま、ORDERS = 目（もく）。図鑑と 同じ 2だんで ならべる（v0.19.4。ずかんの タブ＝目、タブの 中の 見出し＝科）。
+// カブトムシ・クワガタムシも こうちゅう（甲虫目）、セミは カメムシ目、カマキリと ナナフシは べつの 目
+export const GROUPS = ['kabuto', 'stag', 'beetle', 'butterfly', 'bee', 'cicada', 'dragonfly', 'grasshopper', 'mantis', 'stick'];
+export const ORDERS = [
+  { key: 'coleoptera', groups: ['kabuto', 'stag', 'beetle'] },
+  { key: 'lepidoptera', groups: ['butterfly'] },
+  { key: 'hymenoptera', groups: ['bee'] },
+  { key: 'hemiptera', groups: ['cicada'] },
+  { key: 'odonata', groups: ['dragonfly'] },
+  { key: 'orthoptera', groups: ['grasshopper'] },
+  { key: 'mantodea', groups: ['mantis'] },
+  { key: 'phasmatodea', groups: ['stick'] },
+];
 
 // ---------- 甲虫（真上から） ----------
 
@@ -1816,7 +1828,7 @@ const mantis = {
 
 // ナナフシモドキ: えだの ような からだ。はねが ない。触角は まえあしより みじかい（上から 見た すがた・あたまが 左）
 const stickInsect = {
-  group: 'mantis', level: 2, similar: ['mantis', 'longHeadGrasshopper'],
+  group: 'stick', level: 2, similar: ['mantis', 'longHeadGrasshopper'],
   box: [-148, -50, 104, 50],
   draw(ctx) {
     const edge = '#2a3a14';

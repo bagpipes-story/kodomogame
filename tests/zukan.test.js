@@ -46,6 +46,13 @@ function checkSet(set, catalog, words) {
   // かんたん〜おとなの 顔ぶれも ぜんぶ 描ける
   for (const level of ['easy', 'normal', 'hard', 'adult']) for (const id of BLOCK_SETS[set][level]) assert.ok(z.art(id), `${set}/${level}: ${id}`);
 
+  // 目（もく）: どの なかま（科）も ちょうど 1つの 目に 入る（v0.19.4）
+  const inOrders = catalog.ORDERS.flatMap((o) => o.groups);
+  assert.deepStrictEqual([...inOrders].sort(), [...catalog.GROUPS].sort(), `${set}: 目に 入って いない／2つの 目に 入って いる なかまが ある`);
+  for (const o of catalog.ORDERS) {
+    assert.ok(words.orders[o.key] && !KANJI.test(words.orders[o.key]), `${set}: 目の 名前 ${o.key}`);
+    assert.ok(o.groups.some((g) => Object.values(catalog.SPECIES).some((sp) => sp.group === g)), `${set}: 目 ${o.key} に 種類が ない`);
+  }
   for (const g of catalog.GROUPS) {
     assert.ok(words.groups[g], `${set}: なかまの 名前 ${g}`);
     assert.ok(!KANJI.test(words.groups[g]), `${set}: 漢字なし ${words.groups[g]}`);

@@ -594,16 +594,23 @@ export function mount(root, config, { onExit }) {
     const ids = zukanList();
     let tabs = null;
     let detail = null;
+    let allSections = null;
     if (zset) {
-      tabs = zset.groups
-        .map((g) => ({ key: g, label: zset.groupName(g).replace(/の なかま$/, ''), ids: ids.filter((id) => zset.species[id].group === g) }))
+      // タブ＝目（こうちゅう・チョウ…）、タブの 中の 見出し＝科（カブトムシの なかま…）。図鑑と 同じ 2だん（v0.19.4）
+      const idsOfGroup = (g) => ids.filter((id) => zset.species[id].group === g);
+      tabs = zset.orders
+        .map((o) => {
+          const sections = o.groups.map((g) => ({ label: zset.groupName(g), ids: idsOfGroup(g) })).filter((x) => x.ids.length);
+          return { key: o.key, label: zset.orderName(o.key), ids: sections.flatMap((x) => x.ids), sections };
+        })
         .filter((t) => t.ids.length > 0);
+      allSections = tabs.map((t) => ({ label: t.label, ids: t.ids }));
       detail = (id) => {
         const info = zset.info(id);
         const sp = zset.species[id];
         if (!info || !sp) return null;
         return {
-          name: info.name, groupLabel: zset.groupName(sp.group), size: info.size, where: info.where,
+          name: info.name, groupLabel: `${zset.orderName(zset.orderOf(sp.group))} ／ ${zset.groupName(sp.group)}`, size: info.size, where: info.where,
           marks: info.marks, points: sp.marks ?? [], similar: sp.similar ?? [], art: zset.art(id),
         };
       };
@@ -612,7 +619,7 @@ export function mount(root, config, { onExit }) {
       title: `${text[SET_LABEL[set]]} ${text.guessZukan}`,
       bookLabel: book === 'hard' ? text.guessZukanBookHard : text.guessZukanBookEasy,
       note: book === 'hard' ? text.guessZukanNoteHard : text.guessZukanNoteEasy,
-      ids, found, tabs, detail,
+      ids, found, tabs, allSections, detail,
       nameOf,
       thumb: drawThumb,
       onTap: playTap,

@@ -48,6 +48,14 @@ export function makeSet(catalog, words) {
     groupName(group) {
       return words.groups[group] ?? '';
     },
+    // 目（もく）。なかま（科）が どの 目か（v0.19.4）
+    orders: catalog.ORDERS ?? [],
+    orderName(order) {
+      return words.orders?.[order] ?? '';
+    },
+    orderOf(group) {
+      return (catalog.ORDERS ?? []).find((o) => o.groups.includes(group))?.key ?? null;
+    },
   };
 }
 
