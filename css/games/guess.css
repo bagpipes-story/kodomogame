@@ -317,6 +317,25 @@
 
 /* ---------- ずかん（v0.18.1） ---------- */
 
+/* スタートの オーバーレイの「タップして スタート」ボタン（v0.19.2） */
+.kgb-guess-start {
+  min-height: 64px;
+  width: min(80%, 320px);
+  padding: 8px 24px;
+  border: none;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-accent);
+  color: var(--kgb-white);
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+  transition: transform 0.1s ease;
+}
+
+.kgb-guess-start:active {
+  transform: scale(0.96);
+}
+
 .kgb-guess-zukan-open {
   min-height: var(--kgb-tap-min);
   padding: 8px 24px;

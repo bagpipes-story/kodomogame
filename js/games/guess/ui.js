@@ -204,8 +204,11 @@ export function mount(root, config, { onExit }) {
   const startTitle = document.createElement('p');
   startTitle.className = 'kgb-handover-title';
   startTitle.textContent = text.readyTitle;
-  const startSub = document.createElement('p');
-  startSub.className = 'kgb-handover-sub';
+  // 「タップして スタート」は オレンジの ボタンに（どこを おしたら よいか 子どもに わかる ように。v0.19.2）。
+  // ボタンの ほかの ばしょを おしても スタートする（ずかんの ボタンは のぞく）。おすと 下の startOverlay の click で はじまる
+  const startSub = document.createElement('button');
+  startSub.type = 'button';
+  startSub.className = 'kgb-guess-start';
   startSub.textContent = text.handoverTap;
   const startZukan = document.createElement('button');
   startZukan.type = 'button';

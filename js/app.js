@@ -25,7 +25,7 @@ import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 import { mount as mountGuess } from './games/guess/ui.js';
 
-const APP_VERSION = 'v0.19.1';
+const APP_VERSION = 'v0.19.2';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -380,7 +380,10 @@ function buildSetupScreen(gameId) {
     // 文字ラベル4つ以上は1行に収まらないため2れつにする（数字だけの5択は1行のまま）。
     // v0.17.28: つみきが5つ（かたち〜たんすい）になり 1行で はみ出したので、5つでも 文字なら 2れつに
     const shortLabels = group.options.every(([, optionLabel]) => String(optionLabel).length <= 2);
-    row.className = group.options.length >= 6 ? 'kgb-option-row is-grid-3'
+    // v0.19.2: 3れつは 5もじ いじょうの ことば（「とどうふけん」「きょうりゅう」）が ある と、iPhone で 1マスに 入らず
+    // 画面の 右へ はみ出したので、その ときは 2れつに する（ことばの いちばん ながい ところで きめる）
+    const longestWord = Math.max(...group.options.map(([, optionLabel]) => Math.max(...String(optionLabel).split(/\s+/).map((w) => w.length))));
+    row.className = group.options.length >= 6 && longestWord <= 4 ? 'kgb-option-row is-grid-3'
       : group.options.length >= 4 && !shortLabels ? 'kgb-option-row is-grid' : 'kgb-option-row';
     for (const [value, optionLabel] of group.options) {
       const button = document.createElement('button');
