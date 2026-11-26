@@ -124,6 +124,12 @@ export function zukanOptions(answer, zukan, pool, rng = Math.random) {
       if (id !== answer && !chosen.includes(id)) chosen.push(id);
     }
   };
+  // のこり 1つは ちがう なかまから（v0.19.8: 前は のこりも ぜんぶから えらんで いて、たまたま 3つ・4つ にた 種類が ならんだ）。
+  // ちがう 科 → ちがう 目 → それでも ない（なかまを しぼって 1つの 科だけ）ときは しかたなく のこりから
+  const near = new Set([...(close.similar ?? []), ...(close.group ?? [])]);
+  const nearer = new Set([...near, ...(close.order ?? [])]);
+  fill(pool.filter((id) => !nearer.has(id)));
+  fill(pool.filter((id) => !near.has(id)));
   fill(pool);
   fill(zukan.allIds ?? []); // しぼった なかまが 4つ より すくない とき
   return shuffle([answer, ...chosen], rng);

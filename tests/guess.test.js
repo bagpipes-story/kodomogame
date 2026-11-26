@@ -250,7 +250,19 @@ for (const set of GUESS_SETS) {
     assert.strictEqual(new Set(opts).size, OPTIONS, 'かさならない');
     assert.ok(opts.includes('a1'));
     assert.ok(opts.includes('a2'), 'にている 種類（similar）は かならず 入る');
-    assert.ok(opts.filter((id) => sp[id][0] === 'a').length >= 3, 'こたえ＋同じ 科が 2つ いじょう');
+    assert.strictEqual(opts.filter((id) => sp[id][0] === 'a').length, 3, 'こたえ＋同じ 科が ちょうど 2つ');
+    assert.ok(opts.some((id) => sp[id][1] !== 'x'), 'のこり 1つは ちがう 目から（v0.19.8）');
+  }
+  // ちがう 科が ない（a の 科だけ）ときは しかたなく 同じ 科も
+  for (let seed = 1; seed < 20; seed++) {
+    const only = zukanOptions('a1', z, ['a1', 'a2', 'a3', 'a4'], makeRng(seed));
+    assert.strictEqual(new Set(only).size, OPTIONS);
+  }
+  // 目を こうちゅう（x）に しぼった とき: のこり 1つは ちがう 科（b）から
+  for (let seed = 1; seed < 20; seed++) {
+    const xs = allIds.filter((id) => sp[id][1] === 'x');
+    const o = zukanOptions('a1', makeZukan(xs), xs, makeRng(seed));
+    assert.ok(o.some((id) => sp[id][0] === 'b'), 'しぼっても のこり 1つは ちがう 科から');
   }
   // なかまを しぼって 3つしか ない ときは、のこりを その なかまの ぜんぶから
   const narrow = makeZukan(['b1', 'b2', 'b3']);

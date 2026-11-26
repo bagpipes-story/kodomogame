@@ -77,7 +77,7 @@ function solidShadow(g, W, H) {
   g.putImageData(img, 0, 0);
 }
 
-export function mount(root, config, { onExit }) {
+export function mount(root, config, { onExit, onBack }) {
   const abort = new AbortController();
   const timers = new Set();
 
@@ -221,7 +221,13 @@ export function mount(root, config, { onExit }) {
   const startFilter = document.createElement('div');
   startFilter.className = 'kgb-guess-filter';
   startFilter.hidden = true;
-  startOverlay.append(startTitle, startFilter, startSub, startZukan); // えらんでから スタート の じゅん
+  // メニューに もどる ボタン（スタート画面は 上の「←」を かくして しまうので ここに も おく。v0.19.8）
+  const startBack = document.createElement('button');
+  startBack.type = 'button';
+  startBack.className = 'kgb-back-button kgb-guess-start-back';
+  startBack.textContent = '←';
+  startBack.setAttribute('aria-label', text.guessZukanBack);
+  startOverlay.append(startBack, startTitle, startFilter, startSub, startZukan); // えらんでから スタート の じゅん
 
   const zukanOverlay = document.createElement('div');
   zukanOverlay.className = 'kgb-guess-zukan';
@@ -732,12 +738,19 @@ export function mount(root, config, { onExit }) {
   startOverlay.addEventListener('click', (event) => {
     if (phase !== 'idle') return;
     if (needsZukanArt && !zset) return; // ずかん画を 読みこみ中（ふつうは 一しゅん）
+    if (event.target.closest('.kgb-guess-start-back')) {
+      // なまえあての メニュー（なかま・むずかしさ）に もどる（v0.19.8）
+      playTap();
+      (onBack ?? onExit)();
+      return;
+    }
     const chip = event.target.closest('.kgb-guess-filter-chip');
     if (chip) {
       // なかまを えらんだ だけ（スタートには しない）
       playTap();
       filter = chip.dataset.order;
-      for (const c of startFilter.children) c.classList.toggle('is-on', c === chip);
+      // v0.19.8: 前は ボタンでは なく ならびの 箱に 印を つけて いて、えらんでも 見た目が かわらなかった
+      for (const c of startFilter.querySelectorAll('.kgb-guess-filter-chip')) c.classList.toggle('is-on', c === chip);
       return;
     }
     if (event.target.closest('.kgb-guess-filter')) return; // ボタンの すきまを おしても はじめない

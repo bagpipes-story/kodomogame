@@ -317,6 +317,13 @@
 
 /* ---------- ずかん（v0.18.1） ---------- */
 
+/* スタート画面の「←」（なまえあての メニューへ。v0.19.8）: ほかの 画面の もどる ボタンと 同じ ばしょ */
+.kgb-guess-start-back {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 16px);
+  left: 16px;
+}
+
 /* なかまを しぼる（v0.19.7。スタートの オーバーレイ） */
 .kgb-guess-filter {
   display: flex;

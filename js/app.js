@@ -25,7 +25,7 @@ import { mount as mountAbc } from './games/abc/ui.js';
 import { mount as mountListen } from './games/listen/ui.js';
 import { mount as mountGuess } from './games/guess/ui.js';
 
-const APP_VERSION = 'v0.19.7';
+const APP_VERSION = 'v0.19.8';
 
 // 実装済みゲームのマウント関数。ここに無いゲームはダミー画面に遷移する
 const gameMounters = {
@@ -449,8 +449,18 @@ function startGame() {
   currentGame = gameMounters[currentGameId](
     document.getElementById('gameRoot'),
     { ...currentSelection() },
-    { onExit: goHome },
+    { onExit: goHome, onBack: backToSetup },
   );
+}
+
+// ゲームの はじめの 画面から その ゲームの メニュー（えらぶ 画面）へ もどる（なまえあて。v0.19.8）
+function backToSetup() {
+  if (currentGame) {
+    currentGame.destroy();
+    currentGame = null;
+  }
+  quitOverlay.hidden = true;
+  openGame(currentGameId);
 }
 
 // ---------- ミュートボタン ----------
