@@ -25,6 +25,7 @@ import {
   zukanAll,
   bookOf,
   ZUKAN_KEYS,
+  ZUKAN_LEVEL,
   zukanProgress,
   revealProgress,
   tileRevealTimes,
@@ -50,7 +51,8 @@ const ROUND_END_MS = 1500; // さいごの 問題の あと 結果を 出すま�
 const FIT = 0.84;          // 絵を キャンバスの 何わりの 大きさに 描くか
 const HURRY_LAST_MS = 2000; // のこり この 時間で「？」が はやく なる（v0.18.4: おとな 3びょうに あわせて 3→2びょう）
 const BOTTOM_BAND = 0.2;   // 絵の 下に あける わりあい（「？」と 名前の ばしょ。v0.18.3）
-const THUMB = 64;          // ずかんの 絵の 大きさ（px）
+const THUMB = 64;
+const FILTER_MIN = 4;      // なかまを しぼる ボタンを 出す 種類の かず（v0.19.7）          // ずかんの 絵の 大きさ（px）
 
 // ずかんの 見出し（メニューと 同じ なまえ）
 const SET_LABEL = {
@@ -87,6 +89,7 @@ export function mount(root, config, { onExit }) {
   // v0.19.0: ずかん画が ある なかま（むし）は ずかん画で 出す（別冊05）。読みこむ までは スタートを 待つ
   // v0.19.1: ずかん画は むずかしい・おとな だけ。かんたん・ふつうは バランスゲームと 同じ つみきの 絵（ずかんも べつ）
   const book = bookOf(difficulty);
+  let filter = 'all'; // なかまを しぼる（目の key。'all' = ぜんぶ。この 画面を とじる まで おぼえる）
   const zukanKey = ZUKAN_KEYS[book];
   const needsZukanArt = book === 'hard' && hasZukanArt(set);
   let zset = null;
@@ -214,7 +217,11 @@ export function mount(root, config, { onExit }) {
   const startZukan = document.createElement('button');
   startZukan.type = 'button';
   startZukan.className = 'kgb-guess-zukan-open';
-  startOverlay.append(startTitle, startSub, startZukan);
+  // なかまを しぼる（v0.19.7。ずかん画の むずかしい・おとな だけ。ずかん画を 読みこんでから ボタンを 作る）
+  const startFilter = document.createElement('div');
+  startFilter.className = 'kgb-guess-filter';
+  startFilter.hidden = true;
+  startOverlay.append(startTitle, startFilter, startSub, startZukan); // えらんでから スタート の じゅん
 
   const zukanOverlay = document.createElement('div');
   zukanOverlay.className = 'kgb-guess-zukan';
@@ -722,13 +729,69 @@ export function mount(root, config, { onExit }) {
     openZukan();
   }, { signal: abort.signal });
 
-  startOverlay.addEventListener('click', () => {
+  startOverlay.addEventListener('click', (event) => {
     if (phase !== 'idle') return;
     if (needsZukanArt && !zset) return; // ずかん画を 読みこみ中（ふつうは 一しゅん）
+    const chip = event.target.closest('.kgb-guess-filter-chip');
+    if (chip) {
+      // なかまを えらんだ だけ（スタートには しない）
+      playTap();
+      filter = chip.dataset.order;
+      for (const c of startFilter.children) c.classList.toggle('is-on', c === chip);
+      return;
+    }
+    if (event.target.closest('.kgb-guess-filter')) return; // ボタンの すきまを おしても はじめない
     playTap();
     startOverlay.hidden = true;
+    // ずかん画の 出題（にている 選択肢・まだの 子を 多めに・なかまを しぼる）は 読みこみ後に つくりなおす
+    if (zset && strict) state = createGame({ set, difficulty, zukan: zukanQuiz() });
     askQuestion(); // タップ内で よびかけを 鳴らす
   }, { signal: abort.signal });
+
+  // ずかん画の 出題に わたす データ（game.js は 絵の ファイルを 読まないので ここで つくる）
+  function zukanQuiz() {
+    const found = new Set(loadZukan()[set] ?? []);
+    const orderOf = (id) => zset.orderOf(zset.species[id].group);
+    const ids = filter === 'all' ? zset.ids : zset.ids.filter((id) => orderOf(id) === filter);
+    return {
+      ids,
+      allIds: zset.ids,
+      unseen: new Set(zset.ids.filter((id) => !found.has(id))),
+      levelOf: (id) => zset.species[id].level,
+      closeOf: (id) => {
+        const sp = zset.species[id];
+        return {
+          similar: sp.similar ?? [],
+          group: zset.ids.filter((o) => zset.species[o].group === sp.group),
+          order: zset.ids.filter((o) => orderOf(o) === orderOf(id)),
+        };
+      },
+    };
+  }
+
+  // なかまを しぼる ボタン: 「ぜんぶ」と、その むずかしさで 4種類 いじょう 出る 目（1〜3種類 だと 同じ 子ばかりに なるため）
+  function buildFilter() {
+    if (!zset || !strict) return;
+    const max = ZUKAN_LEVEL[difficulty] ?? 3;
+    const orders = zset.orders.filter((o) => zset.ids.filter((id) => o.groups.includes(zset.species[id].group) && zset.species[id].level <= max).length >= FILTER_MIN);
+    if (!orders.some((o) => o.key === filter)) filter = 'all';
+    const chips = [['all', text.guessZukanAll], ...orders.map((o) => [o.key, zset.orderName(o.key)])].map(([key, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `kgb-guess-filter-chip${key === filter ? ' is-on' : ''}`;
+      b.dataset.order = key;
+      b.textContent = label;
+      return b;
+    });
+    const label = document.createElement('p');
+    label.className = 'kgb-guess-filter-label';
+    label.textContent = text.guessFilterLabel;
+    const row = document.createElement('div');
+    row.className = 'kgb-guess-filter-row';
+    row.append(...chips);
+    startFilter.replaceChildren(label, row);
+    startFilter.hidden = orders.length === 0;
+  }
 
   function goNext() {
     if (phase !== 'done') return;
@@ -752,6 +815,7 @@ export function mount(root, config, { onExit }) {
       if (abort.signal.aborted) return; // 読みこむ まえに 画面を とじた
       zset = z;
       startZukan.textContent = zukanButtonLabel(); // ずかん画の しゅるいの かずで かぞえなおす
+      buildFilter();
     });
   }
 

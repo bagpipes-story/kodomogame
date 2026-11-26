@@ -61,9 +61,80 @@ export function poolOf(set, difficulty) {
   return Object.prototype.hasOwnProperty.call(table, difficulty) ? table[difficulty] : table.easy;
 }
 
-export function createGame({ set = 'sea', difficulty = 'easy', rng = Math.random } = {}) {
+// ---------- ずかん画の 出題（v0.19.7。別冊05 §5.1。むずかしい・おとなで ずかん画の ある なかま だけ） ----------
+// ずかん画の データは ui.js が わたす（game.js は 絵の ファイルを 読まない＝DOM・import() に よらない）:
+// zukan = { ids: [えらべる 種類（なかまを しぼった あと）], allIds: [その なかまの ぜんぶ], levelOf(id),
+//           closeOf(id) → { similar: [], group: [], order: [] }（にている・同じ 科・同じ 目）, unseen: Set（まだ ずかんに ない） }
+
+// むずかしいは level 2まで、おとなは ぜんぶ（level 3 = くわしい人むけ）
+export const ZUKAN_LEVEL = { hard: 2, adult: 3 };
+// 10問の うち、まだ ずかんに ない 種類を この 数まで 先に 入れる（数が ふえても「同じ ものばかり 出て 集まらない」を ふせぐ。
+// 運まかせに しない ため、確率では なく 数で きめる）
+export const UNSEEN_PER_ROUND = 7;
+// 4つの えらぶ ボタンの うち、にている 種類を 2つ 入れる（ミヤマクワガタの 問題に ノコギリ・オオクワガタ など）
+export const CLOSE_OPTIONS = 2;
+
+export function zukanPool(zukan, difficulty) {
+  const max = ZUKAN_LEVEL[difficulty] ?? 3;
+  return zukan.ids.filter((id) => (zukan.levelOf(id) ?? 1) <= max);
+}
+
+// 10問の こたえの じゅんばんを はじめに きめる（まだの 子を 先に えらび、あとは のこりから。同じ 子は つづけない）
+export function planRound(pool, unseen, rng = Math.random) {
+  if (!pool.length) return [];
+  const fresh = shuffle(pool.filter((id) => unseen.has(id)), rng).slice(0, UNSEEN_PER_ROUND);
+  const picked = [...fresh];
+  let rest = shuffle(pool.filter((id) => !fresh.includes(id)), rng);
+  while (picked.length < QUESTIONS_PER_ROUND) {
+    if (!rest.length) rest = shuffle(pool, rng); // 顔ぶれが 10より すくない ときは もう1しゅう
+    picked.push(rest.shift());
+  }
+  // となりどうしが 同じ 子に ならない ように 1つずつ ならべる。のこりの 数が 多い 子は 先に 入れないと
+  // あとで つづいて しまうので、その ときだけ その 子に きめる（顔ぶれが 1つ だけの ときは しかたない）
+  const count = new Map();
+  for (const id of picked) count.set(id, (count.get(id) ?? 0) + 1);
+  const plan = [];
+  let last = null;
+  for (let left = picked.length; left > 0; left--) {
+    let ids = [...count.keys()].filter((id) => count.get(id) > 0 && id !== last);
+    if (!ids.length) ids = [last];
+    const forced = ids.find((id) => count.get(id) > Math.ceil((left - 1) / 2));
+    const id = forced ?? ids[Math.floor(rng() * ids.length)];
+    plan.push(id);
+    count.set(id, count.get(id) - 1);
+    last = id;
+  }
+  return plan;
+}
+
+// えらぶ ボタンの 4つ: こたえ＋にている 種類 2つ（にている → 同じ 科 → 同じ 目 の じゅん）＋ ほかから 1つ
+export function zukanOptions(answer, zukan, pool, rng = Math.random) {
+  const inPool = new Set(pool);
+  const close = zukan.closeOf(answer);
+  const chosen = [];
+  for (const tier of [close.similar, close.group, close.order]) {
+    for (const id of shuffle(tier ?? [], rng)) {
+      if (chosen.length >= CLOSE_OPTIONS) break;
+      if (id !== answer && inPool.has(id) && !chosen.includes(id)) chosen.push(id);
+    }
+  }
+  const fill = (list) => {
+    for (const id of shuffle(list, rng)) {
+      if (chosen.length >= OPTIONS - 1) break;
+      if (id !== answer && !chosen.includes(id)) chosen.push(id);
+    }
+  };
+  fill(pool);
+  fill(zukan.allIds ?? []); // しぼった なかまが 4つ より すくない とき
+  return shuffle([answer, ...chosen], rng);
+}
+
+export function createGame({ set = 'sea', difficulty = 'easy', rng = Math.random, zukan = null } = {}) {
   const safeSet = GUESS_SETS.includes(set) ? set : 'sea';
   const safeDifficulty = Object.prototype.hasOwnProperty.call(DIFFICULTY, difficulty) ? difficulty : 'easy';
+  // ずかん画の 出題は しょうぶ（むずかしい・おとな）だけ
+  const useZukan = !!zukan && DIFFICULTY[safeDifficulty].strict;
+  const pool = useZukan ? zukanPool(zukan, safeDifficulty) : null;
   return {
     ...createQuizState({ mode: 'solo', questions: QUESTIONS_PER_ROUND }),
     set: safeSet,
@@ -74,11 +145,20 @@ export function createGame({ set = 'sea', difficulty = 'easy', rng = Math.random
     rng,
     asked: [],  // この ラウンドで 出た id（10問の 中で かさならない ように。顔ぶれが 10より 少なければ 出しきってから もう1しゅう）
     early: 0,   // はやわかりの かず
+    zukan: useZukan ? zukan : null,
+    pool,
+    plan: useZukan ? planRound(pool, zukan.unseen ?? new Set(), rng) : null,
   };
 }
 
 export function nextQuestion(state) {
   if (state.questionIndex >= QUESTIONS_PER_ROUND) return null;
+  if (state.plan?.length) {
+    const answerId = state.plan[state.questionIndex];
+    state.asked.push(answerId);
+    const options = zukanOptions(answerId, state.zukan, state.pool, state.rng);
+    return beginQuestion(state, { answer: answerId, options, correctIndex: options.indexOf(answerId) });
+  }
   const pool = poolOf(state.set, state.difficulty);
   let remaining = pool.filter((id) => !state.asked.includes(id));
   if (!remaining.length) {

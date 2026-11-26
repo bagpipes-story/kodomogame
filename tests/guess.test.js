@@ -15,6 +15,10 @@ import {
   zukanAll,
   bookOf,
   ZUKAN_KEYS,
+  zukanPool,
+  planRound,
+  zukanOptions,
+  UNSEEN_PER_ROUND,
   addToZukan,
   zukanProgress,
   tileRevealTimes,
@@ -198,6 +202,75 @@ for (const set of GUESS_SETS) {
   const h = createGame({ set: 'sea', difficulty: 'hard', rng: makeRng(5) });
   const h1 = nextQuestion(h);
   assert.ok(answerAt(h, h1.correctIndex, 5000).collect, 'しょうぶで 正解したら のる');
+}
+
+// ---------- ずかん画の 出題（v0.19.7）: level・まだの 子を 多めに・にている 選択肢・なかまを しぼる ----------
+{
+  // 12種: A なかま（科 a1・a2）と B なかま。level 3 は おとな だけ
+  const sp = {
+    a1: ['a', 'x', 1, ['a2']], a2: ['a', 'x', 1, ['a1']], a3: ['a', 'x', 2, []], a4: ['a', 'x', 3, []],
+    b1: ['b', 'x', 1, []], b2: ['b', 'x', 1, []], b3: ['b', 'x', 2, []],
+    c1: ['c', 'y', 1, []], c2: ['c', 'y', 1, []], c3: ['c', 'y', 1, []], c4: ['c', 'y', 2, []], c5: ['c', 'y', 1, []],
+  };
+  const allIds = Object.keys(sp);
+  const makeZukan = (ids, unseen = new Set()) => ({
+    ids, allIds, unseen,
+    levelOf: (id) => sp[id][2],
+    closeOf: (id) => ({
+      similar: sp[id][3],
+      group: allIds.filter((o) => sp[o][0] === sp[id][0]),
+      order: allIds.filter((o) => sp[o][1] === sp[id][1]),
+    }),
+  });
+  const z = makeZukan(allIds);
+  assert.ok(!zukanPool(z, 'hard').includes('a4'), 'むずかしいに level 3 は 出ない');
+  assert.ok(zukanPool(z, 'adult').includes('a4'), 'おとなは ぜんぶ');
+
+  // まだ ずかんに ない 子を 先に（7つまで）
+  for (let seed = 1; seed < 30; seed++) {
+    const unseen = new Set(['a1', 'b2', 'c3']);
+    const plan = planRound(zukanPool(z, 'adult'), unseen, makeRng(seed));
+    assert.strictEqual(plan.length, QUESTIONS_PER_ROUND);
+    for (const id of unseen) assert.ok(plan.includes(id), `まだの ${id} は かならず 出る`);
+    for (let i = 1; i < plan.length; i++) assert.notStrictEqual(plan[i], plan[i - 1], 'となりどうし 同じ 子に ならない');
+    assert.strictEqual(new Set(plan).size, plan.length, '顔ぶれが 10より 多ければ かさならない');
+  }
+  const manyUnseen = planRound(allIds, new Set(allIds), makeRng(7));
+  assert.strictEqual(manyUnseen.length, QUESTIONS_PER_ROUND);
+  assert.ok(UNSEEN_PER_ROUND >= 6 && UNSEEN_PER_ROUND <= 8);
+  // 顔ぶれが すくない（しぼった）ときは くりかえす
+  const small = planRound(['a1', 'a2', 'a3'], new Set(), makeRng(3));
+  assert.strictEqual(small.length, QUESTIONS_PER_ROUND);
+  for (let i = 1; i < small.length; i++) assert.notStrictEqual(small[i], small[i - 1], '3つでも となりは ちがう');
+
+  // えらぶ ボタン: こたえ＋にている 2つ（にている → 同じ 科）＋ ほか 1つ
+  for (let seed = 1; seed < 30; seed++) {
+    const opts = zukanOptions('a1', z, allIds, makeRng(seed));
+    assert.strictEqual(opts.length, OPTIONS);
+    assert.strictEqual(new Set(opts).size, OPTIONS, 'かさならない');
+    assert.ok(opts.includes('a1'));
+    assert.ok(opts.includes('a2'), 'にている 種類（similar）は かならず 入る');
+    assert.ok(opts.filter((id) => sp[id][0] === 'a').length >= 3, 'こたえ＋同じ 科が 2つ いじょう');
+  }
+  // なかまを しぼって 3つしか ない ときは、のこりを その なかまの ぜんぶから
+  const narrow = makeZukan(['b1', 'b2', 'b3']);
+  const nOpts = zukanOptions('b1', narrow, ['b1', 'b2', 'b3'], makeRng(2));
+  assert.strictEqual(new Set(nOpts).size, OPTIONS);
+
+  // createGame: しょうぶ だけ ずかん画の 出題。10問 ぜんぶ 出せる
+  const g = createGame({ set: 'insect', difficulty: 'hard', rng: makeRng(5), zukan: makeZukan(allIds, new Set(['c5'])) });
+  const asked = [];
+  for (let i = 0; i < QUESTIONS_PER_ROUND; i++) {
+    const q = nextQuestion(g);
+    assert.ok(q && q.options.length === OPTIONS && q.options[q.correctIndex] === q.answer);
+    assert.ok(sp[q.answer][2] <= 2, 'むずかしい: level 2 まで');
+    asked.push(q.answer);
+    answerAt(g, q.correctIndex, 100);
+  }
+  assert.ok(asked.includes('c5'), 'まだの 子が 出る');
+  assert.strictEqual(nextQuestion(g), null);
+  const easyZ = createGame({ set: 'insect', difficulty: 'easy', zukan: makeZukan(allIds) });
+  assert.strictEqual(easyZ.plan, null, 'かんたんは ずかん画の 出題を つかわない');
 }
 
 console.log('guess.test.js: すべてのテストに合格');

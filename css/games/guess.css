@@ -317,6 +317,51 @@
 
 /* ---------- ずかん（v0.18.1） ---------- */
 
+/* なかまを しぼる（v0.19.7。スタートの オーバーレイ） */
+.kgb-guess-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(92%, 420px);
+  cursor: default;
+}
+
+.kgb-guess-filter[hidden] {
+  display: none;
+}
+
+.kgb-guess-filter-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.kgb-guess-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.kgb-guess-filter-chip {
+  min-height: 44px;
+  padding: 4px 14px;
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 17px;
+  font-weight: bold;
+  box-shadow: 0 3px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-filter-chip.is-on {
+  border-color: var(--kgb-accent);
+  color: var(--kgb-accent);
+}
+
 /* スタートの オーバーレイの「タップして スタート」ボタン（v0.19.2） */
 .kgb-guess-start {
   min-height: 64px;

@@ -585,6 +585,7 @@ export const text = {
   guessZukanMarks: 'みわけ ポイント',
   guessZukanSimilar: 'にている なかま',
   guessZukanBack: 'もどる',
+  guessFilterLabel: 'どの なかまで あそぶ？',      // v0.19.7: なかまを しぼる
   guessZukanTax: 'ぶんるい',                     // v0.19.5: 詳細ページの 分類
   // v0.19.6: 分類の 階級だけは 図鑑と 同じ 漢字に する（開発者の 指示。CLAUDE.md の 例外）。
   // かなの「か」「ぞく」では 名前と まざって 読みにくく、図鑑の 書きかた（コウチュウ目 クワガタムシ科）に そろえる ため
