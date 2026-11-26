@@ -33,6 +33,7 @@ import {
 import { PIECE_SETS } from '../balance/pieceSets.js';
 import { boundsOf } from '../balance/kit.js';
 import { hasZukanArt, loadZukanSet } from '../../zukan/registry.js';
+import { openZukanView } from './zukanView.js';
 import { text } from '../../i18n.js';
 import { playTap, playMatch, playFlutter } from '../../sound.js';
 import { sayJa, cancelSpeech } from '../../speech.js';
@@ -586,52 +587,37 @@ export function mount(root, config, { onExit }) {
     return c;
   }
 
-  // ずかんを ひらく（ひらいた ときに 1回だけ 作る。とじたら すてる）
+  // ずかんを ひらく（ひらいた ときに 作る。とじたら すてる）。画面は zukanView.js（v0.19.3）。
+  // むずかしい・おとなの ずかん画の ずかんは なかまタブと 詳細ページ つき、かんたん・ふつうの ずかんは 一覧だけ
   function openZukan() {
-    const zukan = loadZukan();
-    const found = new Set(zukan[set] ?? []);
-    const { found: count, total } = zukanProgress(zukan, set, zukanList());
-    const head = document.createElement('div');
-    head.className = 'kgb-guess-zukan-head';
-    const title = document.createElement('p');
-    title.className = 'kgb-guess-zukan-title';
-    title.textContent = `${text[SET_LABEL[set]]} ${text.guessZukan}`;
-    const bookLabel = document.createElement('p');
-    bookLabel.className = 'kgb-guess-zukan-book';
-    bookLabel.textContent = book === 'hard' ? text.guessZukanBookHard : text.guessZukanBookEasy;
-    const progress = document.createElement('p');
-    progress.className = 'kgb-guess-zukan-count';
-    progress.textContent = count === total ? `${count} / ${total}　${text.guessZukanComplete}` : `${count} / ${total}`;
-    const note = document.createElement('p');
-    note.className = 'kgb-guess-zukan-note';
-    note.textContent = book === 'hard' ? text.guessZukanNoteHard : text.guessZukanNoteEasy;
-    head.append(title, bookLabel, progress, note);
-    const grid = document.createElement('div');
-    grid.className = 'kgb-guess-zukan-grid';
-    const fragment = document.createDocumentFragment();
-    for (const id of zukanList()) {
-      const has = found.has(id);
-      const cell = document.createElement('div');
-      cell.className = `kgb-guess-zukan-cell${has ? ' is-found' : ''}`;
-      const name = document.createElement('span');
-      name.className = 'kgb-guess-zukan-name';
-      name.textContent = has ? nameOf(id) : text.guessZukanUnknown;
-      cell.append(drawThumb(id, has), name);
-      fragment.append(cell);
+    const found = new Set(loadZukan()[set] ?? []);
+    const ids = zukanList();
+    let tabs = null;
+    let detail = null;
+    if (zset) {
+      tabs = zset.groups
+        .map((g) => ({ key: g, label: zset.groupName(g).replace(/の なかま$/, ''), ids: ids.filter((id) => zset.species[id].group === g) }))
+        .filter((t) => t.ids.length > 0);
+      detail = (id) => {
+        const info = zset.info(id);
+        const sp = zset.species[id];
+        if (!info || !sp) return null;
+        return {
+          name: info.name, groupLabel: zset.groupName(sp.group), size: info.size, where: info.where,
+          marks: info.marks, points: sp.marks ?? [], similar: sp.similar ?? [], art: zset.art(id),
+        };
+      };
     }
-    grid.append(fragment);
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'kgb-guess-zukan-close';
-    close.textContent = text.guessZukanClose;
-    close.addEventListener('click', () => {
-      playTap();
-      zukanOverlay.hidden = true;
-      zukanOverlay.replaceChildren();
-    }, { signal: abort.signal });
-    zukanOverlay.replaceChildren(head, grid, close);
-    zukanOverlay.scrollTop = 0;
-    zukanOverlay.hidden = false;
+    openZukanView(zukanOverlay, {
+      title: `${text[SET_LABEL[set]]} ${text.guessZukan}`,
+      bookLabel: book === 'hard' ? text.guessZukanBookHard : text.guessZukanBookEasy,
+      note: book === 'hard' ? text.guessZukanNoteHard : text.guessZukanNoteEasy,
+      ids, found, tabs, detail,
+      nameOf,
+      thumb: drawThumb,
+      onTap: playTap,
+      signal: abort.signal,
+    });
   }
 
   // ---------- 終了処理（保存はここで1回だけ。§9） ----------

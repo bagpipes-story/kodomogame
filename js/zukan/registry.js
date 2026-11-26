@@ -13,7 +13,8 @@ export function hasZukanArt(set) {
 
 const cache = new Map();
 
-// { ids, art(id) → { minX, minY, w, h, pad, draw(ctx) }, name(id), info(id), groupName(group) }
+// { ids, groups, species, art(id) → { minX, minY, w, h, pad, draw(ctx) }, name(id), info(id), groupName(group) }
+// species[id].marks = 見分けポイントの 印の 場所（v0.19.3。詳細ページ）
 export function loadZukanSet(set) {
   if (!hasZukanArt(set)) return Promise.resolve(null);
   if (!cache.has(set)) {

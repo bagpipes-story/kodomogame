@@ -434,6 +434,124 @@
   word-break: keep-all;
 }
 
+/* ---------- ずかんの なかまタブ・詳細ページ（v0.19.3） ---------- */
+
+/* なかまタブ: よこに ならべて おりかえす（よこスクロールは 小さい 子に むずかしい ため） */
+.kgb-guess-zukan-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.kgb-guess-zukan-tab {
+  min-height: 40px;
+  padding: 4px 12px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--kgb-white);
+  color: var(--kgb-text);
+  font-size: 15px;
+  font-weight: bold;
+  box-shadow: 0 2px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-zukan-tab.is-on {
+  border-color: var(--kgb-accent);
+  color: var(--kgb-accent);
+}
+
+.kgb-guess-zukan-hint {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+/* 見つけた 子は おせる（ボタンの みためを けして マスと 同じに） */
+button.kgb-guess-zukan-cell {
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.kgb-guess-zukan-cell:active {
+  transform: scale(0.95);
+}
+
+.kgb-guess-zukan-bigwrap {
+  display: flex;
+  justify-content: center;
+  border-radius: var(--kgb-radius);
+  background: var(--kgb-white);
+  box-shadow: 0 4px 0 var(--kgb-shadow);
+}
+
+.kgb-guess-zukan-big {
+  display: block;
+  max-width: 100%;
+}
+
+.kgb-guess-zukan-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 16px;
+}
+
+.kgb-guess-zukan-facts dt {
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.kgb-guess-zukan-facts dd {
+  margin: 0;
+}
+
+.kgb-guess-zukan-sub {
+  margin: 6px 0 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.kgb-guess-zukan-marks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.kgb-guess-zukan-marks li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* 絵の 上の 番号と 同じ オレンジの まる */
+.kgb-guess-zukan-num {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #f28b3b;
+  color: var(--kgb-white);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.kgb-guess-zukan-grid.is-similar {
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+}
+
 .kgb-guess-zukan-close {
   position: sticky;
   bottom: 0;

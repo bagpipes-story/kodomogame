@@ -67,6 +67,12 @@ function checkSet(set, catalog, words) {
     assert.ok(!names.has(info.name), `${id}: 名前が かさなる ${info.name}`);
     names.add(info.name);
     assert.ok(info.marks.length >= 2, `${id}: 見分けポイントは 2つ いじょう`);
+    // 見分けポイントの 印（v0.19.3）: 文字と 同じ 数で、絵の はこの 中
+    assert.ok(Array.isArray(sp.marks) && sp.marks.length === info.marks.length, `${id}: 印の 数（${sp.marks?.length}）が 見分けポイントの 数（${info.marks.length}）と ちがう`);
+    for (const [mx, my] of sp.marks) {
+      const [bx0, by0, bx1, by1] = sp.box;
+      assert.ok(mx >= bx0 && mx <= bx1 && my >= by0 && my <= by1, `${id}: 印 ${mx},${my} が 絵の はこの 外`);
+    }
     for (const str of [info.name, info.size, info.where, ...info.marks]) {
       assert.ok(typeof str === 'string' && str.length > 0, `${id}: 文字が からっぽ`);
       assert.ok(!KANJI.test(str), `${id}: 漢字を つかわない「${str}」`);

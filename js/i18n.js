@@ -578,6 +578,13 @@ export const text = {
   guessZukanNoteHard: 'むずかしい・おとなで あてると ずかんに のるよ',
   guessZukanBookEasy: 'かんたん・ふつう の ずかん',
   guessZukanBookHard: 'むずかしい・おとな の ずかん',
+  guessZukanAll: 'ぜんぶ',                       // v0.19.3: ずかんの なかまタブ・詳細ページ
+  guessZukanTapHint: 'みつけた いきものを タップすると くわしく みられるよ',
+  guessZukanSize: 'おおきさ',
+  guessZukanWhere: 'すんでいる ところ',
+  guessZukanMarks: 'みわけ ポイント',
+  guessZukanSimilar: 'にている なかま',
+  guessZukanBack: 'もどる',
   guessZukanUnknown: '？？？',
   guessZukanClose: 'とじる',
   balanceBlocksLabel: 'つみき',

@@ -6,7 +6,7 @@
 //   タップで skipWaiting → controllerchange で再読み込み（ゲーム途中に勝手に入れ替わらない）。
 // 外部通信は一切しない（同一オリジンのGETだけ扱う）。
 
-const VERSION = 'v0.19.2';
+const VERSION = 'v0.19.3';
 const CACHE_NAME = `kgb-${VERSION}`;
 
 // プリキャッシュ一覧（相対パス。tests/sw.test.js が「存在する」「漏れがない」を検査する）
@@ -81,6 +81,7 @@ const PRECACHE = [
   './js/games/korinto/ui.js',
   './js/games/guess/game.js',
   './js/games/guess/ui.js',
+  './js/games/guess/zukanView.js',
   './js/games/listen/game.js',
   './js/games/listen/ui.js',
   './js/games/maze/game.js',

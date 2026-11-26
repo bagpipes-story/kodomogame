@@ -27,7 +27,8 @@ export const DIFFICULTY = {
   // v0.19.1: ずかん画は つみきより こまかく 見分けに 時間が かかるので 6・4びょうに
   // v0.19.2: 時間が 0に なった ときに ちょうど すっかり 見えて いる ように、見えて くる 時間を 時間せいげんと 同じに
   hard: { revealMs: 6000, strict: true, limitMs: 6000, book: 'hard' },
-  adult: { revealMs: 4000, strict: true, limitMs: 4000, book: 'hard' },
+  // v0.19.3: おとなは もう すこし きびしく、時間が 0の とき 8わり だけ 見えて いる（4 ÷ 0.8 = 5びょうで 見えきる）
+  adult: { revealMs: 5000, strict: true, limitMs: 4000, book: 'hard' },
 };
 
 // ずかんの 保存先（stats.guess の キー）。'hard' は v0.18.1 からの 'zukan' を そのまま つかう
