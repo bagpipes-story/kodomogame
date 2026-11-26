@@ -8,6 +8,7 @@ import { BLOCK_SETS } from '../js/games/balance/game.js';
 import { loadZukanSet, makeSet, hasZukanArt, mergeCatalogs } from '../js/zukan/registry.js';
 import * as insectCatalog1 from '../js/zukan/catalog/insect.js';
 import * as insectCatalog2 from '../js/zukan/catalog/insect2.js';
+import * as insectCatalog3 from '../js/zukan/catalog/insect3.js';
 import { ZUKAN_TEXT as insectText } from '../js/i18n/zukan/insect.js';
 
 const KANJI = /[一-鿿㐀-䶿]/;
@@ -110,11 +111,14 @@ function checkSet(set, catalog, words) {
 
 assert.ok(hasZukanArt('insect'));
 assert.ok(!hasZukanArt('pref'), 'ちずは ずかん画に しない');
-// むしは 絵の ファイルが 2つ（v0.19.10）。同じ ID が 両方に ない こと
+// むしは 絵の ファイルが 3つ（v0.19.10・v0.19.12）。同じ ID が 2つの ファイルに ない こと
 for (const id of Object.keys(insectCatalog2.SPECIES)) assert.ok(!insectCatalog1.SPECIES[id], `insect2 の ${id} が insect と かさなる`);
-const insectCatalog = mergeCatalogs(insectCatalog1, insectCatalog2);
+for (const id of Object.keys(insectCatalog3.SPECIES)) assert.ok(!insectCatalog1.SPECIES[id] && !insectCatalog2.SPECIES[id], `insect3 の ${id} が ほかの ファイルと かさなる`);
+const insectCatalog = mergeCatalogs(insectCatalog1, insectCatalog2, insectCatalog3);
 const n = checkSet('insect', insectCatalog, insectText);
-assert.strictEqual(n, 60);
+assert.strictEqual(n, 90);
+// 文字だけ あって 絵が ない 種類が ない こと
+for (const id of Object.keys(insectText.species)) assert.ok(insectCatalog.SPECIES[id], `文字だけ ある: ${id}`);
 
 // 読みこみ（import()）で 同じ ものが とれる。2回目は 同じ もの（もう一度 読まない）
 const a = await loadZukanSet('insect');

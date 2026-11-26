@@ -1,4 +1,4 @@
-// catalog/insect.js — むしの ずかん画（v0.19.0。別冊05 §3）。v0.19.10 で 足した 30種は insect2.js（描く 型は この ファイルから export）
+// catalog/insect.js — むしの ずかん画（v0.19.0。別冊05 §3）。v0.19.10 で 足した 30種は insect2.js、v0.19.12 で 足した 30種は insect3.js（描く 型は この ファイルから export）
 // つみき画（balance/insect.js）とは 別の 絵。かわいさより「その種類だと 見分けられる」ことを 優先する:
 // - 実物の 比率（からだの ながさと あたま・あし・はねの 比）・実物の 色・見分けの もようは 数と 位置まで
 // - 目は 複眼（ひとみ・ハイライトの 白丸・ほっぺ・口は 描かない）
@@ -15,10 +15,10 @@ import {
 
 // GROUPS = 科（か）くらいの なかま、ORDERS = 目（もく）。図鑑と 同じ 2だんで ならべる（v0.19.4。ずかんの タブ＝目、タブの 中の 見出し＝科）。
 // カブトムシ・クワガタムシも こうちゅう（甲虫目）、セミは カメムシ目、カマキリと ナナフシは べつの 目
-export const GROUPS = ['kabuto', 'stag', 'beetle', 'butterfly', 'bee', 'ant', 'cicada', 'waterbug', 'dragonfly', 'damselfly', 'grasshopper', 'mantis', 'stick'];
+export const GROUPS = ['kabuto', 'stag', 'beetle', 'butterfly', 'moth', 'bee', 'ant', 'cicada', 'waterbug', 'dragonfly', 'damselfly', 'grasshopper', 'mantis', 'stick'];
 export const ORDERS = [
   { key: 'coleoptera', groups: ['kabuto', 'stag', 'beetle'] },
-  { key: 'lepidoptera', groups: ['butterfly'] },
+  { key: 'lepidoptera', groups: ['butterfly', 'moth'] },
   { key: 'hymenoptera', groups: ['bee', 'ant'] },
   { key: 'hemiptera', groups: ['cicada', 'waterbug'] },
   { key: 'odonata', groups: ['dragonfly', 'damselfly'] },
@@ -363,7 +363,7 @@ const miyamaStag = {
 // おおあごは まえに のびて さきが 上へ そりかえる（上から 見ると さきが 外へ ひらく）
 const RAINBOW_MAND = [[9, -41.5], [11.5, -51], [13, -60], [16.5, -67.5], [21.5, -72]];
 const rainbowStag = {
-  group: 'stag', level: 2, similar: ['sawStag', 'jewelBeetle'],
+  group: 'stag', level: 2, similar: ['goldenOgreStag', 'sawStag', 'jewelBeetle'],
   box: [-46, -75, 46, 66],
   draw(ctx) {
     // まんなかは みどり〜きんいろ、ふちへ いくほど あか・むらさき（見る 角度で かわる にじいろ）
@@ -476,7 +476,7 @@ const rhinoBeetle = {
 // ヘラクレスオオカブト（オス）: むねの ツノが とても ながく（うらに ちゃいろの 毛）、あたまの ツノと はさむ。
 // はねは きいろっぽい オリーブいろに くろい てん。むね・ツノ・あしは つやの ある くろ
 const hercules = {
-  group: 'kabuto', level: 2, similar: ['caucasusBeetle', 'atlasBeetle', 'rhinoBeetle'],
+  group: 'kabuto', level: 2, similar: ['neptuneBeetle', 'caucasusBeetle', 'atlasBeetle'],
   box: [-56, -150, 56, 82],
   draw(ctx) {
     const edge = '#000';
@@ -723,7 +723,7 @@ const rosalia = {
 
 // ハンミョウ: あたま・むねは みどりと あかの きんぞくいろ。はねは あおむらさきに しろい もようと あかい おび。おおきな め、しろい おおあご
 const tigerBeetle = {
-  group: 'beetle', level: 2, similar: ['rosalia', 'jewelBeetle'],
+  group: 'beetle', level: 2, similar: ['snailBeetle', 'rosalia', 'jewelBeetle'],
   box: [-42, -60, 42, 56],
   draw(ctx) {
     const metal = ['#e8d070', '#c0402a', '#3a6a2a'];
@@ -1302,7 +1302,7 @@ const emperorDragonfly = {
 
 // シオカラトンボ（オス）: おなかは しろっぽい みずいろの こな、さきは くろ。むねは くろっぽい。おなかが ひらたく ふとめ
 const skimmer = {
-  group: 'dragonfly', level: 1, similar: ['greatSkimmer', 'redDragonfly', 'emperorDragonfly'],
+  group: 'dragonfly', level: 1, similar: ['pieSkimmer', 'greatSkimmer', 'redDragonfly'],
   box: [-92, -59, 92, 67],
   draw(ctx) {
     dragonfly(ctx, {
@@ -1334,7 +1334,7 @@ const skimmer = {
 
 // アキアカネ（オス）: あきに おなかが まっか。むねは ちゃいろに くろい すじ。はねは すきとおる
 const redDragonfly = {
-  group: 'dragonfly', level: 1, similar: ['scarletSkimmer', 'skimmer', 'goldenRinged'],
+  group: 'dragonfly', level: 1, similar: ['globeSkimmer', 'scarletSkimmer', 'skimmer'],
   box: [-84, -54, 84, 63],
   draw(ctx) {
     dragonfly(ctx, {
@@ -1485,7 +1485,7 @@ const cabbageWhite = {
 
 // オオムラサキ（オス）: こげちゃの はねの うちがわが むらさきに ひかる。しろと きいろの もよう。後ばねの かどに あかい てん
 const purpleEmperor = {
-  group: 'butterfly', level: 2, similar: ['crowSwallowtail', 'chestnutTiger', 'swallowtail'],
+  group: 'butterfly', level: 2, similar: ['blueAdmiral', 'crowSwallowtail', 'chestnutTiger'],
   box: [-86, -60, 86, 62],
   draw(ctx) {
     const white = '#f4f0e2';
@@ -1523,7 +1523,7 @@ const purpleEmperor = {
 
 // セイヨウミツバチ（はたらきバチ）: むねに ちゃいろの 毛。おなかに オレンジと くろの しま。すきとおった はね 4まい
 const honeybee = {
-  group: 'bee', level: 1, similar: ['giantHornet', 'carpenterBee', 'carpenterAnt'],
+  group: 'bee', level: 1, similar: ['bumblebee', 'giantHornet', 'carpenterBee'],
   box: [-64, -40, 64, 38],
   draw(ctx) {
     const edge = '#140c04';
@@ -1791,7 +1791,7 @@ export function palps(ctx, list, color, w = 0.9) {
 // トノサマバッタ（オス）: 大きな からだ（みどり）。むねの せなかが 弓の ように もりあがり、うしろへ とがる。
 // はねは ながく ちゃいろの まだら（おなかの さきより ながい）。うしろあしの ももが ふとく 矢羽の もよう、すねは あかっぽい
 const locust = {
-  group: 'grasshopper', level: 1, similar: ['longHeadGrasshopper', 'katydid'],
+  group: 'grasshopper', level: 1, similar: ['riceGrasshopper', 'longHeadGrasshopper', 'katydid'],
   box: [-74, -36, 70, 25],
   draw(ctx) {
     const edge = '#22361a';
@@ -1869,7 +1869,7 @@ const locust = {
 // ショウリョウバッタ（オス）: あたまが 前の 上へ ながく とがり、さきの ほうに め。触角は ひらたい 剣の 形。
 // からだが ほそく、はねは おなかより ながく とがる。うしろあしが とても ほそながい
 const longHeadGrasshopper = {
-  group: 'grasshopper', level: 1, similar: ['onbuGrasshopper', 'locust', 'katydid'],
+  group: 'grasshopper', level: 1, similar: ['coneheadKatydid', 'onbuGrasshopper', 'locust'],
   box: [-102, -30, 84, 25],
   draw(ctx) {
     const edge = '#1e3414';

@@ -69,7 +69,7 @@ const smallStag = {
 // ねもとから 3ぶんの1に 大きな 歯、さきの ほうに 小さな 歯が ならび、さきは ふたまた。あたまの まえに 2つの こぶ
 const GIRAFFA_MAND = [[12, -47], [18.5, -60], [21, -76], [20.5, -92], [17, -106], [10.5, -117]];
 const giraffeStag = {
-  group: 'stag', level: 3, similar: ['sawStag', 'flatStag', 'miyamaStag'],
+  group: 'stag', level: 3, similar: ['metalliferStag', 'sawStag', 'flatStag'],
   box: [-50, -124, 50, 70],
   draw(ctx) {
     const tone = ['#5a5a5e', '#1a1a1c', '#050505'];
@@ -227,7 +227,7 @@ const caucasusBeetle = {
 
 // コガネムシ: まるっこい たまご形。ぜんしんが つよい つやの ある きんみどり。あたまは 小さく まえが まるい
 const goldBeetle = {
-  group: 'beetle', level: 1, similar: ['jewelBeetle', 'ladybug', 'rainbowStag'],
+  group: 'beetle', level: 1, similar: ['droneBeetle', 'jewelBeetle', 'ladybug'],
   box: [-40, -46, 40, 48],
   draw(ctx) {
     const edge = '#0a2410';
@@ -269,7 +269,7 @@ const goldBeetle = {
 // ゴマダラカミキリ: つやの ある くろに しろい てんが ちらばる。触角は からだより ながく、ふしごとに あおじろと くろの しま。
 // むねの よこに とげ。はねの つけねに こまかい つぶつぶ
 const spottedLonghorn = {
-  group: 'beetle', level: 2, similar: ['rosalia', 'tigerBeetle', 'firefly'],
+  group: 'beetle', level: 2, similar: ['whiteStripeLonghorn', 'rosalia', 'tigerBeetle'],
   box: [-76, -74, 76, 68],
   draw(ctx) {
     const black = ['#56565c', '#16161a', '#030304'];
@@ -428,7 +428,7 @@ const yellowSwallowtail = {
 // クロアゲハ（オス）: はねの おもてが ほぼ まっくろ。しっぽは みじかい。後ばねの 前の ふちに しろい 帯（オスだけ）、
 // 後ばねの かどに あかい 三日月が 1つ
 const blackSwallowtail = {
-  group: 'butterfly', level: 1, similar: ['crowSwallowtail', 'swallowtail', 'purpleEmperor'],
+  group: 'butterfly', level: 1, similar: ['redHelen', 'crowSwallowtail', 'swallowtail'],
   box: [-88, -62, 88, 62],
   draw(ctx) {
     const black = '#1c181a';
@@ -538,7 +538,7 @@ const bluebottle = {
 // モンキチョウ（オス）: きいろい はね。前ばねの 外の ふちが ひろく くろく、その中に きいろい てん。
 // 前ばねの まんなかに くろい てん、後ばねの まんなかに オレンジの てん。はねの ふちと 触角が ピンク
 const cloudedYellow = {
-  group: 'butterfly', level: 2, similar: ['cabbageWhite', 'yellowSwallowtail', 'smallCopper'],
+  group: 'butterfly', level: 2, similar: ['grassYellow', 'cabbageWhite', 'yellowSwallowtail'],
   box: [-62, -54, 62, 46],
   draw(ctx) {
     const black = '#2a2620';
@@ -576,7 +576,7 @@ const cloudedYellow = {
 // ベニシジミ: 小さい。前ばねは あかるい オレンジに くろい てん、外の ふちは こげちゃ。
 // 後ばねは こげちゃで、ふちに オレンジの 帯
 const smallCopper = {
-  group: 'butterfly', level: 3, similar: ['cloudedYellow', 'cabbageWhite', 'chestnutTiger'],
+  group: 'butterfly', level: 3, similar: ['grassBlue', 'cloudedYellow', 'cabbageWhite'],
   box: [-46, -38, 46, 36],
   draw(ctx) {
     const brown = '#3c2c22';
@@ -676,7 +676,7 @@ const sc = (pts, kx, ky) => pts.map(([x, y]) => [x * kx, y * ky]);
 // クマゼミ（オス）: にほんで いちばん 大きい セミの ひとつ。からだは くろく つやつや。あたまの はばが ひろい。
 // はねは すきとおり、つけねの 脈が みどり。おなかの つけねの よこに しろい こな
 const bearCicada = {
-  group: 'cicada', level: 1, similar: ['greenCicada', 'brownCicada', 'eveningCicada'],
+  group: 'cicada', level: 1, similar: ['ezoCicada', 'greenCicada', 'brownCicada'],
   box: [-100, -33, 100, 50],
   draw(ctx) {
     const black = ['#4c4c4e', '#161617', '#040404'];
@@ -829,7 +829,7 @@ const kaempferCicada = {
 // タガメ: 水の 中で くらす 大きな カメムシ。まえあしが ふとい かまで、さきに するどい つめ（魚や カエルを つかまえる）。
 // からだは ひらたい たまご形で ちゃいろ。はねの さきは うすい まくで すじが ならぶ。おしりに みじかい こきゅうの くだ
 const giantWaterBug = {
-  group: 'waterbug', level: 2, similar: ['divingBeetle', 'waterStrider', 'brownCicada'],
+  group: 'waterbug', level: 2, similar: ['eggCarrierBug', 'divingBeetle', 'waterStrider'],
   box: [-52, -70, 52, 60],
   draw(ctx) {
     const edge = '#1a1006';
@@ -886,7 +886,7 @@ const giantWaterBug = {
 // アメンボ: なかあしと うしろあしが とても ながく、水の 上に うく（あしさきの 毛が 水を はじく）。
 // からだは ほそながく こげちゃ。まえあしは みじかく、えものを つかむ
 const waterStrider = {
-  group: 'waterbug', level: 1, similar: ['giantWaterBug', 'stickInsect', 'moleCricket'],
+  group: 'waterbug', level: 1, similar: ['backswimmer', 'giantWaterBug', 'stickInsect'],
   box: [-69, -45, 69, 42],
   draw(ctx) {
     const edge = '#0a0806';
@@ -1318,7 +1318,7 @@ const wideMantis = {
 // オオスズメバチ: にほんで いちばん 大きい ハチ。あたまが 大きく オレンジいろ。むねは こげちゃ。
 // おなかは オレンジと こげちゃの しま。はねは ちゃいろっぽく すきとおる
 const giantHornet = {
-  group: 'bee', level: 1, similar: ['honeybee', 'carpenterBee', 'carpenterAnt'],
+  group: 'bee', level: 1, similar: ['paperWasp', 'honeybee', 'carpenterBee'],
   box: [-80, -60, 80, 46],
   draw(ctx) {
     const edge = '#1a0c02';
