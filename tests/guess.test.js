@@ -19,6 +19,7 @@ import {
   planRound,
   zukanOptions,
   UNSEEN_PER_ROUND,
+  CLOSE_OPTIONS,
   addToZukan,
   zukanProgress,
   tileRevealTimes,
@@ -252,6 +253,16 @@ for (const set of GUESS_SETS) {
     assert.ok(opts.includes('a2'), 'にている 種類（similar）は かならず 入る');
     assert.strictEqual(opts.filter((id) => sp[id][0] === 'a').length, 3, 'こたえ＋同じ 科が ちょうど 2つ');
     assert.ok(opts.some((id) => sp[id][1] !== 'x'), 'のこり 1つは ちがう 目から（v0.19.8）');
+  }
+  // むずかしい（にている 1つ）: こたえ＋同じ 科 1つ＋ちがう 目 2つ（v0.19.9）
+  assert.strictEqual(CLOSE_OPTIONS.hard, 1);
+  assert.strictEqual(CLOSE_OPTIONS.adult, 2);
+  for (let seed = 1; seed < 30; seed++) {
+    const opts = zukanOptions('a1', z, allIds, makeRng(seed), CLOSE_OPTIONS.hard);
+    assert.strictEqual(new Set(opts).size, OPTIONS);
+    assert.ok(opts.includes('a2'), 'むずかしい: にている 種類が 1つ');
+    assert.strictEqual(opts.filter((id) => sp[id][0] === 'a').length, 2, 'むずかしい: こたえ＋同じ 科 1つ');
+    assert.strictEqual(opts.filter((id) => sp[id][1] !== 'x').length, 2, 'むずかしい: ちがう 目が 2つ');
   }
   // ちがう 科が ない（a の 科だけ）ときは しかたなく 同じ 科も
   for (let seed = 1; seed < 20; seed++) {

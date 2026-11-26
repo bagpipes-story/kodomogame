@@ -71,8 +71,9 @@ export const ZUKAN_LEVEL = { hard: 2, adult: 3 };
 // 10問の うち、まだ ずかんに ない 種類を この 数まで 先に 入れる（数が ふえても「同じ ものばかり 出て 集まらない」を ふせぐ。
 // 運まかせに しない ため、確率では なく 数で きめる）
 export const UNSEEN_PER_ROUND = 7;
-// 4つの えらぶ ボタンの うち、にている 種類を 2つ 入れる（ミヤマクワガタの 問題に ノコギリ・オオクワガタ など）
-export const CLOSE_OPTIONS = 2;
+// 4つの えらぶ ボタンの うち、にている 種類を いくつ 入れるか（ミヤマクワガタの 問題に ノコギリ・オオクワガタ など）。
+// v0.19.9: むずかしいは 1つ（のこり 2つは ちがう なかま）、おとなは 2つ（のこり 1つは ちがう なかま）
+export const CLOSE_OPTIONS = { hard: 1, adult: 2 };
 
 export function zukanPool(zukan, difficulty) {
   const max = ZUKAN_LEVEL[difficulty] ?? 3;
@@ -107,14 +108,14 @@ export function planRound(pool, unseen, rng = Math.random) {
   return plan;
 }
 
-// えらぶ ボタンの 4つ: こたえ＋にている 種類 2つ（にている → 同じ 科 → 同じ 目 の じゅん）＋ ほかから 1つ
-export function zukanOptions(answer, zukan, pool, rng = Math.random) {
+// えらぶ ボタンの 4つ: こたえ＋にている 種類 closeCount こ（にている → 同じ 科 → 同じ 目 の じゅん）＋ のこりは ちがう なかまから
+export function zukanOptions(answer, zukan, pool, rng = Math.random, closeCount = CLOSE_OPTIONS.adult) {
   const inPool = new Set(pool);
   const close = zukan.closeOf(answer);
   const chosen = [];
   for (const tier of [close.similar, close.group, close.order]) {
     for (const id of shuffle(tier ?? [], rng)) {
-      if (chosen.length >= CLOSE_OPTIONS) break;
+      if (chosen.length >= closeCount) break;
       if (id !== answer && inPool.has(id) && !chosen.includes(id)) chosen.push(id);
     }
   }
@@ -124,7 +125,7 @@ export function zukanOptions(answer, zukan, pool, rng = Math.random) {
       if (id !== answer && !chosen.includes(id)) chosen.push(id);
     }
   };
-  // のこり 1つは ちがう なかまから（v0.19.8: 前は のこりも ぜんぶから えらんで いて、たまたま 3つ・4つ にた 種類が ならんだ）。
+  // のこりは ちがう なかまから（v0.19.8: 前は のこりも ぜんぶから えらんで いて、たまたま 3つ・4つ にた 種類が ならんだ）。
   // ちがう 科 → ちがう 目 → それでも ない（なかまを しぼって 1つの 科だけ）ときは しかたなく のこりから
   const near = new Set([...(close.similar ?? []), ...(close.group ?? [])]);
   const nearer = new Set([...near, ...(close.order ?? [])]);
@@ -162,7 +163,7 @@ export function nextQuestion(state) {
   if (state.plan?.length) {
     const answerId = state.plan[state.questionIndex];
     state.asked.push(answerId);
-    const options = zukanOptions(answerId, state.zukan, state.pool, state.rng);
+    const options = zukanOptions(answerId, state.zukan, state.pool, state.rng, CLOSE_OPTIONS[state.difficulty] ?? CLOSE_OPTIONS.adult);
     return beginQuestion(state, { answer: answerId, options, correctIndex: options.indexOf(answerId) });
   }
   const pool = poolOf(state.set, state.difficulty);
