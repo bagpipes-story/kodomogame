@@ -6,7 +6,7 @@
 //   タップで skipWaiting → controllerchange で再読み込み（ゲーム途中に勝手に入れ替わらない）。
 // 外部通信は一切しない（同一オリジンのGETだけ扱う）。
 
-const VERSION = 'v0.19.12';
+const VERSION = 'v0.20.0';
 const CACHE_NAME = `kgb-${VERSION}`;
 
 // プリキャッシュ一覧（相対パス。tests/sw.test.js が「存在する」「漏れがない」を検査する）
@@ -53,11 +53,13 @@ const PRECACHE = [
   './js/wordart.js',
   './js/words.js',
   './js/i18n/zukan/insect.js',
+  './js/i18n/zukan/sea.js',
   './js/zukan/draw.js',
   './js/zukan/registry.js',
   './js/zukan/catalog/insect.js',
   './js/zukan/catalog/insect2.js',
   './js/zukan/catalog/insect3.js',
+  './js/zukan/catalog/sea.js',
   './js/games/abc/game.js',
   './js/games/abc/ui.js',
   './js/games/balance/animal.js',

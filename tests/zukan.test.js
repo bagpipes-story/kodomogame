@@ -10,6 +10,8 @@ import * as insectCatalog1 from '../js/zukan/catalog/insect.js';
 import * as insectCatalog2 from '../js/zukan/catalog/insect2.js';
 import * as insectCatalog3 from '../js/zukan/catalog/insect3.js';
 import { ZUKAN_TEXT as insectText } from '../js/i18n/zukan/insect.js';
+import * as seaCatalog from '../js/zukan/catalog/sea.js';
+import { ZUKAN_TEXT as seaText } from '../js/i18n/zukan/sea.js';
 
 const KANJI = /[一-鿿㐀-䶿]/;
 
@@ -53,7 +55,8 @@ function checkSet(set, catalog, words) {
   assert.deepStrictEqual([...inOrders].sort(), [...catalog.GROUPS].sort(), `${set}: 目に 入って いない／2つの 目に 入って いる なかまが ある`);
   for (const o of catalog.ORDERS) {
     assert.ok(words.orders[o.key] && !KANJI.test(words.orders[o.key]), `${set}: 目の 名前 ${o.key}`);
-    assert.ok(/^[ァ-ヶー]+$/.test(words.taxOrders?.[o.key] ?? ''), `${set}: 分類の 目の 名前 ${o.key}`);
+    // 分類の 目: タブ＝目の なかま（むし）は taxOrders、いろいろな 目が まざる なかま（うみ）は 種類ごとの order（下で 検査）
+    if (words.taxOrders) assert.ok(/^[ァ-ヶー]+$/.test(words.taxOrders[o.key] ?? ''), `${set}: 分類の 目の 名前 ${o.key}`);
     assert.ok(o.groups.some((g) => Object.values(catalog.SPECIES).some((sp) => sp.group === g)), `${set}: 目 ${o.key} に 種類が ない`);
   }
   for (const g of catalog.GROUPS) {
@@ -84,6 +87,7 @@ function checkSet(set, catalog, words) {
       assert.ok(mx >= bx0 && mx <= bx1 && my >= by0 && my <= by1, `${id}: 印 ${mx},${my} が 絵の はこの 外`);
     }
     // ぶんるい（v0.19.5）: 科・属は カタカナ
+    assert.ok(/^[ァ-ヶー]+$/.test(z.taxOrderOf(id)), `${id}: 目 ${z.taxOrderOf(id)}`);
     assert.ok(/^[ァ-ヶー]+$/.test(info.family ?? ''), `${id}: 科 ${info.family}`);
     assert.ok(/^[ァ-ヶー]+$/.test(info.genus ?? ''), `${id}: 属 ${info.genus}`);
     for (const str of [info.name, info.size, info.where, ...info.marks]) {
@@ -120,6 +124,14 @@ assert.strictEqual(n, 90);
 // 文字だけ あって 絵が ない 種類が ない こと
 for (const id of Object.keys(insectText.species)) assert.ok(insectCatalog.SPECIES[id], `文字だけ ある: ${id}`);
 
+// うみ（v0.20.0）: はじめの 30種。目は 種類ごと
+assert.ok(hasZukanArt('sea'));
+const nSea = checkSet('sea', seaCatalog, seaText);
+assert.strictEqual(nSea, 30);
+for (const id of Object.keys(seaText.species)) assert.ok(seaCatalog.SPECIES[id], `文字だけ ある: ${id}`);
+assert.strictEqual(makeSet(seaCatalog, seaText).taxOrderOf('tuna'), 'スズキ');
+assert.strictEqual(makeSet(insectCatalog, insectText).taxOrderOf('ladybug'), 'コウチュウ');
+
 // 読みこみ（import()）で 同じ ものが とれる。2回目は 同じ もの（もう一度 読まない）
 const a = await loadZukanSet('insect');
 const b = await loadZukanSet('insect');
@@ -127,4 +139,6 @@ assert.strictEqual(a, b);
 assert.strictEqual(a.name('ladybug'), 'ナナホシテントウ');
 assert.strictEqual(await loadZukanSet('pref'), null);
 
-console.log(`zukan.test.js: all passed (insect ${n})`);
+assert.strictEqual((await loadZukanSet('sea')).name('whale'), 'シロナガスクジラ');
+
+console.log(`zukan.test.js: all passed (insect ${n}, sea ${nSea})`);

@@ -7,6 +7,8 @@
 const LOADERS = {
   insect: () => Promise.all([import('./catalog/insect.js'), import('./catalog/insect2.js'), import('./catalog/insect3.js'), import('../i18n/zukan/insect.js')])
     .then(([a, b, c, words]) => [mergeCatalogs(a, b, c), words]),
+  // うみ（v0.20.0）: はじめの 30種
+  sea: () => Promise.all([import('./catalog/sea.js'), import('../i18n/zukan/sea.js')]),
 };
 
 // 分けた 絵の ファイルを 1つの なかまに まとめる（なかま・目の ならびは 1つめの ファイルの もの）
@@ -63,6 +65,12 @@ export function makeSet(catalog, words) {
     // 分類の 目の 名前（「コウチュウ」→ 画面で「コウチュウもく」。v0.19.5）
     taxOrderName(order) {
       return words.taxOrders?.[order] ?? '';
+    },
+    // その 種類の 目（v0.20.0）。うみの ように 1つの タブに いろいろな 目が まざる なかまは、種類ごとの order を 使う。
+    // むしの ように タブ＝目の なかまは タブの 目の 名前
+    taxOrderOf(id) {
+      const sp = species[id];
+      return words.species[id]?.order ?? (sp ? words.taxOrders?.[this.orderOf(sp.group)] : '') ?? '';
     },
     orderOf(group) {
       return (catalog.ORDERS ?? []).find((o) => o.groups.includes(group))?.key ?? null;
