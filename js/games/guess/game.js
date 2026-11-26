@@ -16,15 +16,25 @@ export const GUESS_SETS = ['sea', 'animal', 'bird', 'fresh', 'insect', 'deep', '
 // revealMs = 黒い かげが すっかり 見える までの 時間。むずかしいほど ゆっくり 見えて くる
 // strict = しょうぶ（v0.18.1。むずかしい いじょう）: まちがえたら その問題は おわり（えらびなおせない）・時間せいげん limitMs・
 //          正解すると ずかんに のる。かんたん・ふつうは 小さい 子むけに えらびなおせて 時間ぎれも ない
+// book = どちらの ずかんに のるか（v0.19.1）。かんたん・ふつうは バランスゲームと 同じ つみきの 絵で 'easy' の ずかん、
+//        むずかしい・おとなは ずかん画（別冊05）で 'hard' の ずかん。絵が ちがうので ずかんも わける
 export const DIFFICULTY = {
-  easy: { revealMs: 8000, strict: false, limitMs: null },
-  normal: { revealMs: 10000, strict: false, limitMs: null },
+  easy: { revealMs: 8000, strict: false, limitMs: null, book: 'easy' },
+  normal: { revealMs: 10000, strict: false, limitMs: null, book: 'easy' },
   // v0.18.2: 時間せいげんを 12→8びょう・10→6びょう、見えて くる はやさも はやく。
   // v0.18.4: 8・6びょうでは かんたん すぎたので 5・3びょうに。見えて くる はやさは そのまま
   //          （時間ぎれの とき むずかしいは 5わり・おとなは 4わりしか 見えて いない）
-  hard: { revealMs: 9000, strict: true, limitMs: 5000 },
-  adult: { revealMs: 7500, strict: true, limitMs: 3000 },
+  // v0.19.1: ずかん画は つみきより こまかく 見分けに 時間が かかるので 6・4びょうに
+  hard: { revealMs: 9000, strict: true, limitMs: 6000, book: 'hard' },
+  adult: { revealMs: 7500, strict: true, limitMs: 4000, book: 'hard' },
 };
+
+// ずかんの 保存先（stats.guess の キー）。'hard' は v0.18.1 からの 'zukan' を そのまま つかう
+// （いままでの 記録は しょうぶで あつめた もの なので むずかしい・おとなの ずかんに のこす）
+export const ZUKAN_KEYS = { easy: 'zukanEasy', hard: 'zukan' };
+export function bookOf(difficulty) {
+  return Object.prototype.hasOwnProperty.call(DIFFICULTY, difficulty) ? DIFFICULTY[difficulty].book : 'easy';
+}
 
 // この わりあいより 前に あてたら「はやわかり」（ほめ）。
 // 見えきる 時間と 時間せいげんの みじかい ほうの 6わり（v0.18.4: しょうぶで ぜんぶ はやわかりに ならない ように）
@@ -97,9 +107,11 @@ export function answerAt(state, optionIndex, elapsedMs) {
     return { ...result, early: false, final: true, roundOver: roundOverOf(state) };
   }
   if (!result.ok || !result.correct) return { ...result, early: false };
-  const early = q.wrong.size === 0 && elapsedMs < earlyLimitMs(state);
+  const firstTry = q.wrong.size === 0;
+  const early = firstTry && elapsedMs < earlyLimitMs(state);
   if (early) state.early += 1;
-  return { ...result, early };
+  // collect = ずかんに のせる（v0.19.1）: 1かいめで あてた とき。しょうぶは まちがえると おわるので 正解なら いつも
+  return { ...result, early, collect: firstTry };
 }
 
 // 時間ぎれ（しょうぶの とき）。その問題は 正解なしで おわり
@@ -112,8 +124,9 @@ export function timeUp(state) {
   return { ok: true, roundOver: roundOverOf(state) };
 }
 
-// ---------- ずかん（v0.18.1）: しょうぶで 正解した 子を なかまごとに あつめる ----------
+// ---------- ずかん（v0.18.1）: 正解した 子を なかまごとに あつめる ----------
 // zukan = { sea: ['whale', ...], ... }（保存は ui.js が storage.js 経由で 正解の ときだけ）
+// v0.19.1: ずかんは 2さつ（ZUKAN_KEYS）。all = その ずかんの ぜんぶ（ずかん画の なかまは ずかん画の しゅるい。なければ zukanAll）
 
 // その なかまの ぜんぶ（ずかんの ページ。バランスゲームの おとなの 顔ぶれ）
 export function zukanAll(set) {
@@ -121,16 +134,14 @@ export function zukanAll(set) {
 }
 
 // 正解した 子を ずかんに 入れる。もとの ずかんは かえずに 新しい ずかんを かえす
-export function addToZukan(zukan, set, id) {
-  const all = zukanAll(set);
+export function addToZukan(zukan, set, id, all = zukanAll(set)) {
   const found = Array.isArray(zukan?.[set]) ? zukan[set].filter((x) => all.includes(x)) : [];
   if (!all.includes(id) || found.includes(id)) return { zukan: { ...zukan, [set]: found }, isNew: false };
   const next = { ...zukan, [set]: [...found, id] };
   return { zukan: next, isNew: true, complete: next[set].length === all.length };
 }
 
-export function zukanProgress(zukan, set) {
-  const all = zukanAll(set);
+export function zukanProgress(zukan, set, all = zukanAll(set)) {
   const found = Array.isArray(zukan?.[set]) ? zukan[set].filter((x) => all.includes(x)) : [];
   return { found: new Set(found).size, total: all.length };
 }

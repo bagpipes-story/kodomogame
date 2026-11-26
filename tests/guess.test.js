@@ -13,6 +13,8 @@ import {
   revealProgress,
   timeUp,
   zukanAll,
+  bookOf,
+  ZUKAN_KEYS,
   addToZukan,
   zukanProgress,
   tileRevealTimes,
@@ -114,11 +116,11 @@ for (const set of GUESS_SETS) {
   assert.strictEqual(DIFFICULTY.easy.limitMs, null, 'かんたんは 時間ぎれ なし');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.hard.limitMs, 'おとなは 時間が みじかい');
   assert.ok(DIFFICULTY.adult.limitMs < DIFFICULTY.adult.revealMs, 'おとなは 見えきる まえに 時間ぎれ');
-  assert.strictEqual(DIFFICULTY.hard.limitMs, 5000, 'むずかしいは 5びょう（v0.18.4）');
-  assert.strictEqual(DIFFICULTY.adult.limitMs, 3000, 'おとなは 3びょう（v0.18.4）');
+  assert.strictEqual(DIFFICULTY.hard.limitMs, 6000, 'むずかしいは 6びょう（v0.19.1）');
+  assert.strictEqual(DIFFICULTY.adult.limitMs, 4000, 'おとなは 4びょう（v0.19.1）');
   for (const d of ['hard', 'adult']) {
     const seen = revealProgress(DIFFICULTY[d].limitMs, DIFFICULTY[d].revealMs);
-    assert.ok(seen >= 0.3 && seen <= 0.6, `${d}: 時間ぎれの とき 4〜5わりしか 見えて いない（${seen.toFixed(2)}）`);
+    assert.ok(seen >= 0.3 && seen <= 0.7, `${d}: 時間ぎれの とき 7わりまでしか 見えて いない（${seen.toFixed(2)}）`);
   }
   // はやわかりは 時間せいげんの 6わりより 前（しょうぶで ぜんぶ はやわかりに ならない）
   const hs = createGame({ set: 'sea', difficulty: 'hard', rng: makeRng(4) });
@@ -172,6 +174,33 @@ for (const set of GUESS_SETS) {
   for (const id of BLOCK_SETS.dino.adult) ({ zukan: all, complete } = addToZukan(all, 'dino', id));
   assert.ok(complete, 'ぜんぶ あつめたら コンプリート');
   assert.deepStrictEqual(zukanProgress(all, 'dino'), { found: 30, total: 30 });
+  // ずかんの ぜんぶを わたせる（ずかん画の しゅるい。v0.19.1）
+  const list = ['a', 'b'];
+  assert.ok(addToZukan({}, 'insect', 'a', list).isNew);
+  assert.ok(!addToZukan({}, 'insect', 'whale', list).isNew, 'リストに ない 子は のらない');
+  assert.deepStrictEqual(zukanProgress({ insect: ['a', 'x'] }, 'insect', list), { found: 1, total: 2 });
+}
+
+// ---------- ずかんは 2さつ（v0.19.1）: かんたん・ふつう＝つみきの 絵、むずかしい・おとな＝ずかん画 ----------
+{
+  assert.strictEqual(bookOf('easy'), 'easy');
+  assert.strictEqual(bookOf('normal'), 'easy');
+  assert.strictEqual(bookOf('hard'), 'hard');
+  assert.strictEqual(bookOf('adult'), 'hard');
+  assert.strictEqual(bookOf('へん'), 'easy');
+  assert.strictEqual(ZUKAN_KEYS.hard, 'zukan', 'むずかしい・おとなは いままでの 記録を そのまま つかう');
+  assert.notStrictEqual(ZUKAN_KEYS.easy, ZUKAN_KEYS.hard);
+  // かんたん: 1かいめで あてたら ずかんに のる。まちがえてから あてたら のらない
+  const e = createGame({ set: 'sea', difficulty: 'easy', rng: makeRng(3) });
+  const e1 = nextQuestion(e);
+  assert.ok(answerAt(e, e1.correctIndex, 9000).collect, '1かいめで あてたら のる（おそくても）');
+  const e2 = nextQuestion(e);
+  answerAt(e, (e2.correctIndex + 1) % OPTIONS, 100);
+  const late = answerAt(e, e2.correctIndex, 200);
+  assert.ok(late.correct && !late.collect, 'まちがえてから あてたら のらない');
+  const h = createGame({ set: 'sea', difficulty: 'hard', rng: makeRng(5) });
+  const h1 = nextQuestion(h);
+  assert.ok(answerAt(h, h1.correctIndex, 5000).collect, 'しょうぶで 正解したら のる');
 }
 
 console.log('guess.test.js: すべてのテストに合格');

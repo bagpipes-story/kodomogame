@@ -23,6 +23,8 @@ import {
   timeUp,
   addToZukan,
   zukanAll,
+  bookOf,
+  ZUKAN_KEYS,
   zukanProgress,
   revealProgress,
   tileRevealTimes,
@@ -44,7 +46,6 @@ const TILE_FADE = 0.07;    // マス1つが うすく なる 長さ（見えて 
 const GRID = 9;            // かげを 9×9 の マスに わける
 const NEXT_WAIT_MS = 900;  // 正解の あと「つぎ！」を 出すまで
 const ROUND_END_MS = 1500; // さいごの 問題の あと 結果を 出すまで
-const SHADOW = '#2f2a26';  // かげの 色（まっくろより すこし やわらかく）
 const FIT = 0.84;          // 絵を キャンバスの 何わりの 大きさに 描くか
 const HURRY_LAST_MS = 2000; // のこり この 時間で「？」が はやく なる（v0.18.4: おとな 3びょうに あわせて 3→2びょう）
 const BOTTOM_BAND = 0.2;   // 絵の 下に あける わりあい（「？」と 名前の ばしょ。v0.18.3）
@@ -56,6 +57,23 @@ const SET_LABEL = {
   insect: 'balanceBlocksInsect', deep: 'balanceBlocksDeep', dino: 'balanceBlocksDino', pref: 'balanceBlocksPref', world: 'balanceBlocksWorld',
 };
 
+// 描いた 絵を まっくろな かげに する。すきとおった はね（セミ・トンボ）の ところも こい かげに して、
+// かげの 中に 脈が すけて 見えない ように する（v0.19.1。ヒントに なって しまうため）。
+// 1問に 1回だけ（毎フレームでは ない）なので getImageData でも 重く ならない
+const SHADOW_RGB = [0x2f, 0x2a, 0x26]; // かげの 色（まっくろより すこし やわらかく。#2f2a26）
+function solidShadow(g, W, H) {
+  const img = g.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    // うすい ところは 4ばい こく（はねは まっくろ、りんかくの なめらかさは のこす）
+    d[i] = SHADOW_RGB[0];
+    d[i + 1] = SHADOW_RGB[1];
+    d[i + 2] = SHADOW_RGB[2];
+    d[i + 3] = Math.min(255, d[i + 3] * 4);
+  }
+  g.putImageData(img, 0, 0);
+}
+
 export function mount(root, config, { onExit }) {
   const abort = new AbortController();
   const timers = new Set();
@@ -66,7 +84,10 @@ export function mount(root, config, { onExit }) {
   const strict = rule.strict; // しょうぶ（むずかしい いじょう）
   const pieceSet = PIECE_SETS[set];
   // v0.19.0: ずかん画が ある なかま（むし）は ずかん画で 出す（別冊05）。読みこむ までは スタートを 待つ
-  const needsZukanArt = hasZukanArt(set);
+  // v0.19.1: ずかん画は むずかしい・おとな だけ。かんたん・ふつうは バランスゲームと 同じ つみきの 絵（ずかんも べつ）
+  const book = bookOf(difficulty);
+  const zukanKey = ZUKAN_KEYS[book];
+  const needsZukanArt = book === 'hard' && hasZukanArt(set);
   let zset = null;
   // 絵: { minX, minY, w, h, pad, draw(ctx) }。ずかん画が なければ いままでの つみきの 絵
   function artOf(id) {
@@ -146,7 +167,7 @@ export function mount(root, config, { onExit }) {
   qRight.className = 'kgb-guess-q is-right';
   qRight.textContent = '?';
   qRight.setAttribute('aria-hidden', 'true');
-  stage.append(canvas, qLeft, qRight, callEl, nameEl, nextHint);
+  stage.append(canvas, qLeft, qRight, nameEl, nextHint);
 
   // 時間の バー（しょうぶ）: CSS transition の scaleX で へっていく
   const timerBar = document.createElement('div');
@@ -199,7 +220,8 @@ export function mount(root, config, { onExit }) {
   resultOverlay.className = 'kgb-overlay';
   resultOverlay.hidden = true;
 
-  container.append(banner, stage, timerBar, statusEl, choices, nextButton);
+  // よびかけは 絵の 上に かさねず、上の「○/10もんめ」に かさねる（かげが かくれない ように。v0.19.1）
+  container.append(banner, stage, timerBar, statusEl, choices, nextButton, callEl);
   root.append(container, startOverlay, resultOverlay, zukanOverlay);
 
   // ---------- キャンバス（オフスクリーンは 最初に 作って 使いまわす） ----------
@@ -248,10 +270,7 @@ export function mount(root, config, { onExit }) {
     shadowCtx.globalCompositeOperation = 'source-over';
     shadowCtx.clearRect(0, 0, W, H);
     shadowCtx.drawImage(colorCanvas, 0, 0);
-    shadowCtx.globalCompositeOperation = 'source-in';
-    shadowCtx.fillStyle = SHADOW;
-    shadowCtx.fillRect(0, 0, W, H);
-    shadowCtx.globalCompositeOperation = 'source-over';
+    solidShadow(shadowCtx, W, H);
 
     // かげを おおう はんい（絵の はこ）を GRID×GRID の マスに わける
     const x0 = W / 2 - (fullW / 2) * scale;
@@ -471,7 +490,7 @@ export function mount(root, config, { onExit }) {
     playMatch();
     if (result.early) emitPraise('early_guess');
     let message = result.early ? text.guessEarly : text.guessCorrect;
-    if (strict && recordZukan(state.current.answer)) message = `${message}　${text.guessZukanNew}`;
+    if (result.collect && recordZukan(state.current.answer)) message = `${message}　${text.guessZukanNew}`;
     endQuestion(result, now, elapsed, message);
   }
 
@@ -519,16 +538,21 @@ export function mount(root, config, { onExit }) {
   // ---------- ずかん（v0.18.1） ----------
 
   function loadZukan() {
-    return loadStats().guess?.zukan ?? {};
+    return loadStats().guess?.[zukanKey] ?? {};
   }
 
-  // しょうぶで 正解した 子を ずかんに 入れる。新しい ときだけ 保存（イベントの 区切り。§9）
+  // この ずかんの ぜんぶ（ずかん画の なかまは ずかん画の しゅるい。v0.19.1）
+  function zukanList() {
+    return zset ? zset.ids : zukanAll(set);
+  }
+
+  // 1かいめで 正解した 子を ずかんに 入れる。新しい ときだけ 保存（イベントの 区切り。§9）
   function recordZukan(id) {
     const stats = loadStats();
     stats.guess ??= { plays: 0 };
-    const result = addToZukan(stats.guess.zukan ?? {}, set, id);
+    const result = addToZukan(stats.guess[zukanKey] ?? {}, set, id, zukanList());
     if (!result.isNew) return false;
-    stats.guess.zukan = result.zukan;
+    stats.guess[zukanKey] = result.zukan;
     saveStats(stats);
     newInZukan += 1;
     if (result.complete) completedZukan = true;
@@ -536,7 +560,7 @@ export function mount(root, config, { onExit }) {
   }
 
   function zukanButtonLabel() {
-    const { found, total } = zukanProgress(loadZukan(), set);
+    const { found, total } = zukanProgress(loadZukan(), set, zukanList());
     return `${text.guessZukan}  ${found} / ${total}`;
   }
 
@@ -555,11 +579,7 @@ export function mount(root, config, { onExit }) {
     g.setTransform(scale, 0, 0, scale, c.width / 2 - (box.minX + box.w / 2) * scale, c.height / 2 - (box.minY + box.h / 2) * scale);
     art.draw(g);
     g.setTransform(1, 0, 0, 1, 0, 0);
-    if (!found) {
-      g.globalCompositeOperation = 'source-in';
-      g.fillStyle = SHADOW;
-      g.fillRect(0, 0, c.width, c.height);
-    }
+    if (!found) solidShadow(g, c.width, c.height);
     return c;
   }
 
@@ -567,23 +587,26 @@ export function mount(root, config, { onExit }) {
   function openZukan() {
     const zukan = loadZukan();
     const found = new Set(zukan[set] ?? []);
-    const { found: count, total } = zukanProgress(zukan, set);
+    const { found: count, total } = zukanProgress(zukan, set, zukanList());
     const head = document.createElement('div');
     head.className = 'kgb-guess-zukan-head';
     const title = document.createElement('p');
     title.className = 'kgb-guess-zukan-title';
     title.textContent = `${text[SET_LABEL[set]]} ${text.guessZukan}`;
+    const bookLabel = document.createElement('p');
+    bookLabel.className = 'kgb-guess-zukan-book';
+    bookLabel.textContent = book === 'hard' ? text.guessZukanBookHard : text.guessZukanBookEasy;
     const progress = document.createElement('p');
     progress.className = 'kgb-guess-zukan-count';
     progress.textContent = count === total ? `${count} / ${total}　${text.guessZukanComplete}` : `${count} / ${total}`;
     const note = document.createElement('p');
     note.className = 'kgb-guess-zukan-note';
-    note.textContent = text.guessZukanNote;
-    head.append(title, progress, note);
+    note.textContent = book === 'hard' ? text.guessZukanNoteHard : text.guessZukanNoteEasy;
+    head.append(title, bookLabel, progress, note);
     const grid = document.createElement('div');
     grid.className = 'kgb-guess-zukan-grid';
     const fragment = document.createDocumentFragment();
-    for (const id of zukanAll(set)) {
+    for (const id of zukanList()) {
       const has = found.has(id);
       const cell = document.createElement('div');
       cell.className = `kgb-guess-zukan-cell${has ? ' is-found' : ''}`;
@@ -725,6 +748,7 @@ export function mount(root, config, { onExit }) {
     loadZukanSet(set).then((z) => {
       if (abort.signal.aborted) return; // 読みこむ まえに 画面を とじた
       zset = z;
+      startZukan.textContent = zukanButtonLabel(); // ずかん画の しゅるいの かずで かぞえなおす
     });
   }
 

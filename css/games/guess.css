@@ -47,12 +47,13 @@
   transform: scale(1.06);
 }
 
-/* 「おなまえ な〜んだ？」: ふわっと 出て、見えはじめると 消える */
+/* 「おなまえ な〜んだ？」: ふわっと 出て、見えはじめると 消える。
+   絵の 上だと かげが かくれるので、いちばん 上の「○/10もんめ」に かさねる（v0.19.1） */
 .kgb-guess-call {
   position: absolute;
-  z-index: 4;
+  z-index: 6;
   left: 50%;
-  top: 14px;
+  top: 4px;
   margin: 0;
   padding: 6px 16px;
   border-radius: 999px;
@@ -358,6 +359,13 @@
   margin: 0;
   font-size: 26px;
   font-weight: bold;
+}
+
+.kgb-guess-zukan-book {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: bold;
+  opacity: 0.7;
 }
 
 .kgb-guess-zukan-count {

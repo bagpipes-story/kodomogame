@@ -199,7 +199,8 @@ export function limb(ctx, a, b, wa, wb, fillStyle, edge, width = 0.8) {
 
 // あし 1本: joints = [つけね, ひざ, あしくび, さき]、w = [もも, すね, あしくび] の 太さ
 // tarsi = あしさきの ふしの 数（甲虫 5・セミ 3 など）、claw = つめの 長さ、spines = すねの とげ（外がわ）
-export function leg(ctx, joints, w, color, edge, { tarsi = 5, claw = 2.2, spines = 0, spineLen = 2, tibiaColor = color } = {}) {
+// tibiaColor・tarsusColor = すね・あしさきの 色（ももだけ 色が ちがう 種類 用。v0.19.1）
+export function leg(ctx, joints, w, color, edge, { tarsi = 5, claw = 2.2, spines = 0, spineLen = 2, tibiaColor = color, tarsusColor = color } = {}) {
   const [a, b, c, d] = joints;
   limb(ctx, a, b, w[0], w[0] * 0.75, color, edge);
   limb(ctx, b, c, w[1] * 0.7, w[1], tibiaColor, edge);
@@ -232,7 +233,7 @@ export function leg(ctx, joints, w, color, edge, { tarsi = 5, claw = 2.2, spines
     const q = [c[0] + (d[0] - c[0]) * t1, c[1] + (d[1] - c[1]) * t1];
     // ふしごとに すこし ふくらむ（ふしの くびれが 見える）。さいごの ふしは 長めで ほそい
     const wt = w[2] * (i === n - 1 ? 0.8 : 1);
-    limb(ctx, p, q, wt * 0.7, wt, color, null);
+    limb(ctx, p, q, wt * 0.7, wt, tarsusColor, null);
   }
   if (claw > 0) {
     const dx = d[0] - c[0];
@@ -328,6 +329,39 @@ export function fill3d(ctx, pts, tone, edge = null, width = 0.8, light = [0.32, 
   const ly = y0 + h * light[1];
   const r = Math.hypot(w, h) * 0.75;
   shape(ctx, pts, rgrad(ctx, lx, ly, r, tone), edge, width);
+}
+
+// はねの 平面形（v0.19.1）。つけね (x0, y0) から 右へ のびる はねを、長さ L・いちばん ひろい はば C と
+// かたちの 数で きめる（種類ごとに はねの かたちを 描きわける ため）。
+// alpha = つけねの ほそさ（大きいほど つけねが ほそい）、beta = さきの まるさ（小さいほど まるく ひろい・大きいほど とがる）、
+// lead = はばの うち 前の ふちがわの わりあい（小さいほど 前の ふちが まっすぐ）、sweep = さきが 下（+）／上（-）へ ずれる 量、
+// lobe = うしろの ふちの つけね ちかくの はりだし { at, w, size, kind: 'round' | 'angle' }（トンボの 後ばね）。
+// u = つけね→さき（0〜1）、v = 前の ふち(-1)〜うしろの ふち(+1)。脈も (u, v) で きめて at() で うつすので、形が かわっても はみださない
+export function planform({ x0 = 6, y0 = 0, L, C, base = 3, alpha = 0.45, beta = 0.5, lead = 0.32, sweep = 0, lobe = null, n = 56 }) {
+  const raw = (u) => u ** alpha * (1 - u) ** beta;
+  const um = alpha / (alpha + beta);
+  const peak = raw(um);
+  const chord = (u) => base * (1 - u) + (C - base * (1 - um)) * (raw(u) / peak);
+  const extra = (u) => {
+    if (!lobe) return 0;
+    const d = Math.abs(u - lobe.at) / lobe.w;
+    return lobe.size * (lobe.kind === 'angle' ? Math.max(0, 1 - d) : Math.exp(-d * d * 2.2));
+  };
+  const le = (u) => y0 + sweep * u * u - lead * chord(u);
+  const te = (u) => y0 + sweep * u * u + (1 - lead) * chord(u) + extra(u);
+  const at = (u, v) => {
+    const a = le(u);
+    return [x0 + u * L, a + ((v + 1) / 2) * (te(u) - a)];
+  };
+  const us = [];
+  for (let i = 0; i <= n; i++) us.push(1 - (1 - i / n) ** 1.25); // さきの ほうを こまかく
+  const outline = [...us.map((u) => at(u, -1)), ...us.slice(0, -1).reverse().map((u) => at(u, 1))];
+  return { outline, at, chord };
+}
+
+// (u, v) の 点の ならびを 線に（脈を 描く ため）
+export function mapLine(W, uvs) {
+  return uvs.map(([u, v]) => W.at(u, v));
 }
 
 // 線（芯）を なめらかに こまかく する（Catmull-Rom を 等間かくの 点に）

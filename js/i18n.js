@@ -574,7 +574,10 @@ export const text = {
   guessZukanAdded: 'ずかんに あたらしく ',
   guessZukanAddedSuffix: 'こ とうろく！',
   guessZukanComplete: 'ずかん コンプリート！',
-  guessZukanNote: 'むずかしい いじょうで あてると ずかんに のるよ',
+  guessZukanNoteEasy: '1かいめで あてると ずかんに のるよ',   // v0.19.1: ずかんを 2さつに
+  guessZukanNoteHard: 'むずかしい・おとなで あてると ずかんに のるよ',
+  guessZukanBookEasy: 'かんたん・ふつう の ずかん',
+  guessZukanBookHard: 'むずかしい・おとな の ずかん',
   guessZukanUnknown: '？？？',
   guessZukanClose: 'とじる',
   balanceBlocksLabel: 'つみき',

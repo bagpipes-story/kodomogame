@@ -30,7 +30,9 @@ const DEFAULT_STATS = {
   enword: { wins: 0, plays: 0 },  // ロボくんに勝った数（別冊04§3）
   abc: { bestBy: {}, plays: 0 },  // じゅんばんABCのベストタイム(ms)を むずかしさ別に（別冊04§4）
   listen: { wins: 0, plays: 0 },  // きいてタッチ（別冊04§5）
-  guess: { plays: 0, zukan: {} }, // なまえあて（v0.18）。zukan = なかまごとに しょうぶで 正解した 子の id（v0.18.1）
+  // なまえあて（v0.18）。zukan = むずかしい・おとなで 正解した 子の id（v0.18.1）、
+  // zukanEasy = かんたん・ふつうで 1かいめに 正解した 子の id（v0.19.1。絵が ちがうので ずかんを わけた）
+  guess: { plays: 0, zukan: {}, zukanEasy: {} },
   // 6つのあそびのちからカウンタ（保護者画面の星表示の元データ。仕様§5）
   skills: { memoryPower: 0, thinkPower: 0, numberLetter: 0, shapeBalance: 0, heartPower: 0, english: 0 },
   stamps: 0,
