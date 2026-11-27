@@ -585,3 +585,259 @@ export function mEye(ctx, x, y, r, { iris = '#6a4a22', pupil = 'round', pr = 0.5
   if (shine) disc(ctx, x - r * 0.32, y - r * 0.36, r * 0.18, 'rgba(255,255,255,0.88)');
   if (lid) stroke(ctx, [[x - r * 1.2, y - r * 0.1], [x - r * 0.5, y - r * 1.02], [x + r * 0.5, y - r * 1.02], [x + r * 1.2, y - r * 0.1]], lid, Math.max(0.3, r * 0.2));
 }
+
+// ---------- なめらかに とけあう からだ（v0.21.0） ----------
+// どうぶつの からだを「だえん・太さの かわる つつ・多角形」の 部品で 組み、部品どうしが なめらかに とけあった 1本の りんかく（点の 列）を 作る。
+// 部品からの きょりを こまかい 格子で はかり、きょりが 0 の ところを たどる（マーチングスクエア）。きょりを まぜる ときに
+// なめらかな 最小（smin）を 使うので、あしの つけね・ひざ・くびの つけねが 肉の ふくらみで つながり、つなぎめの 線も 出ない。
+// 点を 手で ならべて あしを 描くと まっすぐな つつ（テーブルの あし）に なりやすかった ため、関節の 位置と 太さで 決める ように した。
+// 計算は 重いので、同じ 部品なら 1回だけ 計算して おぼえて おく（ずかんの 小さい 絵を 何まい 描いても 1回）。
+// part = { e: [cx, cy, rx, ry, rot] } だえん / { c: [x1, y1, r1, x2, y2, r2] } 太さの かわる つつ / { p: [[x, y], …] } 多角形。
+// part.k = その 部品を それまでの 形に つなぐ ときの とけあう はば（大きいほど ふくらんで なめらか。0 で かどが のこる）。
+// part.cut = true なら その 部品を けずる（あしの あいだの すきま など）。返り値は いちばん 大きい 形の りんかく（all: true で ぜんぶ）
+const blobCache = new Map();
+export function blob(parts, { step = 1, k = 4, tol = 0.1, all = false } = {}) {
+  const key = JSON.stringify([parts, step, k, tol, all]);
+  const hit = blobCache.get(key);
+  if (hit) return hit;
+  let bx0 = Infinity;
+  let by0 = Infinity;
+  let bx1 = -Infinity;
+  let by1 = -Infinity;
+  // 部品ごとの はこ（はこの 外では その 部品を はからない。とおい 部品は りんかくの 形に ひびかない ため）
+  const boxes = [];
+  let pb = null;
+  const grow = (x, y, r) => {
+    bx0 = Math.min(bx0, x - r);
+    by0 = Math.min(by0, y - r);
+    bx1 = Math.max(bx1, x + r);
+    by1 = Math.max(by1, y + r);
+  };
+  const pgrow = (x, y, r) => {
+    pb[0] = Math.min(pb[0], x - r);
+    pb[1] = Math.min(pb[1], y - r);
+    pb[2] = Math.max(pb[2], x + r);
+    pb[3] = Math.max(pb[3], y + r);
+  };
+  const fns = parts.map((part) => {
+    pb = [Infinity, Infinity, -Infinity, -Infinity];
+    boxes.push(pb);
+    if (part.e) {
+      const [cx, cy, rx, ry, rot = 0] = part.e;
+      const c = Math.cos(rot);
+      const s = Math.sin(rot);
+      const m = Math.min(rx, ry);
+      pgrow(cx, cy, Math.max(rx, ry));
+      if (!part.cut) grow(cx, cy, Math.max(rx, ry));
+      return (x, y) => {
+        const dx = x - cx;
+        const dy = y - cy;
+        return (Math.hypot((dx * c + dy * s) / rx, (dy * c - dx * s) / ry) - 1) * m;
+      };
+    }
+    if (part.c) {
+      const [x1, y1, r1, x2, y2, r2] = part.c;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const l2 = dx * dx + dy * dy || 1;
+      pgrow(x1, y1, r1);
+      pgrow(x2, y2, r2);
+      if (!part.cut) {
+        grow(x1, y1, r1);
+        grow(x2, y2, r2);
+      }
+      return (x, y) => {
+        let t = ((x - x1) * dx + (y - y1) * dy) / l2;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        return Math.hypot(x - x1 - dx * t, y - y1 - dy * t) - (r1 + (r2 - r1) * t);
+      };
+    }
+    const P = part.p;
+    for (const [x, y] of P) pgrow(x, y, 0);
+    if (!part.cut) for (const [x, y] of P) grow(x, y, 0);
+    return (x, y) => {
+      let d = Infinity;
+      let inside = false;
+      for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+        const [ax, ay] = P[j];
+        const [bx, by] = P[i];
+        const ex = bx - ax;
+        const ey = by - ay;
+        let t = ((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey || 1);
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        d = Math.min(d, Math.hypot(x - ax - ex * t, y - ay - ey * t));
+        if ((ay > y) !== (by > y) && x < ax + ((y - ay) * ex) / (ey || 1e-9)) inside = !inside;
+      }
+      return inside ? -d : d;
+    };
+  });
+  const smin = (a, b, kk) => {
+    if (kk <= 0) return Math.min(a, b);
+    const h = Math.max(kk - Math.abs(a - b), 0) / kk;
+    return Math.min(a, b) - h * h * kk * 0.25;
+  };
+  const smax = (a, b, kk) => -smin(-a, -b, kk);
+  const pad = 2 * step + 2;
+  // はこを ひろげる はば: とけあう はば ＋ あらい 格子で しらべる はば（その 外では 部品の きょりが 大きく、りんかくに ひびかない）
+  const reach = 4 * step * 1.6 + Math.max(k, ...parts.map((p) => p.k ?? 0)) + 1;
+  for (const b of boxes) {
+    b[0] -= reach;
+    b[1] -= reach;
+    b[2] += reach;
+    b[3] += reach;
+  }
+  const far = reach + 4 * step * 2;
+  const field = (x, y) => {
+    let d = Infinity;
+    for (let i = 0; i < fns.length; i++) {
+      const b = boxes[i];
+      if (x < b[0] || x > b[2] || y < b[1] || y > b[3]) continue;
+      if (parts[i].cut) {
+        if (d !== Infinity) d = smax(d, -fns[i](x, y), parts[i].k ?? k);
+      } else {
+        const di = fns[i](x, y);
+        d = d === Infinity ? di : smin(d, di, parts[i].k ?? k);
+      }
+    }
+    return d === Infinity ? far : d;
+  };
+  bx0 -= pad;
+  by0 -= pad;
+  bx1 += pad;
+  by1 += pad;
+  const nx = Math.ceil((bx1 - bx0) / step) + 1;
+  const ny = Math.ceil((by1 - by0) / step) + 1;
+  // まず あらい 格子（4マスおき）で はかり、りんかくの 近くだけ こまかく はかる（きょりは 1マス すすむと 1 までしか かわらないので、
+  // あらい 格子で 0 から とおい ところは こまかく はからなくても 0 を よこぎらない）。iPhone で はじめて 開く ときの 重さを へらす ため
+  const G = 4;
+  const cx = Math.ceil((nx - 1) / G) + 1;
+  const cy = Math.ceil((ny - 1) / G) + 1;
+  const coarse = new Float64Array(cx * cy);
+  for (let j = 0; j < cy; j++) for (let i = 0; i < cx; i++) coarse[j * cx + i] = field(bx0 + i * G * step, by0 + j * G * step);
+  const band = G * step * 1.6;
+  const f = new Float64Array(nx * ny);
+  for (let j = 0; j < ny; j++) {
+    const cj = Math.min(cy - 2, Math.floor(j / G));
+    for (let i = 0; i < nx; i++) {
+      const ci = Math.min(cx - 2, Math.floor(i / G));
+      const a = coarse[cj * cx + ci];
+      const b = coarse[cj * cx + ci + 1];
+      const c = coarse[(cj + 1) * cx + ci];
+      const d = coarse[(cj + 1) * cx + ci + 1];
+      const near = Math.min(Math.abs(a), Math.abs(b), Math.abs(c), Math.abs(d));
+      f[j * nx + i] = near > band ? (a + b + c + d) / 4 : field(bx0 + i * step, by0 + j * step);
+    }
+  }
+  // マーチングスクエア: 格子の 1マスごとに 0 を よこぎる 辺を つなぐ。辺の 名前で つないで 輪に する
+  const pos = new Map();
+  const adj = new Map();
+  const ept = (ia, ja, ib, jb) => {
+    const name = ia === ib ? `v${ia},${Math.min(ja, jb)}` : `h${Math.min(ia, ib)},${ja}`;
+    if (!pos.has(name)) {
+      const fa = f[ja * nx + ia];
+      const fb = f[jb * nx + ib];
+      const t = fa / (fa - fb);
+      pos.set(name, [bx0 + (ia + (ib - ia) * t) * step, by0 + (ja + (jb - ja) * t) * step]);
+    }
+    return name;
+  };
+  const link = (a, b) => {
+    if (!adj.has(a)) adj.set(a, []);
+    if (!adj.has(b)) adj.set(b, []);
+    adj.get(a).push(b);
+    adj.get(b).push(a);
+  };
+  for (let j = 0; j < ny - 1; j++) {
+    for (let i = 0; i < nx - 1; i++) {
+      const v0 = f[j * nx + i];
+      const v1 = f[j * nx + i + 1];
+      const v2 = f[(j + 1) * nx + i + 1];
+      const v3 = f[(j + 1) * nx + i];
+      const idx = (v0 < 0 ? 1 : 0) | (v1 < 0 ? 2 : 0) | (v2 < 0 ? 4 : 0) | (v3 < 0 ? 8 : 0);
+      if (idx === 0 || idx === 15) continue;
+      const T = () => ept(i, j, i + 1, j);
+      const R = () => ept(i + 1, j, i + 1, j + 1);
+      const B = () => ept(i, j + 1, i + 1, j + 1);
+      const L = () => ept(i, j, i, j + 1);
+      const center = (v0 + v1 + v2 + v3) / 4 < 0;
+      switch (idx) {
+        case 1: case 14: link(L(), T()); break;
+        case 2: case 13: link(T(), R()); break;
+        case 3: case 12: link(L(), R()); break;
+        case 4: case 11: link(R(), B()); break;
+        case 6: case 9: link(T(), B()); break;
+        case 7: case 8: link(L(), B()); break;
+        case 5:
+          if (center) { link(T(), R()); link(B(), L()); } else { link(L(), T()); link(R(), B()); }
+          break;
+        case 10:
+          if (center) { link(L(), T()); link(R(), B()); } else { link(T(), R()); link(B(), L()); }
+          break;
+        default: break;
+      }
+    }
+  }
+  const seen = new Set();
+  const loops = [];
+  for (const start of adj.keys()) {
+    if (seen.has(start)) continue;
+    const loop = [];
+    let prev = null;
+    let cur = start;
+    while (cur && !seen.has(cur)) {
+      seen.add(cur);
+      loop.push(pos.get(cur));
+      const nb = adj.get(cur);
+      const next = nb[0] !== prev && !seen.has(nb[0]) ? nb[0] : nb[1] !== prev && !seen.has(nb[1]) ? nb[1] : null;
+      prev = cur;
+      cur = next;
+    }
+    if (loop.length > 8) loops.push(loop);
+  }
+  // 点を へらす（ほぼ まっすぐな ところの 点を ぬく）
+  const simplify = (pts) => {
+    const keep = new Uint8Array(pts.length);
+    keep[0] = 1;
+    keep[pts.length - 1] = 1;
+    const stack = [[0, pts.length - 1]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      const [ax, ay] = pts[a];
+      const [bx, by] = pts[b];
+      const ex = bx - ax;
+      const ey = by - ay;
+      const l = Math.hypot(ex, ey) || 1;
+      let worst = -1;
+      let wd = tol;
+      for (let i = a + 1; i < b; i++) {
+        const d = Math.abs((pts[i][0] - ax) * ey - (pts[i][1] - ay) * ex) / l;
+        if (d > wd) { wd = d; worst = i; }
+      }
+      if (worst >= 0) {
+        keep[worst] = 1;
+        stack.push([a, worst], [worst, b]);
+      }
+    }
+    return pts.filter((_, i) => keep[i]);
+  };
+  const area = (pts) => {
+    let s = 0;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) s += (pts[j][0] - pts[i][0]) * (pts[j][1] + pts[i][1]);
+    return s / 2;
+  };
+  const out = loops.map(simplify).sort((a, b) => Math.abs(area(b)) - Math.abs(area(a)));
+  const res = all ? out : out[0] ?? [];
+  blobCache.set(key, res);
+  return res;
+}
+
+// 関節の 列（[[x, y, 太さの 半径], …]）を 太さの かわる つつで つなぐ（あし・くび・しっぽ）。blob の 部品に する
+export function chain(joints, k) {
+  const out = [];
+  for (let i = 0; i < joints.length - 1; i++) {
+    const [x1, y1, r1] = joints[i];
+    const [x2, y2, r2] = joints[i + 1];
+    out.push(k == null ? { c: [x1, y1, r1, x2, y2, r2] } : { c: [x1, y1, r1, x2, y2, r2], k });
+  }
+  return out;
+}
