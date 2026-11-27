@@ -459,3 +459,129 @@ export function ribbon(spine, widths, { teeth = [], outerTeeth = [], fork = 0, n
   }
   return outer.slice(0, -1).concat(tip, innerOut.slice(0, -1).reverse());
 }
+
+// ---------- うみ・どうぶつ 共通の 部品（v0.20.x で sea.js に 作り、v0.21.0 で ここへ うつした） ----------
+
+// 形の 中に こまかい 点を ちらす（はだの つぶつぶ・ごまもよう）
+export function sprinkle(ctx, pts, count, r, color, seed) {
+  const rnd = seeded(seed);
+  const [x0, y0, x1, y1] = bbox(pts);
+  within(ctx, pts, () => {
+    ctx.fillStyle = color;
+    for (let i = 0; i < count; i++) {
+      const x = x0 + rnd() * (x1 - x0);
+      const y = y0 + rnd() * (y1 - y0);
+      ctx.beginPath();
+      ctx.arc(x, y, r * (0.6 + rnd() * 0.7), 0, PI * 2);
+      ctx.fill();
+    }
+  });
+}
+
+// まるみ（v0.20.2）: 形の ふちへ むかって くらく、上を あかるく・下を くらく。なめらかな はだや 毛の ある 生きものの 立体感
+export function volume(ctx, pts, { dark = 0.12, wide = 8, light = 0.14 } = {}) {
+  const [x0, y0, x1, y1] = bbox(pts);
+  within(ctx, pts, () => {
+    // ふちの かげは 4だんに 分けて ぼかす（2だん だと 帯の さかいが りんかくの ように 見える）
+    for (const k of [2, 1.5, 1, 0.5]) shape(ctx, pts, null, `rgba(0,0,0,${dark * 0.3})`, wide * k);
+    ctx.fillStyle = vgrad(ctx, y0, y1, [`rgba(255,255,255,${light})`, 'rgba(255,255,255,0)', 'rgba(0,0,0,0)', `rgba(0,0,0,${dark})`]);
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  });
+}
+
+// みじかい 毛・すじ（むきの そろった 短い 線を ちらす）。angle = 毛の むき、spread = むきの ばらつき
+export function fur(ctx, pts, count, len, angle, color, seed, spread = 0.6, width = 0.3) {
+  const rnd = seeded(seed);
+  const [x0, y0, x1, y1] = bbox(pts);
+  within(ctx, pts, () => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (let i = 0; i < count; i++) {
+      const x = x0 + rnd() * (x1 - x0);
+      const y = y0 + rnd() * (y1 - y0);
+      const a = angle + (rnd() - 0.5) * spread;
+      const l = len * (0.6 + rnd() * 0.8);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
+    }
+    ctx.stroke();
+  });
+}
+
+// ヘビの ような ながい からだ（ウナギ・ウツボ・チンアナゴ・タコの うで）。芯と 太さから りんかくを 作る。
+// up = 進む むきの 左がわ（左→右へ のびる 芯なら 上）、down = 右がわ
+export function snake(spine, widths, n = 48) {
+  const c = resample(spine, n);
+  const wAt = (t) => {
+    const x = t * (widths.length - 1);
+    const i = Math.min(widths.length - 2, Math.floor(x));
+    return widths[i] + (widths[i + 1] - widths[i]) * (x - i);
+  };
+  const up = [];
+  const down = [];
+  for (let i = 0; i < n; i++) {
+    const a = c[Math.max(0, i - 1)];
+    const b = c[Math.min(n - 1, i + 1)];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const nx = (b[1] - a[1]) / len;
+    const ny = -(b[0] - a[0]) / len;
+    const w = wAt(i / (n - 1)) / 2;
+    up.push([c[i][0] + nx * w, c[i][1] + ny * w]);
+    down.push([c[i][0] - nx * w, c[i][1] - ny * w]);
+  }
+  // はしを まるく とじる
+  const cap = (i, j, w) => {
+    const len = Math.hypot(c[i][0] - c[j][0], c[i][1] - c[j][1]) || 1;
+    return [c[i][0] + ((c[i][0] - c[j][0]) / len) * w, c[i][1] + ((c[i][1] - c[j][1]) / len) * w];
+  };
+  const head = cap(0, 1, wAt(0) * 0.45);
+  const tail = cap(n - 1, n - 2, wAt(1) * 0.45);
+  return { c, up, down, outline: [head, ...up, tail, ...down.slice().reverse()], wAt };
+}
+
+// ---------- どうぶつの 部品（v0.21.0） ----------
+
+// むきの そろった 毛。dir = 角度（ラジアン）か (x, y) => 角度。毛なみが からだの 形に そって ながれる ように 場所ごとに むきを かえられる。
+// 1本ずつ 描かず 1つの パスに まとめて 1回で ぬるので、数百本 でも 重く ならない。毛は 2だんで すこし まがる
+export function furFlow(ctx, pts, count, len, dir, color, seed, width = 0.3, spread = 0.35) {
+  const rnd = seeded(seed);
+  const [x0, y0, x1, y1] = bbox(pts);
+  const f = typeof dir === 'function' ? dir : () => dir;
+  within(ctx, pts, () => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let i = 0; i < count; i++) {
+      const x = x0 + rnd() * (x1 - x0);
+      const y = y0 + rnd() * (y1 - y0);
+      const a = f(x, y) + (rnd() - 0.5) * spread;
+      const l = len * (0.6 + rnd() * 0.8);
+      const bx = x + Math.cos(a) * l * 0.5;
+      const by = y + Math.sin(a) * l * 0.5;
+      const a2 = a + (rnd() - 0.5) * 0.5;
+      ctx.moveTo(x, y);
+      ctx.lineTo(bx, by);
+      ctx.lineTo(bx + Math.cos(a2) * l * 0.5, by + Math.sin(a2) * l * 0.5);
+    }
+    ctx.stroke();
+  });
+}
+
+// ほにゅうるい・とり・はちゅうるい・カエルの 目。r = 目の 半径。iris = ひとみの まわり（こうさい）の 色。
+// pupil: 'round'（まるい）| 'slit'（たてに ほそい: ネコ・キツネ・ワニ など）| 'bar'（よこに ながい: ヒツジ・ウシ・カエル など）。pr = ひとみの 大きさ
+// lid = まぶたの 線の 色（null で なし）。図鑑の 絵なので 白目や 大きな 光の 玉は 描かない（光は 小さく 1つ）
+export function mEye(ctx, x, y, r, { iris = '#6a4a22', pupil = 'round', pr = 0.5, ring = 'rgba(0,0,0,0.8)', lid = null, shine = true, rot = 0 } = {}) {
+  disc(ctx, x, y, r, iris, ring, Math.max(0.2, r * 0.16));
+  within(ctx, ell(x, y, r, r, 18), () => {
+    // 上は まぶたの かげで くらく、下は あかるい
+    ctx.fillStyle = vgrad(ctx, y - r, y + r, ['rgba(0,0,0,0.5)', 'rgba(0,0,0,0.08)', 'rgba(255,255,255,0.16)']);
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    if (pupil === 'slit') oval(ctx, x, y, r * pr * 0.34, r * 0.94, '#060504', null, 0, rot);
+    else if (pupil === 'bar') oval(ctx, x, y, r * 0.88, r * pr * 0.44, '#060504', null, 0, rot);
+    else disc(ctx, x, y, r * pr, '#060504');
+  });
+  if (shine) disc(ctx, x - r * 0.32, y - r * 0.36, r * 0.18, 'rgba(255,255,255,0.88)');
+  if (lid) stroke(ctx, [[x - r * 1.2, y - r * 0.1], [x - r * 0.5, y - r * 1.02], [x + r * 0.5, y - r * 1.02], [x + r * 1.2, y - r * 0.1]], lid, Math.max(0.3, r * 0.2));
+}

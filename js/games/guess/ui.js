@@ -624,7 +624,8 @@ export function mount(root, config, { onExit, onBack }) {
         if (!info || !sp) return null;
         return {
           name: info.name, groupLabel: `${zset.orderName(zset.orderOf(sp.group))} ／ ${zset.groupName(sp.group)}`, size: info.size, where: info.where,
-          marks: info.marks, points: sp.marks ?? [], similar: sp.similar ?? [], art: zset.art(id),
+          // にている なかまは その なかまに いる 種類だけ（v0.21.0。描いて いる とちゅうで 絵の ない 種類が あっても こわれない ように）
+          marks: info.marks, points: sp.marks ?? [], similar: (sp.similar ?? []).filter((o) => zset.species[o]), art: zset.art(id),
           // ぶんるい（v0.19.5）: 目・科・属・しゅ（図鑑と 同じ じゅん）
           tax: [
             [text.guessZukanTaxOrder, `${zset.taxOrderOf(id)}${text.guessZukanTaxOrder}`],
@@ -774,7 +775,7 @@ export function mount(root, config, { onExit, onBack }) {
       closeOf: (id) => {
         const sp = zset.species[id];
         return {
-          similar: sp.similar ?? [],
+          similar: (sp.similar ?? []).filter((o) => zset.species[o]),
           group: zset.ids.filter((o) => zset.species[o].group === sp.group),
           order: zset.ids.filter((o) => orderOf(o) === orderOf(id)),
         };

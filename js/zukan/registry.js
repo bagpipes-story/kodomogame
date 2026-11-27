@@ -10,6 +10,9 @@ const LOADERS = {
   // うみ: sea.js = はじめの 30種と 描く 部品（v0.20.0）、sea2〜sea4.js = v0.20.6 の 30種（さかな／ほにゅうるい・とり・カメ／エビ カニ・かい ほか）
   sea: () => Promise.all([import('./catalog/sea.js'), import('./catalog/sea2.js'), import('./catalog/sea3.js'), import('./catalog/sea4.js'), import('../i18n/zukan/sea.js')])
     .then(([a, b, c, d, words]) => [mergeCatalogs(a, b, c, d), words]),
+  // どうぶつ（v0.21.0）: animal.js = なかまと タブ、animal2〜animal4.js = 絵（10種ずつ）
+  animal: () => Promise.all([import('./catalog/animal.js'), import('./catalog/animal2.js'), import('./catalog/animal3.js'), import('./catalog/animal4.js'), import('../i18n/zukan/animal.js')])
+    .then(([a, b, c, d, words]) => [mergeCatalogs(a, b, c, d), words]),
 };
 
 // 分けた 絵の ファイルを 1つの なかまに まとめる（なかま・目の ならびは 1つめの ファイルの もの）

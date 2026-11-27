@@ -15,6 +15,11 @@ import * as seaCatalog2 from '../js/zukan/catalog/sea2.js';
 import * as seaCatalog3 from '../js/zukan/catalog/sea3.js';
 import * as seaCatalog4 from '../js/zukan/catalog/sea4.js';
 import { ZUKAN_TEXT as seaText } from '../js/i18n/zukan/sea.js';
+import * as animalCatalog1 from '../js/zukan/catalog/animal.js';
+import * as animalCatalog2 from '../js/zukan/catalog/animal2.js';
+import * as animalCatalog3 from '../js/zukan/catalog/animal3.js';
+import * as animalCatalog4 from '../js/zukan/catalog/animal4.js';
+import { ZUKAN_TEXT as animalText } from '../js/i18n/zukan/animal.js';
 
 const KANJI = /[一-鿿㐀-䶿]/;
 
@@ -145,6 +150,23 @@ for (const id of Object.keys(seaText.species)) assert.ok(seaCatalog.SPECIES[id],
 assert.strictEqual(makeSet(seaCatalog, seaText).taxOrderOf('tuna'), 'スズキ');
 assert.strictEqual(makeSet(insectCatalog, insectText).taxOrderOf('ladybug'), 'コウチュウ');
 
+// どうぶつ（v0.21.0）: はじめの 30種（バランスゲームと 同じ ID）。animal.js は なかまと タブ、絵は animal2〜animal4.js
+assert.ok(hasZukanArt('animal'));
+{
+  const seen = new Set();
+  for (const [file, cat] of [['animal', animalCatalog1], ['animal2', animalCatalog2], ['animal3', animalCatalog3], ['animal4', animalCatalog4]]) {
+    for (const id of Object.keys(cat.SPECIES)) {
+      assert.ok(!seen.has(id), `${file} の ${id} が ほかの ファイルと かさなる`);
+      seen.add(id);
+    }
+  }
+}
+const animalCatalog = mergeCatalogs(animalCatalog1, animalCatalog2, animalCatalog3, animalCatalog4);
+const nAnimal = checkSet('animal', animalCatalog, animalText);
+assert.strictEqual(nAnimal, 30);
+for (const id of Object.keys(animalText.species)) assert.ok(animalCatalog.SPECIES[id], `文字だけ ある: ${id}`);
+assert.strictEqual(makeSet(animalCatalog, animalText).taxOrderOf('lion'), 'ネコ');
+
 // 読みこみ（import()）で 同じ ものが とれる。2回目は 同じ もの（もう一度 読まない）
 const a = await loadZukanSet('insect');
 const b = await loadZukanSet('insect');
@@ -154,5 +176,6 @@ assert.strictEqual(await loadZukanSet('pref'), null);
 
 assert.strictEqual((await loadZukanSet('sea')).name('whale'), 'シロナガスクジラ');
 assert.strictEqual((await loadZukanSet('sea')).ids.length, 60);
+assert.strictEqual((await loadZukanSet('animal')).name('bear'), 'ヒグマ');
 
-console.log(`zukan.test.js: all passed (insect ${n}, sea ${nSea})`);
+console.log(`zukan.test.js: all passed (insect ${n}, sea ${nSea}, animal ${nAnimal})`);
