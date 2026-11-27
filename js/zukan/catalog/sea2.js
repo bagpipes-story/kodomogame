@@ -32,68 +32,210 @@ function ridge(ctx, pts, dark = 'rgba(8,18,30,0.45)', light = 'rgba(210,226,238,
 
 // ---------- サメ・エイ ----------
 
-// ジンベエザメ（真横・左むき）: さかなで いちばん 大きい。あたまは ひらたく はばひろく、口は あたまの 先に あって よこに ひろい（ほかの サメは 下）。
-// あおぐろい せなかに 白い 点と 白い たての 線が こうしの ように ならぶ。わきばらに たての もりあがりが 3本。
-// 第1せびれは からだの まんなかより うしろ。おびれは 上が 長い 三日月。大きな えらあな 5つ（プランクトンを こしとる）
-const WS_TOP = [[-87.6, -5.6], [-80, -9.4], [-66, -13], [-50, -15.6], [-32, -16.8], [-14, -16.4], [4, -14.4], [20, -11.6], [36, -8.4], [50, -5.6], [60, -4], [66, -3.4]];
+// ジンベエザメ（ななめ上・前から 見た すがた。あたまが 左手前、おが 右おく）: さかなで いちばん 大きい。
+// あたまは ひらたく はばひろく、口は あたまの 先に あって よこに ひろい（ほかの サメは 下）。小さな 目は あたまの かど。
+// せなかは あおぐろく、白い 点と 白い 線が こうしの ように ならぶ。おなかは 白。わきに たての もりあがりが 3本ずつ。
+// 第1せびれは からだの まんなかより うしろ。大きな むなびれ。おびれは 上が 長い 三日月。
+// v0.20.7（作りなおし）: 真横の 絵は はばひろい あたまも せなかの もようも 見えず、細い ふつうの サメに 見えて 大きさが 出なかった。
+// ななめ上から 見ると、はばひろい あたま・よこに ひろい 口・せなかいちめんの もよう・ひろげた むなびれが いちどに 見える。
+// 形は 立体で 決める: からだは「口先から おへ ならぶ だえんの 輪切り」（はば A・高さ Bh・中心 YC ZC）、ひれは 立体の 中の 板。
+// それを 同じ むき（YAW・PITCH）で 画面に うつすので、もようや もりあがりが からだの まるみに そって まがる
 const whaleshark = {
   group: 'shark', level: 1, similar: ['whiteshark', 'whale', 'manta'],
-  box: [-92, -37, 94, 35],
+  box: [-84, -53, 80, 57],
   draw(ctx) {
-    const edge = '#0e1a26';
-    const blue = ['#6f8ca4', '#3b566f', '#16283a'];
-    const spot = 'rgba(240,244,230,0.9)';
-    // おびれ（上が 長い）・むこうがわの むなびれ・せびれ・しりびれ・はらびれ
-    plainFin(ctx, [[63, -3.4], [70, -11], [79, -22], [90, -35, 1], [85.6, -19], [79, -4], [78.4, 2], [80.4, 10], [84, 22, 1], [75.6, 14], [68.6, 6.6], [63, 2]], blue, edge, { spots: 46, seed: 801 });
-    plainFin(ctx, [[-60, 12], [-51, 14], [-42, 26, 1], [-54, 22]], ['#3b566f', '#22384c', '#0e1c2a'], edge);
-    plainFin(ctx, [[-5, -15.2], [4, -26], [11, -32.6], [14.6, -31.6], [16.4, -22], [18.6, -14.6], [23, -11, 1], [16, -12]], blue, edge, { spots: 30, seed: 802 });
-    plainFin(ctx, [[35, -8.6], [40, -14.6], [43, -15.6], [44.4, -10], [47.6, -6.6, 1], [42, -7]], blue, edge, { spots: 8, seed: 803 });
-    plainFin(ctx, [[37, 6], [42, 12.6], [45, 13], [45.6, 8], [48.6, 4.6, 1], [43, 5]], blue, edge, { spots: 6, seed: 804 });
-    plainFin(ctx, [[9, 11.4], [15, 19], [19, 19.4], [19.6, 13.4], [22.6, 9.4, 1], [16, 10]], blue, edge, { spots: 8, seed: 805 });
-    const body = [...WS_TOP, [68.6, -0.4], [66, 2], [58, 2.8], [46, 5], [34, 7.4], [18, 10.4], [0, 13], [-20, 14.6], [-42, 14.8], [-60, 13.4], [-74, 10.6], [-83, 7.4], [-88, 4.2], [-89.6, 0.6], [-89.4, -3]];
-    shadedBody(ctx, body, ['#1a2e42', '#263f57', '#34536e', '#476983', '#c4d0d6', '#f6f6f2', '#f6f6f2'], edge, 0.6);
+    const edge = '#121e2a';
+    const L = 178; // 口先から おびれの 先まで
+    const YAW = 0.42;
+    const PITCH = 0.66;
+    const cy = Math.cos(YAW);
+    const sy = Math.sin(YAW);
+    const cp = Math.cos(PITCH);
+    const sp = Math.sin(PITCH);
+    const OX = -78;
+    const OY = 34;
+    // 立体（X = 口先から おへ、Y = 上、Z = 手前）→ 画面
+    const proj = ([X, Y, Z, sharp]) => {
+      const z1 = -X * sy + Z * cy;
+      const q = [OX + X * cy + Z * sy, OY - (Y * cp - z1 * sp)];
+      if (sharp) q.push(1);
+      return q;
+    };
+    // 表の 値を なめらかに つなぐ（t = 口先 0 → おびれの 先 1。値は 体長との 比）
+    const curve = (tab) => (t) => {
+      let i = 0;
+      while (i < tab.length - 2 && t > tab[i + 1][0]) i++;
+      const [t0, v1] = tab[i];
+      const [t1, v2] = tab[i + 1];
+      const v0 = tab[Math.max(0, i - 1)][1];
+      const v3 = tab[Math.min(tab.length - 1, i + 2)][1];
+      const u = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
+      return 0.5 * (2 * v1 + (v2 - v0) * u + (2 * v0 - 5 * v1 + 4 * v2 - v3) * u * u + (3 * v1 - v0 - 3 * v2 + v3) * u * u * u);
+    };
+    const A = curve([[-0.016, 0.03], [-0.008, 0.052], [0, 0.064], [0.02, 0.077], [0.05, 0.083], [0.1, 0.092], [0.18, 0.098], [0.3, 0.092], [0.45, 0.074], [0.6, 0.051], [0.7, 0.035], [0.76, 0.027], [0.8, 0.012]]);
+    const Bh = curve([[-0.016, 0.006], [-0.008, 0.015], [0, 0.021], [0.02, 0.03], [0.05, 0.041], [0.1, 0.056], [0.18, 0.073], [0.3, 0.082], [0.45, 0.071], [0.6, 0.047], [0.7, 0.029], [0.76, 0.019], [0.8, 0.012]]);
+    const YC = curve([[-0.016, -0.014], [0, -0.012], [0.05, -0.006], [0.18, 0.004], [0.3, 0.008], [0.45, 0.008], [0.6, 0.012], [0.8, 0.02]]);
+    // およぐ うねり: あたまは すこし 手前へ、おは むこうへ
+    const ZC = (t) => (t < 0.25 ? 0.03 * (1 - t / 0.25) ** 2 : t > 0.42 ? -0.3 * (t - 0.42) ** 2 : 0);
+    // からだの 表面の 点。th = 輪切りの 中の 角度（0 = せなかの まんなか、+ = 手前の わき、PI = おなか）
+    const S = (t, th) => [t * L, (YC(t) + Bh(t) * Math.cos(th)) * L, (ZC(t) + A(t) * Math.sin(th)) * L];
+    const P = (t, th) => proj(S(t, th));
+    // 見える はんい: th1（むこうがわの りんかく）〜 th2（手前の 下の りんかく）
+    const th1 = (t) => Math.atan(-(sp * A(t)) / (cp * cy * Bh(t)));
+    const th2 = (t) => th1(t) + PI;
+    const thB = 1.82; // せなかの 色と おなかの 白の さかい
+    const T0 = -0.016;
+    const T1 = 0.8;
+    const N = 84;
+    const ts = [];
+    for (let i = 0; i <= N; i++) ts.push(T0 + ((T1 - T0) * i) / N);
+    const upper = ts.map((t) => P(t, th1(t)));
+    const lower = ts.map((t) => P(t, th2(t)));
+    const body = [...upper, ...lower.slice().reverse()];
+    // th が 同じ 線を、見える ところだけ つないで 返す
+    const runs = (th, ta, tb, lim = 0.03, hi = null) => {
+      const out = [];
+      let cur = [];
+      for (const t of ts) {
+        const ok = t >= ta && t <= tb && th > th1(t) + lim && th < (hi ?? th2(t) - lim);
+        if (ok) cur.push(P(t, th));
+        else if (cur.length) { if (cur.length > 2) out.push(cur); cur = []; }
+      }
+      if (cur.length > 2) out.push(cur);
+      return out;
+    };
+    const rnd = seeded(771);
+    const back = ['#6a8cae', '#3e5c7c', '#263c54'];
+    // ひれ（立体の 中の 板）: ぬり・白い 点・ふち
+    const fin3 = (pts3, seed, n, light = [0.3, 0.2]) => {
+      const poly = pts3.map(proj);
+      fill3d(ctx, poly, back, edge, 0.5, light);
+      const [x0, y0, x1, y1] = bbox(poly);
+      const r = seeded(seed);
+      within(ctx, poly, () => {
+        for (let k = 0; k < n; k++) disc(ctx, x0 + r() * (x1 - x0), y0 + r() * (y1 - y0), 0.5 + r() * 0.55, 'rgba(244,246,230,0.9)');
+      });
+      volume(ctx, poly, { dark: 0.14, wide: 2.4 });
+      shape(ctx, poly, null, edge, 0.5);
+    };
+    const add = (p, d, k = 1) => [p[0] + d[0] * k, p[1] + d[1] * k, p[2] + d[2] * k];
+    const mid = (p, q, k = 0.5) => [p[0] + (q[0] - p[0]) * k, p[1] + (q[1] - p[1]) * k, p[2] + (q[2] - p[2]) * k];
+    // むなびれ（かまの 形。つけねは わきの 下より、先は うしろ・外・すこし 下へ）。side = 1 手前 / -1 むこう
+    const pectoral = (side) => {
+      const b0 = S(0.2, side * 2.0);
+      const b1 = S(0.275, side * 2.05);
+      const tip = add(b0, [0.19 * L, -0.04 * L, side * 0.18 * L]);
+      const lead = add(mid(b0, tip, 0.5), [-0.014 * L, 0, side * 0.014 * L]);
+      const lead2 = add(mid(b0, tip, 0.85), [-0.004 * L, 0, side * 0.008 * L]);
+      const trail = mid(mid(tip, b1), mid(b0, tip), 0.3);
+      return [b0, lead, lead2, tip, trail, b1];
+    };
+    // ① むこうがわの むなびれ（からだの うしろに かくれる）
+    fin3(pectoral(-1), 781, 26, [0.5, 0.3]);
+    // ② おびれ（からだの まんなかの 面に 立つ。上が 長い 三日月）
+    const C = (t, y, sharp) => [t * L, (YC(0.78) + y) * L, ZC(t) * L, sharp];
+    fin3([C(0.772, 0.017), C(0.835, 0.064), C(0.895, 0.118), C(0.95, 0.168), C(0.984, 0.192, 1), C(0.99, 0.162), C(0.968, 0.108), C(0.938, 0.06), C(0.915, 0.024), C(0.9, -0.004), C(0.922, -0.046), C(0.942, -0.088), C(0.95, -0.118, 1), C(0.908, -0.094), C(0.85, -0.054), C(0.776, -0.017)], 782, 40, [0.4, 0.3]);
+    // ③ からだ
+    shape(ctx, body, lgrad(ctx, -60, -30, 30, 50, ['#4c6c8e', '#34506e', '#2a425c']), null);
     within(ctx, body, () => {
-      // こうしの もよう: 白い たての 線と、その あいだの 白い 点の れつ（おなかがわには ない）
-      const limit = (x) => 6.4 - Math.max(0, x - 10) * 0.11;
-      for (let x = -43; x < 64; x += 6.8) {
-        const yt = edgeY(WS_TOP, x);
-        const yb = limit(x);
-        stroke(ctx, [[x, yt + 0.6], [x + 0.7, (yt + yb) / 2], [x, yb]], 'rgba(236,240,226,0.62)', 0.55);
-        const n = Math.max(1, Math.round((yb - yt - 2) / 3.2));
-        for (let k = 0; k < n; k++) disc(ctx, x + 3.4, yt + 2.4 + (k * (yb - yt - 3.4)) / Math.max(1, n - 1 || 1), x > 44 ? 0.7 : 1, spot);
+      // おなかの 白（手前の わきの 下に 見える）
+      for (const [d, a] of [[-0.16, 0.4], [-0.07, 0.5], [0, 1]]) {
+        const top = ts.map((t) => P(t, thB + d));
+        shape(ctx, [...top, ...lower.slice().reverse().map(([x, y]) => [x + 1, y + 4])], `rgba(240,244,242,${a})`, null);
       }
-      // あたまは こまかい 点が びっしり
-      const rnd = seeded(806);
-      for (let gx = -87; gx < -45; gx += 2.5) for (let gy = -16; gy < 7; gy += 2.5) {
-        const x = gx + rnd() * 1.6;
-        const y = gy + rnd() * 1.6;
-        if (y < edgeY(WS_TOP, x) + 0.8 || rnd() < 0.12) continue;
-        disc(ctx, x, y, 0.42 + rnd() * 0.3, spot);
+      // まるみの かげと 光（光は 上から。th ごとの 線を かさねて ぬる）
+      for (let th = -1.2; th < 2.6; th += 0.09) {
+        const x1 = Math.sin(th) * sy;
+        const z1 = Math.sin(th) * cy;
+        const lam = x1 * -0.34 + (Math.cos(th) * cp - z1 * sp) * 0.78 + (Math.cos(th) * sp + z1 * cp) * 0.52;
+        const col = lam > 0.72 ? `rgba(190,216,240,${(lam - 0.72) * 0.5})` : `rgba(8,16,28,${Math.min(0.2, (0.72 - lam) * 0.17) * (th > thB - 0.12 ? 0.3 : 1)})`;
+        for (const run of runs(th, T0, T1, 0.0)) stroke(ctx, run, col, 2.6);
       }
-      // わきばらの もりあがり 3本（まんなかの 1本は おの つけねの りゅうきへ）
-      ridge(ctx, [[-44, -10.4], [-12, -11.6], [18, -9], [44, -5.2]]);
-      ridge(ctx, [[-46, -5], [-12, -5.8], [22, -3.8], [50, -1.6], [67, -0.6]]);
-      ridge(ctx, [[-42, 0.8], [-12, 1], [18, 1.6], [40, 1.8]]);
-      // えらあな 5つ（大きく、せなかの 近くまで とどく）
+      // こうしもよう: からだを よこぎる 白い 線と、あたまから おへ 走る 白い 線
+      const cols = [];
+      for (let t = 0.2; t < 0.775; t += 0.0235 - 0.007 * Math.max(0, (t - 0.5) / 0.27)) cols.push(t);
+      const rows = [];
+      for (let th = -1.1; th < thB - 0.2; th += 0.255) rows.push(th);
+      for (const t of cols) {
+        const line = [];
+        for (let th = th1(t) + 0.05; th < thB - 0.14; th += 0.07) line.push(P(t + 0.004 * Math.sin(th * 3 + t * 40), th));
+        if (line.length > 2) stroke(ctx, line, 'rgba(238,244,228,0.55)', 0.5);
+      }
+      for (const th of rows) for (const run of runs(th, 0.205, 0.77, 0.05, thB - 0.14)) stroke(ctx, run, 'rgba(238,244,228,0.4)', 0.42);
+      // ます目の 中の 白い 点（表面に のせた だえん。むこうへ まわるほど つぶれる）
+      const spot = (t, th, r) => {
+        const c = S(t, th);
+        const es = [1, 0, 0];
+        const et = [0, -Math.sin(th), Math.cos(th)];
+        const pts = [];
+        for (let k = 0; k < 8; k++) {
+          const u = (k / 8) * PI * 2;
+          pts.push(proj([c[0] + (es[0] * Math.cos(u) + et[0] * Math.sin(u)) * r, c[1] + (es[1] * Math.cos(u) + et[1] * Math.sin(u)) * r, c[2] + (es[2] * Math.cos(u) + et[2] * Math.sin(u)) * r]));
+        }
+        shape(ctx, pts, 'rgba(246,248,232,0.95)', null);
+      };
+      const seen = (t, th) => th > th1(t) + 0.07 && th < thB - 0.2;
+      for (let i = 0; i < cols.length - 1; i++) {
+        const tm = (cols[i] + cols[i + 1]) / 2;
+        for (const th of rows) {
+          const tt = tm + (rnd() - 0.5) * 0.004;
+          const hh = th + 0.128 + (rnd() - 0.5) * 0.05;
+          if (seen(tt, hh)) spot(tt, hh, (1.06 + rnd() * 0.34) * (1 - 0.5 * Math.max(0, (tm - 0.48) / 0.3)));
+        }
+      }
+      // あたま: 線は なく、小さな 点が こまかく ならぶ
+      for (let t = 0.004; t < 0.196; t += 0.0115) {
+        for (let th = -1.25; th < thB - 0.2; th += 0.15) {
+          const tt = t + (rnd() - 0.5) * 0.006;
+          const hh = th + (rnd() - 0.5) * 0.08 + (Math.round(t / 0.0115) % 2) * 0.075;
+          if (seen(tt, hh)) spot(tt, hh, 0.46 + rnd() * 0.3 + t * 1.6);
+        }
+      }
+      // わきの たての もりあがり（上・まんなか・下。まんなかの 1本は おの つけねの りゅうきへ つづく）
+      for (const [th, tb] of [[-0.36, 0.74], [0.36, 0.74], [0.98, 0.8], [1.5, 0.7]]) {
+        for (const run of runs(th, 0.215, tb, 0.05)) stroke(ctx, run, 'rgba(8,18,30,0.5)', 0.8);
+        for (const run of runs(th - 0.05, 0.215, tb, 0.05)) stroke(ctx, run, 'rgba(176,206,234,0.5)', 0.5);
+      }
+      // えらあな 5つ（大きく、せなかの ほうまで のびる）
       for (let k = 0; k < 5; k++) {
-        const x = -63 + k * 4.2;
-        stroke(ctx, [[x + 1.2, -10.6 + k * 0.3], [x + 2.8, -1], [x + 1.2, 9.4 - k * 0.2]], 'rgba(255,255,255,0.22)', 0.5);
-        stroke(ctx, [[x, -10.8 + k * 0.3], [x + 1.6, -1], [x, 9.6 - k * 0.2]], 'rgba(4,10,18,0.8)', 0.75);
+        const t0 = 0.148 + k * 0.0135;
+        const slit = [];
+        const rim = [];
+        for (let th = 0.56; th < 2.06; th += 0.1) {
+          const t = t0 + 0.008 * Math.sin(((th - 0.56) / 1.5) * PI);
+          if (th < th2(t) - 0.04) { slit.push(P(t, th)); rim.push(P(t + 0.0034, th)); }
+        }
+        stroke(ctx, rim, 'rgba(170,200,228,0.4)', 0.5);
+        stroke(ctx, slit, 'rgba(6,12,20,0.85)', 0.9);
       }
-      stroke(ctx, [[-74, -7], [-40, -12], [0, -12], [40, -6]], 'rgba(255,255,255,0.1)', 2.4); // せなかの てり
     });
-    volume(ctx, body, { dark: 0.12, wide: 4 });
-    shape(ctx, body, null, edge, 0.6);
-    // 口（あたまの 先・よこに ひろい）と くちびるの 白い ふち、はなの ひげ
-    stroke(ctx, [[-89.4, 0.6], [-86, 2.4], [-80.6, 3.2]], 'rgba(4,10,18,0.85)', 0.9);
-    stroke(ctx, [[-89.2, -0.8], [-85.6, 1], [-80.6, 1.9]], 'rgba(236,240,230,0.55)', 0.5);
-    stroke(ctx, [[-89.2, -2.6], [-90.4, -1.4]], edge, 0.6, false);
-    // 目（小さい）と その うしろの 噴水孔
-    disc(ctx, -78, -1.2, 1.5, '#0a0c10', 'rgba(220,230,226,0.6)', 0.35);
-    disc(ctx, -78.4, -1.6, 0.4, 'rgba(255,255,255,0.7)');
-    oval(ctx, -73, -3.4, 1, 0.7, 'rgba(4,10,18,0.8)');
-    // 手前の むなびれ（大きい かまの 形）
-    plainFin(ctx, [[-52, 9.6], [-43, 11.6], [-31, 20], [-21.6, 33, 1], [-34, 28], [-46, 19.6], [-53.4, 13.6]], blue, edge, { spots: 44, seed: 807 });
+    stroke(ctx, upper, edge, 0.6);
+    stroke(ctx, lower, edge, 0.6);
+    // 口（あたまの 先に よこに ひろがる）。上くちびるの 光
+    const mouth = [];
+    const lip = [];
+    for (let u = -0.96; u <= 1.001; u += 0.08) {
+      const t = -0.0135 + 0.02 * u * u;
+      mouth.push(proj([t * L, (YC(0) - 0.42 * Bh(0)) * L, (ZC(0) + 0.057 * u) * L]));
+      lip.push(proj([(t - 0.001) * L, (YC(0) + 0.1 * Bh(0)) * L, (ZC(0) + 0.057 * u) * L]));
+    }
+    stroke(ctx, mouth, '#0a121a', 1.7);
+    stroke(ctx, lip, 'rgba(170,200,228,0.45)', 0.5);
+    // 目（小さい。あたまの かど）と、その うしろの 小さな あな
+    const [ex, ey] = P(0.047, 1.6);
+    disc(ctx, ex, ey, 1.7, '#06090c', 'rgba(190,210,230,0.7)', 0.35);
+    disc(ctx, ex - 0.5, ey - 0.5, 0.42, 'rgba(255,255,255,0.8)');
+    const [qx, qy] = P(0.068, 1.36);
+    oval(ctx, qx, qy, 1, 0.6, '#070b10', null, 0, -0.5);
+    // ④ せびれ（せなかの まんなかの 線に 立つ。第1せびれは からだの まんなかより うしろ）
+    const D = (t, h, sharp) => [t * L, (YC(t) + Bh(t) + h) * L, ZC(t) * L, sharp];
+    fin3([D(0.428, -0.004), D(0.468, 0.046), D(0.512, 0.086), D(0.542, 0.102), D(0.556, 0.094), D(0.552, 0.05), D(0.557, 0.022), D(0.586, 0.006, 1), D(0.552, -0.004)], 783, 30);
+    fin3([D(0.652, -0.003), D(0.684, 0.022), D(0.708, 0.04), D(0.722, 0.036), D(0.718, 0.014), D(0.738, 0.004, 1), D(0.712, -0.003)], 784, 8);
+    // ⑤ 手前の はらびれ と むなびれ
+    const v0 = S(0.555, 2.32);
+    const v1 = S(0.602, 2.32);
+    fin3([v0, add(v0, [0.03 * L, -0.012 * L, 0.03 * L]), add(v0, [0.07 * L, -0.02 * L, 0.036 * L]), mid(add(v0, [0.07 * L, -0.02 * L, 0.036 * L]), v1, 0.6), v1], 785, 5);
+    fin3(pectoral(1), 786, 34, [0.3, 0.2]);
   },
 };
 
@@ -791,7 +933,7 @@ export const SPECIES = {
 
 // 見分けポイントの 印の 場所（sea.js の MARK_POINTS と 同じ きまり）
 export const MARK_POINTS = {
-  whaleshark: [[-20, -8], [-88, 0.6], [10, -4.4], [84, -22]],
+  whaleshark: [[-16, 18], [-75, 38], [10, 10], [68, -32]],
   whiteshark: [[-84, -1], [-14, 4], [-73, 6.6], [74, -2]],
   hammerhead: [[-74, -12], [-66.6, -23.4], [-78.4, 0], [34, 0]],
   manta: [[2, -40], [-37, -12], [-25.6, 3], [50, 2.4]],
