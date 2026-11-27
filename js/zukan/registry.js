@@ -7,8 +7,9 @@
 const LOADERS = {
   insect: () => Promise.all([import('./catalog/insect.js'), import('./catalog/insect2.js'), import('./catalog/insect3.js'), import('../i18n/zukan/insect.js')])
     .then(([a, b, c, words]) => [mergeCatalogs(a, b, c), words]),
-  // うみ（v0.20.0）: はじめの 30種
-  sea: () => Promise.all([import('./catalog/sea.js'), import('../i18n/zukan/sea.js')]),
+  // うみ: sea.js = はじめの 30種と 描く 部品（v0.20.0）、sea2〜sea4.js = v0.20.6 の 30種（さかな／ほにゅうるい・とり・カメ／エビ カニ・かい ほか）
+  sea: () => Promise.all([import('./catalog/sea.js'), import('./catalog/sea2.js'), import('./catalog/sea3.js'), import('./catalog/sea4.js'), import('../i18n/zukan/sea.js')])
+    .then(([a, b, c, d, words]) => [mergeCatalogs(a, b, c, d), words]),
 };
 
 // 分けた 絵の ファイルを 1つの なかまに まとめる（なかま・目の ならびは 1つめの ファイルの もの）

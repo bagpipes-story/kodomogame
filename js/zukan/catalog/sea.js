@@ -13,19 +13,20 @@ import {
 
 // GROUPS = タブの 中の 見出し（目 くらいの なかま）、ORDERS = タブ（さかな・ほにゅうるい など 大きな なかま）。
 // うみは 魚・ほにゅう類・エビ カニ・貝 などが まざるので、むしより 1だん 大きく 分ける。分類の「目」は 種類ごとに 文字の ファイルで 持つ
+// v0.20.6（60種）: カサゴ・カレイ・ジュゴン・まきがいの なかまを 足した。絵は sea.js（はじめの 30種と 部品）と sea2〜sea4.js（足した 30種）に 分けて ある
 export const GROUPS = [
-  'shark', 'eel', 'salmon', 'saury', 'oarfish', 'pipefish', 'perch', 'puffer',
-  'whale', 'seal', 'penguin', 'turtle',
+  'shark', 'eel', 'salmon', 'saury', 'oarfish', 'pipefish', 'perch', 'scorpionfish', 'flatfish', 'puffer',
+  'whale', 'seal', 'sirenian', 'penguin', 'turtle',
   'crab', 'shrimp', 'hermit',
-  'cephalopod', 'seaslug', 'bivalve',
+  'cephalopod', 'snail', 'seaslug', 'bivalve',
   'echinoderm', 'jelly',
 ];
 export const ORDERS = [
-  { key: 'fish', groups: ['shark', 'eel', 'salmon', 'saury', 'oarfish', 'pipefish', 'perch', 'puffer'] },
-  { key: 'mammal', groups: ['whale', 'seal'] },
+  { key: 'fish', groups: ['shark', 'eel', 'salmon', 'saury', 'oarfish', 'pipefish', 'perch', 'scorpionfish', 'flatfish', 'puffer'] },
+  { key: 'mammal', groups: ['whale', 'seal', 'sirenian'] },
   { key: 'birdReptile', groups: ['penguin', 'turtle'] },
   { key: 'crustacean', groups: ['crab', 'shrimp', 'hermit'] },
-  { key: 'mollusk', groups: ['cephalopod', 'seaslug', 'bivalve'] },
+  { key: 'mollusk', groups: ['cephalopod', 'snail', 'seaslug', 'bivalve'] },
   { key: 'other', groups: ['echinoderm', 'jelly'] },
 ];
 

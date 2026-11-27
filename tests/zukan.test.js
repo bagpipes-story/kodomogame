@@ -10,7 +10,10 @@ import * as insectCatalog1 from '../js/zukan/catalog/insect.js';
 import * as insectCatalog2 from '../js/zukan/catalog/insect2.js';
 import * as insectCatalog3 from '../js/zukan/catalog/insect3.js';
 import { ZUKAN_TEXT as insectText } from '../js/i18n/zukan/insect.js';
-import * as seaCatalog from '../js/zukan/catalog/sea.js';
+import * as seaCatalog1 from '../js/zukan/catalog/sea.js';
+import * as seaCatalog2 from '../js/zukan/catalog/sea2.js';
+import * as seaCatalog3 from '../js/zukan/catalog/sea3.js';
+import * as seaCatalog4 from '../js/zukan/catalog/sea4.js';
 import { ZUKAN_TEXT as seaText } from '../js/i18n/zukan/sea.js';
 
 const KANJI = /[一-鿿㐀-䶿]/;
@@ -124,10 +127,20 @@ assert.strictEqual(n, 90);
 // 文字だけ あって 絵が ない 種類が ない こと
 for (const id of Object.keys(insectText.species)) assert.ok(insectCatalog.SPECIES[id], `文字だけ ある: ${id}`);
 
-// うみ（v0.20.0）: はじめの 30種。目は 種類ごと
+// うみ（v0.20.0）: はじめの 30種。目は 種類ごと。v0.20.6 で 30種を 足して 60種（絵の ファイルは 4つ。同じ ID が 2つの ファイルに ない こと）
 assert.ok(hasZukanArt('sea'));
+{
+  const seen = new Set();
+  for (const [file, cat] of [['sea', seaCatalog1], ['sea2', seaCatalog2], ['sea3', seaCatalog3], ['sea4', seaCatalog4]]) {
+    for (const id of Object.keys(cat.SPECIES)) {
+      assert.ok(!seen.has(id), `${file} の ${id} が ほかの ファイルと かさなる`);
+      seen.add(id);
+    }
+  }
+}
+const seaCatalog = mergeCatalogs(seaCatalog1, seaCatalog2, seaCatalog3, seaCatalog4);
 const nSea = checkSet('sea', seaCatalog, seaText);
-assert.strictEqual(nSea, 30);
+assert.strictEqual(nSea, 60);
 for (const id of Object.keys(seaText.species)) assert.ok(seaCatalog.SPECIES[id], `文字だけ ある: ${id}`);
 assert.strictEqual(makeSet(seaCatalog, seaText).taxOrderOf('tuna'), 'スズキ');
 assert.strictEqual(makeSet(insectCatalog, insectText).taxOrderOf('ladybug'), 'コウチュウ');
@@ -140,5 +153,6 @@ assert.strictEqual(a.name('ladybug'), 'ナナホシテントウ');
 assert.strictEqual(await loadZukanSet('pref'), null);
 
 assert.strictEqual((await loadZukanSet('sea')).name('whale'), 'シロナガスクジラ');
+assert.strictEqual((await loadZukanSet('sea')).ids.length, 60);
 
 console.log(`zukan.test.js: all passed (insect ${n}, sea ${nSea})`);
