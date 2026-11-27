@@ -58,7 +58,7 @@ function dactyl(ctx, a, b, w, fill, edge, bend = 0.14) {
 
 // ふしの ある あし（上から 見た カニ）。pts = 関節の 点、ws = ふしの つけねの 太さ（さいごの ふしは とがった つめ）。
 // 先の ふしから 描いて、つけねがわの ふしが 上に かさなる。spine = とげの 数（ふしごと）
-function jointLeg(ctx, pts, ws, fill, edge, { spine = null, spineLen = 2, spineFill = null, seed = 1, bend = 0.14, hi = 'rgba(255,238,220,0.26)', sides = [1, -1] } = {}) {
+function jointLeg(ctx, pts, ws, fill, edge, { spine = null, spineLen = 2, spineFill = null, seed = 1, bend = 0.14, hi = 'rgba(255,238,220,0.17)', sides = [1, -1] } = {}) {
   const n = pts.length - 1;
   for (let i = n - 1; i >= 0; i--) {
     const a = pts[i];
@@ -604,12 +604,13 @@ const nautilus = {
     sprinkle(ctx, hood, 60, 0.5, 'rgba(60,30,14,0.4)', 833);
     volume(ctx, hood, { dark: 0.16, wide: 3 });
     // 目: レンズが なく、小さな あなが あいて いる だけ
-    disc(ctx, -4.6, 12.6, 4.2, '#e8e2d6', edge, 0.45);
+    disc(ctx, -4.6, 12.6, 4.2, '#8c7a66', edge, 0.45);
     within(ctx, ell(-4.6, 12.6, 4.2, 4.2, 16), () => {
-      ctx.fillStyle = rgrad(ctx, -6, 11, 6, ['rgba(255,255,255,0.6)', 'rgba(255,255,255,0)', 'rgba(60,50,40,0.4)']);
+      ctx.fillStyle = rgrad(ctx, -6, 11, 6, ['rgba(255,244,226,0.5)', 'rgba(255,244,226,0)', 'rgba(40,30,20,0.5)']);
       ctx.fillRect(-10, 8, 11, 10);
     });
-    disc(ctx, -5, 12.6, 1.15, '#0c0a08');
+    disc(ctx, -5, 12.6, 1.5, 'rgba(236,224,200,0.75)');
+    disc(ctx, -5, 12.6, 1.05, '#0c0a08');
     stroke(ctx, [[-5, 13.6], [-5.6, 16.4]], 'rgba(40,30,20,0.6)', 0.4, false);
   },
 };
@@ -767,7 +768,7 @@ const clione = {
 // うすい はいちゃいろで ふしの うしろの ふちが こい。おの 先に 青や きいろ
 const mantisshrimp = {
   group: 'mantis', level: 2, similar: ['prawn', 'lobster', 'hermitcrab'],
-  box: [-92, -32, 84, 32],
+  box: [-92, -32, 82, 32],
   draw(ctx) {
     const edge = '#3a2c1c';
     const tone = ['#f2ead6', '#cabd9e', '#877a5c'];
@@ -844,20 +845,23 @@ const mantisshrimp = {
     const cara = mirrorY([[-57.6, 0], [-56.6, -4.6], [-53, -8.4], [-45, -10.6], [-36, -12.6], [-30.6, -13, 1], [-28.6, -9.6], [-29, 0]]);
     // 前あし（ほかく脚）: 太い つけねの ふし → 前へ のびる 長い ふし → おりたたむ 先の ふし（内がわに とげ 6本。ここでは すこし ひらく）
     bothY(ctx, () => {
-      limb(ctx, [-42, -11], [-31.6, -21], 7.6, 6.8, skin, edge, 0.45);
-      const dTip = [-41, -29.4];
-      const dBase = [-59, -18.6];
+      // からだの わきに ぴったり よせる（はなすと 棒が ういて いる ように 見える）。つけねは こうらの 下に かくれる
+      ctx.save();
+      ctx.translate(0, 3.4);
+      limb(ctx, [-43, -10], [-32.6, -19], 7.6, 6.8, skin, edge, 0.45);
+      const dTip = [-41, -28];
+      const dBase = [-59, -17.2];
       const dx = dTip[0] - dBase[0];
       const dy = dTip[1] - dBase[1];
       for (let k = 0; k < 5; k++) {
         const t = 0.16 + k * 0.165;
         thorn(ctx, dBase[0] + dx * t + 0.6, dBase[1] + dy * t + 1, 0.78, 4.2 - k * 0.3, 0.7, '#f6eedc', edge, 0.3);
       }
-      shape(ctx, [[-60, -17], [-52, -24.6], [-44, -29.4], [-39, -30.6, 1], [-45, -26.6], [-52.6, -21.4], [-57.6, -17]], '#eadfc4', edge, 0.4);
-      limb(ctx, [-31.6, -21], [-59, -18.2], 6.2, 4.6, skin, edge, 0.45);
-      stroke(ctx, [[-35, -22.6], [-56, -19.8]], 'rgba(255,250,236,0.5)', 1, false);
-      for (let k = 0; k < 9; k++) disc(ctx, -36 - k * 2.4, -18.6 + k * 0.26, 0.42, 'rgba(96,70,44,0.6)');
-      disc(ctx, -31.6, -21, 2.6, '#d2c4a2', edge, 0.4);
+      shape(ctx, [[-60, -15.6], [-52, -23.2], [-44, -28], [-39, -29.2, 1], [-45, -25.2], [-52.6, -20], [-57.6, -15.6]], '#eadfc4', edge, 0.4);
+      limb(ctx, [-32.6, -19], [-59, -16.8], 6.4, 4.6, skin, edge, 0.45);
+      stroke(ctx, [[-36, -20.6], [-56, -18.4]], 'rgba(255,250,236,0.5)', 1, false);
+      for (let k = 0; k < 9; k++) disc(ctx, -37 - k * 2.4, -16.8 + k * 0.22, 0.42, 'rgba(96,70,44,0.6)');
+      ctx.restore();
     });
     shape(ctx, cara, skin, edge, 0.55);
     within(ctx, cara, () => {
@@ -887,7 +891,7 @@ const mantisshrimp = {
 // 色は 赤・青（みどりっぽい）・黒の 3つの 型が あり、ここでは 岩場に 多い あかちゃいろの まだら
 const seacucumber = {
   group: 'echinoderm', level: 1, similar: ['seahare', 'starfish', 'urchin'],
-  box: [-88, -34, 82, 32],
+  box: [-89, -29, 80, 28],
   draw(ctx) {
     const edge = '#30140c';
     const N = 64;
@@ -977,7 +981,7 @@ const seacucumber = {
 // サンゴを たべる ので、ふえすぎると サンゴしょうが あれる
 const crownofthorns = {
   group: 'echinoderm', level: 2, similar: ['starfish', 'urchin', 'octopus'],
-  box: [-52, -52, 52, 52],
+  box: [-47, -46, 46, 46],
   draw(ctx) {
     const edge = '#1a1a30';
     const tone = ['#a6aec8', '#626a90', '#2c3050'];
@@ -994,8 +998,8 @@ const crownofthorns = {
     for (let k = 0; k < ARMS; k++) {
       const a = armA[k];
       const R = armR[k];
-      pts.push(pol(a - PI / ARMS, 16.6));
-      for (const [da, f] of [[-0.15, 0.56], [-0.1, 0.82], [-0.05, 0.97], [0, 1], [0.05, 0.97], [0.1, 0.82], [0.15, 0.56]]) pts.push(pol(a + da * (22 / (R * f)) * 1.4, R * f));
+      pts.push(pol(a - PI / ARMS, 21));
+      for (const [da, f] of [[-0.15, 0.66], [-0.11, 0.84], [-0.055, 0.97], [0, 1], [0.055, 0.97], [0.11, 0.84], [0.15, 0.66]]) pts.push(pol(a + da * (22 / (R * f)) * 1.5, R * f));
     }
     // とげ 1本: つけねは からだの 色、先へ オレンジ〜赤
     const spine = (x, y, ang, len, w = 0.9) => {
@@ -1008,8 +1012,8 @@ const crownofthorns = {
       const a = armA[k];
       const R = armR[k];
       for (let j = 0; j < 5; j++) {
-        const r = 19 + j * (R - 20) / 4.4;
-        const hw = 5.2 - j * 0.7;
+        const r = 23 + j * (R - 24) / 4.4;
+        const hw = 5.6 - j * 0.7;
         for (const side of [-1, 1]) {
           const base = [Math.cos(a) * r - Math.sin(a) * hw * side, Math.sin(a) * r + Math.cos(a) * hw * side];
           spine(base[0], base[1], a + side * (1.05 - j * 0.12) + (rnd() - 0.5) * 0.2, 6.6 + rnd() * 2, 1);
@@ -1022,7 +1026,7 @@ const crownofthorns = {
       // うでの まんなかの うね と、うでの あいだの みぞ
       for (let k = 0; k < ARMS; k++) {
         stroke(ctx, [pol(armA[k], 12), pol(armA[k], armR[k] - 2)], 'rgba(220,226,246,0.14)', 3.4, false);
-        stroke(ctx, [pol(armA[k] - PI / ARMS, 9), pol(armA[k] - PI / ARMS, 17)], 'rgba(20,20,44,0.4)', 0.9, false);
+        stroke(ctx, [pol(armA[k] - PI / ARMS, 15), pol(armA[k] - PI / ARMS, 21.4)], 'rgba(20,20,44,0.4)', 0.9, false);
       }
       // あかむらさきの くすんだ まだら
       for (let k = 0; k < 40; k++) {
@@ -1038,17 +1042,17 @@ const crownofthorns = {
     for (let k = 0; k < ARMS; k++) {
       const a = armA[k];
       for (let j = 0; j < 4; j++) {
-        const r = 17 + j * (armR[k] - 20) / 3.6;
-        tops.push([pol(a + (j % 2 ? 0.05 : -0.05), r), a + (rnd() - 0.5) * 0.7, 5 + rnd() * 1.6]);
+        const r = 20 + j * (armR[k] - 23) / 3.6;
+        tops.push([pol(a + (j % 2 ? 0.05 : -0.05), r), a + (rnd() - 0.5) * 0.7, 4.2 + rnd() * 1.4]);
       }
     }
-    for (let k = 0; k < 30; k++) {
+    for (let k = 0; k < 40; k++) {
       const a = rnd() * PI * 2;
-      const r = 2 + Math.sqrt(rnd()) * 13;
-      tops.push([pol(a, r), r < 4 ? rnd() * PI * 2 : a + (rnd() - 0.5) * 0.9, 4 + rnd() * 2]);
+      const r = 2 + Math.sqrt(rnd()) * 16;
+      tops.push([pol(a, r), r < 4 ? rnd() * PI * 2 : a + (rnd() - 0.5) * 0.9, 3.6 + rnd() * 1.6]);
     }
     for (const [[x, y], ang, len] of tops) oval(ctx, x + 0.8, y + 1, 1.5, 1.1, 'rgba(10,10,30,0.4)');
-    for (const [[x, y], ang, len] of tops) spine(x, y, ang, len, 1);
+    for (const [[x, y], ang, len] of tops) spine(x, y, ang, len, 0.85);
   },
 };
 
@@ -1118,14 +1122,14 @@ const manofwar = {
     });
     stroke(ctx, sail, edge, 0.5);
     // うきぶくろ（気体の 入った ふくろ。すきとおった 青むらさき。かたほうの はしが とがる）
-    const float = [[-37, -28.6], [-29, -35.6], [-15, -41], [3, -43], [19, -41], [30, -35.6], [35, -29], [31, -23], [17, -19.6], [-3, -19], [-21, -21.6], [-32, -25.4]];
-    shape(ctx, float, lgrad(ctx, 0, -44, 0, -18, ['#d2c4f2', '#b8d0f8', '#82aaea', '#4e76d4']), null);
+    const float = [[-36, -27], [-33, -34], [-22, -40], [-6, -42.6], [10, -42], [24, -39.6], [34, -37.6], [39.4, -38.4, 1], [35.6, -32.6], [28, -24.6], [16, -18.4], [0, -15.6], [-16, -16.6], [-29, -20.6]];
+    shape(ctx, float, lgrad(ctx, 0, -44, 0, -15, ['#d2c4f2', '#b8d0f8', '#82aaea', '#4e76d4']), null);
     within(ctx, float, () => {
       // うすい まくの しわ と、中の 気体の あかるさ
-      for (let k = 0; k < 8; k++) stroke(ctx, [[-30 + k * 8.4, -42], [-33 + k * 8.6, -30], [-30 + k * 8.4, -18]], 'rgba(60,80,190,0.18)', 0.5);
+      for (let k = 0; k < 8; k++) stroke(ctx, [[-30 + k * 8.4, -42], [-33 + k * 8.6, -30], [-30 + k * 8.4, -15]], 'rgba(60,80,190,0.18)', 0.5);
       ctx.fillStyle = rgrad(ctx, -4, -30, 30, ['rgba(255,255,255,0.4)', 'rgba(255,255,255,0)']);
       ctx.fillRect(-40, -46, 80, 30);
-      stroke(ctx, [[-30, -25], [-16, -21.6], [4, -20.6], [22, -22.6], [32, -27]], 'rgba(40,60,170,0.34)', 3);
+      stroke(ctx, [[-30, -22.6], [-16, -19], [0, -18], [16, -20.6], [29, -27.6]], 'rgba(40,60,170,0.34)', 3);
       stroke(ctx, [[-27, -32], [-14, -38], [2, -40]], 'rgba(255,255,255,0.8)', 1.7);
       stroke(ctx, [[8, -40], [14, -39.4]], 'rgba(255,255,255,0.8)', 1.5);
       shape(ctx, float, null, 'rgba(236,120,180,0.3)', 2);
@@ -1152,14 +1156,14 @@ export const SPECIES = {
 export const MARK_POINTS = {
   kingcrab: [[64, -36], [44, 33], [-3, 6], [22, -47]],
   swimmingcrab: [[40, -1], [47, 45], [-40, -20], [-10, 8]],
-  prawn: [[24, -5], [36, 2], [53, 46], [-66, -19]],
-  cuttlefish: [[-30, -25], [-36, 2], [-12, -10], [-73, 0]],
+  prawn: [[8, -9], [44, 13], [53, 46], [-66, -19]],
+  cuttlefish: [[-30, -25], [-36, 6], [3, -10], [-73, 0]],
   nautilus: [[30, -12], [-40, 14], [-5, 12.6], [-18, -4]],
   turban: [[-20, 14], [-40, -4], [14, 20], [28, 6]],
   clione: [[7, 10], [4.6, -43], [22, -24], [0, -12]],
-  mantisshrimp: [[-48, -22], [18, -6], [66, 3], [-65.4, -8]],
+  mantisshrimp: [[-48, -20.6], [18, -6], [66, 3], [-65.4, -8]],
   seacucumber: [[30, 6], [-4, -19], [-78, 14], [20, 17]],
-  crownofthorns: [[30, 22], [-28, -38], [0, 3], [40, -12]],
+  crownofthorns: [[27, 20], [-22, -32], [0, 3], [40, -12]],
   manofwar: [[10, -30], [4, -52], [-2, 40], [-10, -12]],
 };
 for (const [id, pts] of Object.entries(MARK_POINTS)) SPECIES[id].marks = pts;

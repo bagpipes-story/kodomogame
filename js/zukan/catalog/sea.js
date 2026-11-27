@@ -313,7 +313,7 @@ export function fish(ctx, F) {
 const TUNA_TOP = [[8, -20.6], [24, -16], [38, -10.6], [50, -6], [58, -3.6], [64, -2.4]];
 const TUNA_BOTTOM = [[8, 22], [24, 17.6], [38, 11.6], [50, 6.4], [58, 3.8], [64, 2.4]];
 const tuna = {
-  group: 'perch', level: 1, similar: ['horsemackerel', 'saury', 'salmon'],
+  group: 'perch', level: 1, similar: ['bonito', 'horsemackerel', 'salmon'],
   box: [-84, -42, 92, 42],
   draw(ctx) {
     const edge = '#0a0e16';
@@ -460,7 +460,7 @@ const seabream = {
 // せなかは あおみどり、おなかは ぎんいろ。えらぶたの 上に くろい 点。むなびれが ながい。目が 大きい
 const AJI_LINE = [[-40, -5], [-28, -7.4], [-16, -5.6], [-6, -0.6], [4, 1.4], [30, 1], [56, 0.4]];
 const horsemackerel = {
-  group: 'perch', level: 1, similar: ['tuna', 'saury', 'seabream'],
+  group: 'perch', level: 1, similar: ['mackerel', 'tuna', 'saury'],
   box: [-68, -30, 74, 26],
   draw(ctx) {
     const edge = '#1c2a28';
@@ -524,7 +524,7 @@ const horsemackerel = {
 // せなかは あおぐろく、わきばらは ぎんいろ。うろこは 小さい。川で 生まれて 海で そだち、たまごを うみに 生まれた 川へ もどる
 // v0.20.2: からだが ほそく、あたまと 口が 小さく、おびれが 小さく ふかく 切れこんで ニシンの ように 見えたので、比率と ひれの 形を 直した
 const salmon = {
-  group: 'salmon', level: 1, similar: ['tuna', 'horsemackerel', 'saury'],
+  group: 'salmon', level: 1, similar: ['mackerel', 'tuna', 'horsemackerel'],
   box: [-80, -33, 82, 32],
   draw(ctx) {
     const edge = '#14202a';
@@ -597,7 +597,7 @@ const salmon = {
 const SANMA_TOP = [[30, -7], [52, -5], [66, -3], [72, -2]];
 const SANMA_BOTTOM = [[30, 7.6], [52, 5.6], [66, 3.4], [72, 2.4]];
 const saury = {
-  group: 'saury', level: 1, similar: ['horsemackerel', 'tuna', 'eel'],
+  group: 'saury', level: 1, similar: ['flyingfish', 'mackerel', 'horsemackerel'],
   box: [-84, -15, 84, 16],
   draw(ctx) {
     const edge = '#0c1624';
@@ -648,7 +648,7 @@ const saury = {
 // カクレクマノミ: オレンジいろの からだに しろい 帯が 3ぼん（あたま・からだの まんなか・おの つけね）。帯と ひれの ふちは くろい。
 // ひれは まるい。イソギンチャクの 中で くらす（どくの ある 触手に さされない）
 const clownfish = {
-  group: 'perch', level: 1, similar: ['seabream', 'puffer', 'seahorse'],
+  group: 'perch', level: 1, similar: ['seabream', 'lionfish', 'seahorse'],
   box: [-58, -32, 58, 44],
   draw(ctx) {
     const edge = '#1a0e06';
@@ -713,7 +713,7 @@ const clownfish = {
 // トラフグ: ずんぐりした こん棒の 形。せなかは くろっぽく、おなかは まっしろ。むなびれの うしろに しろい ふちどりの 大きな くろい もん。
 // しりびれが しろい（にた カラスは くろい）。はらびれが ない。口は くちばしの ような 歯。うろこは なく、はだに 小さな とげ。からだに つよい どく
 const puffer = {
-  group: 'puffer', level: 1, similar: ['sunfish', 'clownfish', 'seabream'],
+  group: 'puffer', level: 1, similar: ['porcupinefish', 'sunfish', 'clownfish'],
   box: [-58, -26, 64, 28],
   draw(ctx) {
     const edge = '#141414';
@@ -1120,7 +1120,7 @@ const oarfish = {
 // タツノオトシゴ（オス）: ウマの ような あたまと つつの ような 口。からだは ほねの 板（ふし）で おおわれ、立って およぐ。
 // しっぽを 海そうに まきつける。オスは おなかに ふくろが あり、メスが うんだ たまごを その中で そだてる
 const seahorse = {
-  group: 'pipefish', level: 1, similar: ['gardeneel', 'clownfish', 'seahare'],
+  group: 'pipefish', level: 1, similar: ['gardeneel', 'lionfish', 'clownfish'],
   box: [-29, -56, 22, 52],
   draw(ctx) {
     const edge = '#2e1e08';
@@ -1175,7 +1175,7 @@ const seahorse = {
 // マンボウ: からだの うしろ半分が 切れた ような 形。おびれが なく、かわりに 波形の「かじびれ」が ある。
 // せびれと しりびれが 上と 下に 長く のび、これを 左右に ふって およぐ。口は 小さく、歯は くちばしの よう。はだは ざらざらで うろこが ない
 const sunfish = {
-  group: 'puffer', level: 2, similar: ['puffer', 'ray', 'whale'],
+  group: 'puffer', level: 2, similar: ['puffer', 'porcupinefish', 'ray'],
   box: [-52, -68, 56, 68],
   draw(ctx) {
     const edge = '#1e262c';
@@ -1222,7 +1222,7 @@ const sunfish = {
 // アカエイ（上から 見た すがた・あたまが 左）: ひしがたの ひらたい からだ。むちの ような ながい おに どくの とげ。
 // 目は せなかがわに あり、うしろに いきを する あな（噴水孔）。せなかは ちゃいろで、ふちと 目の まわりは きいろっぽい
 const ray = {
-  group: 'shark', level: 2, similar: ['sunfish', 'turtle', 'squid'],
+  group: 'shark', level: 2, similar: ['manta', 'flounder', 'turtle'],
   box: [-64, -48, 96, 48],
   draw(ctx) {
     const edge = '#2a1c0c';
@@ -1274,7 +1274,7 @@ const ray = {
 // シロナガスクジラ: ちきゅうで いちばん 大きい どうぶつ。からだは とても ながく ほそながい。のどから おなかに たくさんの たての みぞ
 // （えさの オキアミを 水ごと のみこむ とき ふくらむ）。せびれは とても 小さく、うしろの ほうに ある。あおみがかった はいいろに うすい まだら
 const whale = {
-  group: 'whale', level: 1, similar: ['dolphin', 'sunfish', 'seal'],
+  group: 'whale', level: 1, similar: ['humpback', 'spermwhale', 'whaleshark'],
   box: [-92, -18, 96, 30],
   draw(ctx) {
     const edge = '#1a2834';
@@ -1321,7 +1321,7 @@ const whale = {
 // ハンドウイルカ: くちばしが みじかく ふとい。せびれは かまの 形。せなかは こい はいいろ、わきばらは うすい はいいろ、おなかは しろっぽい。
 // はなの あなは あたまの 上に 1つ（水面で いきを する）。かしこく、音で なかまと はなす
 const dolphin = {
-  group: 'whale', level: 1, similar: ['whale', 'seal', 'tuna'],
+  group: 'whale', level: 1, similar: ['orca', 'beluga', 'whiteshark'],
   box: [-70, -34, 76, 28],
   draw(ctx) {
     const edge = '#1c2228';
@@ -1363,7 +1363,7 @@ const dolphin = {
 // ゴマフアザラシ: はいいろの からだに ゴマの ような くろい 点。耳たぶが なく、あなだけ（アシカには 耳たぶが ある）。
 // 後あしは うしろむきの ひれで 前へ まげられず、陸では はって すすむ。冬は 流氷の 上で 子どもを うむ
 const seal = {
-  group: 'seal', level: 1, similar: ['otter', 'dolphin', 'penguin'],
+  group: 'seal', level: 1, similar: ['sealion', 'otter', 'dugong'],
   box: [-72, -24, 76, 26],
   draw(ctx) {
     const edge = '#2a2e32';
@@ -1416,7 +1416,7 @@ const seal = {
 // v0.20.3: かおが 上を むいて 形が わかりにくく、うでが からだに ささった ように 見えたので、かおを こちらへ 向け（まるい かお・大きな はな・小さな 耳）、
 // うでは かたから 出て むねの 上で 貝を かかえる 形に 直した
 const otter = {
-  group: 'seal', level: 1, similar: ['seal', 'dolphin', 'penguin'],
+  group: 'seal', level: 1, similar: ['seal', 'sealion', 'penguin'],
   box: [-72, -32, 74, 16],
   draw(ctx) {
     const edge = '#20140c';
@@ -1500,7 +1500,7 @@ const otter = {
 // コウテイペンギン（オス）: いちばん 大きい ペンギン。くびの よこに きいろ〜オレンジの もよう。くちばしは ほそながく、下がわに オレンジの すじ。
 // 冬の 南極で、オスが 足の 上に たまごを のせて おなかの ひふで あたため、かえった ひなも そこで まもる
 const penguin = {
-  group: 'penguin', level: 1, similar: ['seal', 'otter', 'dolphin'],
+  group: 'penguin', level: 1, similar: ['rockhopper', 'seal', 'otter'],
   box: [-30, -58, 23, 57],
   draw(ctx) {
     const edge = '#101216';
@@ -1555,7 +1555,7 @@ const penguin = {
 // アオウミガメ（オス・上から 見た すがた・あたまが 左）: こうらは なめらかな たまご形で、よこの 板（肋甲板）が 左右に 4まいずつ。
 // まえあしは ながい ひれで、つばさの ように うごかして およぐ。目の あいだの うろこが 2まい（アカウミガメは 4まい）。オスは しっぽが 長い
 const turtle = {
-  group: 'turtle', level: 1, similar: ['ray', 'crab', 'seal'],
+  group: 'turtle', level: 1, similar: ['leatherback', 'ray', 'crab'],
   box: [-58, -60, 60, 60],
   draw(ctx) {
     const edge = '#1e2010';
@@ -1655,7 +1655,7 @@ function crabLeg(ctx, pts, w, tone, edge) {
 // はさみの あし 1つい と あるく あし 4つい（あわせて 10ぽん。タラバガニは ヤドカリの なかまで 8ほんに 見える）。からだは きいろっぽい ちゃいろ
 // v0.20.1: こうらが たてに 長く、あしが 上下に のびて いたのを、こうらを はばひろく・あしを よこへ ひろげる 形に 直した
 const crab = {
-  group: 'crab', level: 1, similar: ['hermitcrab', 'lobster', 'starfish'],
+  group: 'crab', level: 1, similar: ['kingcrab', 'swimmingcrab', 'hermitcrab'],
   box: [-92, -44, 92, 46],
   draw(ctx) {
     const edge = '#3a1a08';
@@ -1703,7 +1703,7 @@ const crab = {
 // イセエビ（よこから・左むき）: からだより ながく ふとい 触角（つけねを こすって 音を 出す）。大きな はさみが ない。
 // こうらに とげが 多く、目の 上に 2ほんの ツノ。こい あかむらさき。昼は 岩の あなに かくれる
 const lobster = {
-  group: 'shrimp', level: 1, similar: ['crab', 'hermitcrab', 'squid'],
+  group: 'shrimp', level: 1, similar: ['prawn', 'mantisshrimp', 'crab'],
   box: [-100, -62, 72, 32],
   draw(ctx) {
     const edge = '#200608';
@@ -1785,7 +1785,7 @@ const lobster = {
 // ホンヤドカリ（よこから・左むき）: まき貝の からに 入って くらす（からだが 大きく なると 大きい からに ひっこす）。
 // やわらかい おなかは からの 中。右の はさみが 左より 大きい。あしの さきが しろい。磯の しおだまりに 多い
 const hermitcrab = {
-  group: 'hermit', level: 3, similar: ['crab', 'lobster', 'shell'],
+  group: 'hermit', level: 3, similar: ['kingcrab', 'crab', 'turban'],
   box: [-48, -40, 42, 30],
   draw(ctx) {
     const edge = '#1c1a0c';
@@ -1846,7 +1846,7 @@ const hermitcrab = {
 // つなぎめ: はだの 色を ぜんたいで ひとつの グラデーションに して、うでの ふちの 線と かげは つけねで 消える ように した。
 // こうすると あたまから うでへ 線なしで つながる（前は あたまと うでを べつの 形で かさねて、つなぎめに 線が 出て いた）
 const octopus = {
-  group: 'cephalopod', level: 1, similar: ['squid', 'jellyfish', 'seahare'],
+  group: 'cephalopod', level: 1, similar: ['squid', 'cuttlefish', 'jellyfish'],
   box: [-72, -57, 72, 54],
   draw(ctx) {
     const edge = '#3a140a';
@@ -2015,7 +2015,7 @@ const octopus = {
 // スルメイカ（上から 見た すがた・胴の さきが 左）: 胴の さきに ひしがたの ひれ（えんぺら）。うでが 10ぽんで、2ほんは ながい（えものを つかまえる）。
 // せなかの まんなかに こい いろの すじ。生きて いる ときは あかちゃいろで、色の つぶ（色素胞）が ひろがったり ちぢんだり する
 const squid = {
-  group: 'cephalopod', level: 1, similar: ['octopus', 'jellyfish', 'saury'],
+  group: 'cephalopod', level: 1, similar: ['cuttlefish', 'octopus', 'jellyfish'],
   box: [-88, -23, 92, 23],
   draw(ctx) {
     const edge = '#3a140e';
@@ -2059,7 +2059,7 @@ const squid = {
 // アメフラシ（よこから・左むき）: 貝の なかまだが からは 小さく からだの 中に かくれて 見えない。あたまに ウサギの 耳の ような つの。
 // せなかに ひらひらした ひだ。こげちゃいろに しろっぽい まだら。さわると むらさきの しるを 出す（雨雲の ように ひろがるのが 名前の もと）
 const seahare = {
-  group: 'seaslug', level: 3, similar: ['octopus', 'jellyfish', 'starfish'],
+  group: 'seaslug', level: 3, similar: ['seacucumber', 'clione', 'octopus'],
   box: [-64, -30, 58, 18],
   draw(ctx) {
     const edge = '#1a0c0c';
@@ -2096,7 +2096,7 @@ const seahare = {
 // ホタテガイ: おうぎの 形の 2まいの から。からに ほうしゃ状の すじが 20ぽん あまり。ちょうつがいの 両がわに 耳の ような 出っぱり。
 // からの ふちに 小さな 目が たくさん ならび（あかるさを かんじる）、からを いきおいよく とじて 水を はき、はねる ように およぐ
 const shell = {
-  group: 'bivalve', level: 2, similar: ['starfish', 'urchin', 'hermitcrab'],
+  group: 'bivalve', level: 2, similar: ['turban', 'starfish', 'urchin'],
   box: [-44, -40, 44, 48],
   draw(ctx) {
     const edge = '#3a1a16';
@@ -2135,7 +2135,7 @@ const shell = {
 // イトマキヒトデ: うでが みじかく、五角形に ちかい 形（糸巻きに にて いる）。あおい からだに あか〜オレンジの まだら。
 // ひょうめんは こまかい つぶつぶ。うらは オレンジいろ。磯で いちばん よく 見る ヒトデ
 const starfish = {
-  group: 'echinoderm', level: 3, similar: ['urchin', 'shell', 'crab'],
+  group: 'echinoderm', level: 3, similar: ['crownofthorns', 'urchin', 'shell'],
   box: [-42, -42, 42, 38],
   draw(ctx) {
     const edge = '#0e1a34';
@@ -2173,7 +2173,7 @@ const starfish = {
 // ムラサキウニ: ぜんしんに ながく するどい とげ。こい むらさきいろ（くろに ちかい）。とげの 下に まるい から。
 // 磯の 岩の すきまに いて、海そうを たべる。とげの あいだから ほそい 足（管足）を のばして あるく
 const urchin = {
-  group: 'echinoderm', level: 2, similar: ['starfish', 'shell', 'jellyfish'],
+  group: 'echinoderm', level: 2, similar: ['crownofthorns', 'porcupinefish', 'starfish'],
   box: [-44, -41, 42, 30],
   draw(ctx) {
     const edge = '#0c0612';
@@ -2214,7 +2214,7 @@ const urchin = {
 // ミズクラゲ: すきとおった まるい かさ。かさの まんなかに 4つの わ（胃と 生殖腺。ヨツメクラゲとも よばれる）。
 // かさの ふちに ほそく みじかい 触手が びっしり ならび、下に ひらひらした うで（口腕）が 4ほん。かさを ひらいたり とじたり して およぐ
 const jellyfish = {
-  group: 'jelly', level: 1, similar: ['octopus', 'squid', 'urchin'],
+  group: 'jelly', level: 1, similar: ['manofwar', 'octopus', 'clione'],
   box: [-50, -32, 50, 44],
   draw(ctx) {
     const edge = 'rgba(70,110,170,0.95)';
